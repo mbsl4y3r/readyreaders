@@ -67,6 +67,14 @@ records straight into the repo with the exact right filenames, and shows
 what's still missing. When you're done, just commit the new files under
 `public/audio/`.
 
+No laptop handy? Open a **GitHub Codespace** on this repo instead — it
+installs everything and starts the recorder automatically. Wait for the
+"Family voice recorder" port notification, click **Open in Browser** (keep
+the port **Private** — you'll just authenticate with your GitHub login),
+and record from any device's browser. Recordings land on the Codespace, so
+`git add public/audio && git commit && git push` from its terminal when
+you're done.
+
 ## Parent corner
 
 Long-press the ⚙️ gear on the map for 2 seconds: set the book-lesson marker,

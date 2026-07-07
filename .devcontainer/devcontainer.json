@@ -1,0 +1,13 @@
+{
+  "name": "Ready Readers dev",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "forwardPorts": [5179],
+  "portsAttributes": {
+    "5179": {
+      "label": "Family voice recorder",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "npm install",
+  "postStartCommand": "nohup npm run recorder > /tmp/recorder.log 2>&1 &"
+}
