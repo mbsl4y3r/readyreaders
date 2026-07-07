@@ -4,6 +4,7 @@
  */
 import Phaser from 'phaser';
 import { unlockAudio, speakUI } from '../services/audio';
+import { loadProgress } from '../services/progress';
 import { GAME_W, GAME_H, readingText, emojiText, drawRealmBackground } from '../ui/kit';
 import { THEMES } from '../content/themes';
 
@@ -32,8 +33,11 @@ export class BootScene extends Phaser.Scene {
     star.once('pointerdown', () => {
       unlockAudio();
       void speakUI('welcome', "Welcome to Evie's Reading Realms!");
+      // first-ever launch sails the placement voyage so the map opens at the
+      // right frontier; after that the star always goes straight to the map
+      const next = loadProgress().placed ? 'map' : 'voyage';
       this.cameras.main.fadeOut(350);
-      this.time.delayedCall(380, () => this.scene.start('map'));
+      this.time.delayedCall(380, () => this.scene.start(next));
     });
   }
 }

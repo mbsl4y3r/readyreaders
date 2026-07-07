@@ -25,6 +25,8 @@ export interface ProgressData {
   currentLevel: number;
   /** Parent-set marker: which book lesson Evie is on. */
   bookLesson: number;
+  /** True once the placement voyage has confirmed the starting frontier. */
+  placed: boolean;
   words: Record<string, WordStat>;
   collections: {
     treasures: string[];
@@ -44,6 +46,7 @@ export function freshProgress(): ProgressData {
     version: 1,
     currentLevel: 1,
     bookLesson: 17,
+    placed: false,
     words: {},
     collections: { treasures: [], pets: [], charms: [] },
     sessions: [],
@@ -69,6 +72,8 @@ export function loadProgress(): ProgressData {
     if (!raw) return freshProgress();
     const data = JSON.parse(raw) as ProgressData;
     if (data.version !== 1) return freshProgress();
+    // saves from before the placement voyage existed were already mid-journey
+    data.placed ??= data.sessions.length > 0;
     return data;
   } catch {
     return freshProgress();
@@ -106,6 +111,7 @@ export function importCode(code: string): ProgressData | null {
   try {
     const data = JSON.parse(decodeURIComponent(escape(atob(code.trim())))) as ProgressData;
     if (data.version !== 1 || typeof data.words !== 'object') return null;
+    data.placed ??= data.sessions.length > 0;
     return data;
   } catch {
     return null;

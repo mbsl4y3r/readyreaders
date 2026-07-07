@@ -3,11 +3,14 @@ import {
   planSession,
   lessonCapFor,
   wordsForLevel,
+  phrasesForLevel,
+  memoryWordsForLevel,
   pickDistractors,
 } from '../src/engine/session-planner';
 import { freshProgress } from '../src/services/progress';
 import { getWord, WORDS_BY_ID } from '../src/content/words';
 import { SENTENCES } from '../src/content/sentences';
+import { PHRASES } from '../src/content/phrases';
 
 const rng = (() => {
   let seed = 42;
@@ -61,6 +64,68 @@ describe('planSession', () => {
         expect(id).not.toBe(r.wordId);
       }
     }
+  });
+});
+
+describe('phrase and memory-word pools', () => {
+  it('phrasesForLevel stays inside the level range and the lesson cap', () => {
+    const phrases = phrasesForLevel(2, 17); // level 2 = lessons 10-17, cap 17
+    expect(phrases.length).toBeGreaterThan(0);
+    for (const p of phrases) {
+      expect(p.lesson).toBeGreaterThanOrEqual(10);
+      expect(p.lesson).toBeLessThanOrEqual(17);
+    }
+    // marker way behind: level 3's pool is clipped to the from+1 floor cap
+    for (const p of phrasesForLevel(3, 1)) {
+      expect(p.lesson).toBeGreaterThanOrEqual(18);
+      expect(p.lesson).toBeLessThanOrEqual(19);
+    }
+  });
+
+  it('memoryWordsForLevel returns only heart-marked words inside the cap', () => {
+    const mem = memoryWordsForLevel(1, 17); // "was" (lesson 5) lives here
+    expect(mem.map((w) => w.id)).toContain('was');
+    for (const w of mem) {
+      expect(w.heartIndexes?.length ?? 0).toBeGreaterThan(0);
+      expect(w.lesson).toBeGreaterThanOrEqual(1);
+      expect(w.lesson).toBeLessThanOrEqual(9);
+    }
+    // "the" (lesson 19) reaches level 3 through the +2 lookahead at marker 17
+    expect(memoryWordsForLevel(3, 17).map((w) => w.id)).toContain('the');
+    for (const w of memoryWordsForLevel(3, 30)) {
+      expect(w.heartIndexes?.length ?? 0).toBeGreaterThan(0);
+      expect(w.lesson).toBeLessThanOrEqual(30);
+    }
+  });
+});
+
+describe('planSession phrase and memory rounds', () => {
+  it('weaves in exactly one magic-phrase round when phrases exist', () => {
+    for (const levelId of [1, 2, 3]) {
+      const rounds = planSession(levelId, freshProgress(), rng);
+      const phraseRounds = rounds.filter((r) => r.mechanic === 'magic-phrase');
+      expect(phraseRounds).toHaveLength(1);
+      const phrase = PHRASES.find((p) => p.id === phraseRounds[0]!.phraseId)!;
+      expect(phrase).toBeDefined();
+      expect(phrase.lesson).toBeLessThanOrEqual(17 + 2); // fresh marker + lookahead
+    }
+  });
+
+  it('adds at most one memory-word round — a heart word, converted not doubled', () => {
+    for (const levelId of [1, 2, 3]) {
+      const rounds = planSession(levelId, freshProgress(), rng);
+      const memory = rounds.filter((r) => r.mechanic === 'memory-word');
+      expect(memory.length).toBeLessThanOrEqual(1);
+      for (const m of memory) {
+        const w = getWord(m.wordId!);
+        expect(w.heartIndexes?.length ?? 0).toBeGreaterThan(0);
+        // conversion, not duplication: no other round drills the same word
+        expect(rounds.filter((r) => r !== m && r.wordId === m.wordId)).toHaveLength(0);
+      }
+    }
+    // level 1 always has an unmastered heart word ("was") on a fresh save
+    const rounds = planSession(1, freshProgress(), rng);
+    expect(rounds.filter((r) => r.mechanic === 'memory-word')).toHaveLength(1);
   });
 });
 

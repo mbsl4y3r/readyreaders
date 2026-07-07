@@ -11,6 +11,11 @@ import type { RunRound } from './types';
 
 export const runFeedCreature: RunRound = (scene, spec, ctx) => {
   return new Promise((resolve) => {
+    // guards a delayed audio-chain callback from firing into a LATER round
+    // if she taps home mid-celebration (the scene instance is reused)
+    let aborted = false;
+    scene.events.once('shutdown', () => (aborted = true));
+
     const word = getWord(spec.wordId!);
     const distractors = (spec.distractorIds ?? []).map(getWord);
     const container = scene.add.container(0, 0);
@@ -75,6 +80,7 @@ export const runFeedCreature: RunRound = (scene, spec, ctx) => {
           }
           void speakUI('yum', 'Yum! Thank you!');
           scene.time.delayedCall(1300, () => {
+            if (aborted) return;
             container.destroy();
             resolve({
               itemId: word.id,

@@ -21,6 +21,14 @@ import type { RunRound } from './types';
 
 export const runBuildWord: RunRound = (scene, spec, ctx) => {
   return new Promise((resolve) => {
+    // Phaser reuses the scene instance across visits, so a delayed call or
+    // audio-chain callback left pending when she taps home can still fire
+    // once a LATER round is already running on this same scene. Guard every
+    // callback below with this flag so an abandoned round never mutates a
+    // scene it no longer owns.
+    let aborted = false;
+    scene.events.once('shutdown', () => (aborted = true));
+
     const word = getWord(spec.wordId!);
     const container = scene.add.container(0, 0);
     const graphemes = word.graphemes;
@@ -141,6 +149,7 @@ export const runBuildWord: RunRound = (scene, spec, ctx) => {
       confettiBurst(scene, GAME_W / 2, slotY - 60, ctx.theme.accent);
       void speakUI('you-read-it', `You built it! ${word.text}!`);
       scene.time.delayedCall(1700, () => {
+        if (aborted) return;
         container.destroy();
         resolve({
           itemId: word.id,

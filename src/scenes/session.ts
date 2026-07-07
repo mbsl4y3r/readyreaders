@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 import { LEVELS } from '../content/levels';
 import { THEMES } from '../content/themes';
-import { planSession, wordsForLevel } from '../engine/session-planner';
+import { planSession, wordsForLevel, phraseStatKey } from '../engine/session-planner';
 import type { RoundSpec, RoundResult } from '../engine/rounds';
 import { updateStat } from '../engine/adaptive';
 import { loadProgress, saveProgress, statFor } from '../services/progress';
@@ -14,6 +14,8 @@ import { speakUI, chime } from '../services/audio';
 import { runFeedCreature } from '../games/feed-creature';
 import { runBuildWord } from '../games/build-word';
 import { runSentencePicture } from '../games/sentence-picture';
+import { runMagicPhrase } from '../games/magic-phrase';
+import { runMemoryWord } from '../games/memory-word';
 import type { RunRound } from '../games/types';
 import {
   GAME_W,
@@ -30,6 +32,8 @@ const RUNNERS: Record<RoundSpec['mechanic'], RunRound> = {
   'feed-creature': runFeedCreature,
   'build-word': runBuildWord,
   'sentence-picture': runSentencePicture,
+  'magic-phrase': runMagicPhrase,
+  'memory-word': runMemoryWord,
 };
 
 export class SessionScene extends Phaser.Scene {
@@ -93,14 +97,16 @@ export class SessionScene extends Phaser.Scene {
 
   private recordResult(spec: RoundSpec, result: RoundResult): void {
     const progress = loadProgress();
-    if (spec.mechanic === 'sentence-picture') {
-      // sentence stats keyed by sentence id — same stat machinery
-      const stat = statFor(progress, `sent:${result.itemId}`);
-      progress.words[`sent:${result.itemId}`] = updateStat(stat, result);
-    } else {
-      const stat = statFor(progress, result.itemId);
-      progress.words[result.itemId] = updateStat(stat, result);
-    }
+    // sentence and phrase stats live under prefixed keys so they never
+    // collide with word ids — same stat machinery either way
+    const key =
+      spec.mechanic === 'sentence-picture'
+        ? `sent:${result.itemId}`
+        : spec.mechanic === 'magic-phrase'
+          ? phraseStatKey(result.itemId)
+          : result.itemId;
+    const stat = statFor(progress, key);
+    progress.words[key] = updateStat(stat, result);
     saveProgress(progress);
   }
 

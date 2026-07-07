@@ -61,6 +61,12 @@ Record on a phone, one clip per line, name files exactly as listed, and drop
 them into `public/audio/<folder>/`. Every clip you add upgrades the game
 automatically — start with the letter sounds.
 
+Even easier: run `npm run recorder` and open <http://localhost:5179> — a
+built-in recording booth that walks you clip by clip (letter sounds first),
+records straight into the repo with the exact right filenames, and shows
+what's still missing. When you're done, just commit the new files under
+`public/audio/`.
+
 ## Parent corner
 
 Long-press the ⚙️ gear on the map for 2 seconds: set the book-lesson marker,

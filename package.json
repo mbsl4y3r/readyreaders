@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "validate": "tsx scripts/validate-content.ts",
     "recording-script": "tsx scripts/gen-recording-script.ts",
+    "recorder": "tsx scripts/recorder-server.ts",
     "audio-check": "tsx scripts/gen-audio-index.ts --check",
     "fetch-assets": "tsx scripts/fetch-assets.ts"
   },
@@ -19,6 +20,7 @@
     "phaser": "^3.87.0"
   },
   "devDependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@types/node": "^26.1.0",
     "jsdom": "^29.1.1",
     "tsx": "^4.19.0",

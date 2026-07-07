@@ -6,7 +6,8 @@
 import { LEVELS } from '../content/levels';
 import { WORDS } from '../content/words';
 import { SENTENCES } from '../content/sentences';
-import type { Word } from '../content/types';
+import { PHRASES } from '../content/phrases';
+import type { Phrase, Word } from '../content/types';
 import type { ProgressData } from '../services/progress';
 import { planQueue } from './adaptive';
 import type { RoundSpec } from './rounds';
@@ -28,6 +29,22 @@ export function wordsForLevel(levelId: number, bookLesson: number): Word[] {
   if (!level) return [];
   const cap = lessonCapFor(levelId, bookLesson);
   return WORDS.filter((w) => w.lesson >= level.lessonRange[0] && w.lesson <= cap);
+}
+
+/** Phrases readable in this level right now (respects the book marker). */
+export function phrasesForLevel(levelId: number, bookLesson: number): Phrase[] {
+  const level = LEVELS.find((l) => l.id === levelId);
+  if (!level) return [];
+  const cap = lessonCapFor(levelId, bookLesson);
+  return PHRASES.filter((p) => p.lesson >= level.lessonRange[0] && p.lesson <= cap);
+}
+
+/** Progress key for phrase stats (kept apart from word stats). */
+export const phraseStatKey = (phraseId: string): string => `phr:${phraseId}`;
+
+/** Memory words (heart-marked) in this level's readable range. */
+export function memoryWordsForLevel(levelId: number, bookLesson: number): Word[] {
+  return wordsForLevel(levelId, bookLesson).filter((w) => (w.heartIndexes?.length ?? 0) > 0);
 }
 
 /** Pick 2 written-choice distractors that force full decoding (minimal pairs). */
@@ -61,8 +78,11 @@ export function planSession(
   const cap = lessonCapFor(levelId, progress.bookLesson);
 
   const newIds = levelWords.map((w) => w.id);
+  // phrase/sentence stats share this map under 'phr:'/'sent:' prefixed keys —
+  // exclude them here or they crowd out real words in the working set (their
+  // trust-path latencies are seconds long, which reads as "struggling").
   const seenIds = Object.keys(progress.words).filter(
-    (id) => (progress.words[id]?.exposures ?? 0) > 0,
+    (id) => !id.includes(':') && (progress.words[id]?.exposures ?? 0) > 0,
   );
 
   const queue = planQueue({
@@ -97,11 +117,53 @@ export function planSession(
     }
   });
 
+  // memory words get their own ritual: convert one word round to the
+  // memory-word mechanic (weakest heart-word first), or teach a fresh one early
+  const memPool = memoryWordsForLevel(levelId, progress.bookLesson).filter(
+    (w) => (progress.words[w.id]?.mastery ?? 0) < 3,
+  );
+  if (memPool.length > 0) {
+    const weakest = [...memPool].sort(
+      (a, b) =>
+        (progress.words[a.id]?.mastery ?? 0) - (progress.words[b.id]?.mastery ?? 0) ||
+        (progress.words[a.id]?.exposures ?? 0) - (progress.words[b.id]?.exposures ?? 0),
+    )[0]!;
+    const existing = rounds.find((r) => r.wordId === weakest.id);
+    if (existing) {
+      existing.mechanic = 'memory-word';
+      delete existing.distractorIds;
+    } else {
+      rounds.splice(Math.min(1, rounds.length), 0, {
+        mechanic: 'memory-word',
+        wordId: weakest.id,
+        realm: level.realm,
+      });
+    }
+  }
+
   // weave sentence rounds in at positions 3 and end — sentence comprehension
   // is the core loop, never an afterthought
   const [s1, s2] = sentences;
   if (s1) rounds.splice(Math.min(3, rounds.length), 0, { mechanic: 'sentence-picture', sentenceId: s1.id, realm: level.realm });
   if (s2) rounds.push({ mechanic: 'sentence-picture', sentenceId: s2.id, realm: level.realm });
+
+  // one magic phrase mid-chunk — the bridge between words and sentences.
+  // least-practised first; jitter is assigned once per phrase (not inside the
+  // comparator — an inconsistent comparator makes sort order engine-defined)
+  const phrasePool = phrasesForLevel(levelId, progress.bookLesson);
+  if (phrasePool.length > 0) {
+    const pick = phrasePool
+      .map((p) => ({
+        p,
+        score: (progress.words[phraseStatKey(p.id)]?.exposures ?? 0) + random() * 0.5,
+      }))
+      .sort((a, b) => a.score - b.score)[0]!.p;
+    rounds.splice(Math.min(5, rounds.length), 0, {
+      mechanic: 'magic-phrase',
+      phraseId: pick.id,
+      realm: level.realm,
+    });
+  }
 
   return rounds;
 }

@@ -9,7 +9,7 @@ import { LEVELS } from '../content/levels';
 import { THEMES } from '../content/themes';
 import { loadProgress } from '../services/progress';
 import { speakUI } from '../services/audio';
-import { GAME_W, GAME_H, readingText, emojiText, drawRealmBackground } from '../ui/kit';
+import { GAME_W, GAME_H, readingText, emojiText, drawRealmBackground, makeButton } from '../ui/kit';
 
 const STOP_POS: [number, number][] = [
   [140, 590], [330, 620], [520, 570], [700, 610], [870, 520],
@@ -42,6 +42,28 @@ export class MapScene extends Phaser.Scene {
     const total = c.treasures.length + c.pets.length + c.charms.length;
     emojiText(this, 80, 60, '🐚', 34);
     readingText(this, 130, 60, `${total}`, 34, '#ffffff');
+
+    // side doors off the map — icon-only, scenes greet with their own audio
+    const goTo = (key: string) => {
+      this.cameras.main.fadeOut(300);
+      this.time.delayedCall(330, () => this.scene.start(key));
+    };
+    // 📚 sits under the shell tally: "see what those shells are"
+    makeButton(this, 80, 134, '📚', () => goTo('collection'), {
+      emoji: true,
+      fontSize: 30,
+      width: 76,
+      height: 64,
+      fill: 0xffffff,
+    }).setAlpha(0.85);
+    // ✨ in the opposite top corner, clear of the path and the gear
+    makeButton(this, GAME_W - 80, 60, '✨', () => goTo('phrases-hub'), {
+      emoji: true,
+      fontSize: 30,
+      width: 76,
+      height: 64,
+      fill: 0xffffff,
+    }).setAlpha(0.85);
 
     LEVELS.forEach((level, i) => {
       const [x, y] = STOP_POS[i]!;

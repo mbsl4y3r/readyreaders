@@ -24,7 +24,11 @@ export class ParentScene extends Phaser.Scene {
     readingText(this, GAME_W / 2, 60, 'Parent corner', 40, '#ffe9a8');
 
     const progress = loadProgress();
-    const wordStats = Object.entries(progress.words).filter(([k]) => !k.startsWith('sent:'));
+    // sentence + phrase stats share the words map under prefixed keys —
+    // keep the "words practiced" number honest by skipping them
+    const wordStats = Object.entries(progress.words).filter(
+      ([k]) => !k.startsWith('sent:') && !k.startsWith('phr:'),
+    );
     const mastered = wordStats.filter(([, s]) => s.mastery >= 2).length;
     const automatic = wordStats.filter(([, s]) => s.mastery === 3).length;
 
@@ -90,10 +94,20 @@ export class ParentScene extends Phaser.Scene {
       { fontSize: 24, height: 76, width: 300 },
     );
 
+    // --- placement voyage (re-runnable from here without touching the save) ---
+    makeButton(
+      this,
+      GAME_W / 2 - 180,
+      490,
+      'Placement voyage ⛵',
+      () => this.scene.start('voyage', { fromParent: true }),
+      { fontSize: 24, height: 72, width: 320 },
+    );
+
     // --- reset (double confirm) ---
     makeButton(
       this,
-      GAME_W / 2,
+      GAME_W / 2 + 180,
       490,
       'Reset all progress',
       () => {

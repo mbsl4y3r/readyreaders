@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
-import { freshProgress, exportCode, importCode } from '../src/services/progress';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { freshProgress, loadProgress, exportCode, importCode } from '../src/services/progress';
 
 describe('progress export/import', () => {
   it('round-trips through the copy-paste code', () => {
@@ -25,5 +25,42 @@ describe('progress export/import', () => {
   it('rejects garbage codes', () => {
     expect(importCode('not-a-code')).toBeNull();
     expect(importCode('aGVsbG8=')).toBeNull(); // valid base64, not progress JSON
+  });
+});
+
+describe('placement voyage flag', () => {
+  beforeEach(() => localStorage.clear());
+
+  /** A v1 save from before `placed` existed. */
+  const legacySave = (sessions: { date: string; rounds: number }[]) => {
+    const data = freshProgress() as unknown as Record<string, unknown>;
+    delete data['placed'];
+    data['sessions'] = sessions;
+    return data;
+  };
+
+  it('fresh saves start unplaced so boot routes to the voyage', () => {
+    expect(freshProgress().placed).toBe(false);
+    expect(loadProgress().placed).toBe(false); // empty storage → fresh
+  });
+
+  it('a pre-voyage save that has been played counts as already placed', () => {
+    localStorage.setItem(
+      'readyreaders.v1',
+      JSON.stringify(legacySave([{ date: '2026-07-01', rounds: 8 }])),
+    );
+    expect(loadProgress().placed).toBe(true);
+  });
+
+  it('a pre-voyage save with no sessions still gets the voyage', () => {
+    localStorage.setItem('readyreaders.v1', JSON.stringify(legacySave([])));
+    expect(loadProgress().placed).toBe(false);
+  });
+
+  it('importCode applies the same migration', () => {
+    const played = btoa(JSON.stringify(legacySave([{ date: '2026-07-01', rounds: 8 }])));
+    expect(importCode(played)?.placed).toBe(true);
+    const unplayed = btoa(JSON.stringify(legacySave([])));
+    expect(importCode(unplayed)?.placed).toBe(false);
   });
 });

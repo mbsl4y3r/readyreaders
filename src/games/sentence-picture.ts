@@ -22,6 +22,11 @@ import type { RunRound } from './types';
 
 export const runSentencePicture: RunRound = (scene, spec, ctx) => {
   return new Promise((resolve) => {
+    // guards the multi-second audio-chain callbacks below from firing into a
+    // LATER round if she taps home mid-chain (the scene instance is reused)
+    let aborted = false;
+    scene.events.once('shutdown', () => (aborted = true));
+
     const sentence = SENTENCES.find((s) => s.id === spec.sentenceId);
     if (!sentence) throw new Error(`Unknown sentence ${spec.sentenceId}`);
     const container = scene.add.container(0, 0);
@@ -82,6 +87,7 @@ export const runSentencePicture: RunRound = (scene, spec, ctx) => {
               void speakUI('listen', 'Yes! Listen:')
                 .then(() => speakSentence(sentence.id, sentence.text))
                 .then(() => {
+                  if (aborted) return;
                   // Beat 4: …then read it again, with expression.
                   const prompt = sentence.rereadPrompt ?? 'Now read it again, nice and smooth!';
                   void speakUI(`reread-${sentence.id}`, prompt);

@@ -36,7 +36,7 @@ async function loadClip(kind: ClipKind, id: string): Promise<AudioBuffer | null>
     bufferCache.set(key, null);
     return null;
   }
-  for (const ext of ['mp3', 'm4a']) {
+  for (const ext of ['mp3', 'm4a', 'wav']) {
     try {
       const res = await fetch(`${import.meta.env.BASE_URL}audio/${kind}/${id}.${ext}`);
       if (!res.ok) continue;
