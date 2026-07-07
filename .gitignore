@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.DS_Store
+*.local
+# Generated at build time from whatever audio files exist
+src/content/audio-index.json

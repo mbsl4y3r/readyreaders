@@ -1,0 +1,148 @@
+/**
+ * Runs one chunk (~8 rounds) for a level: plans the queue, mounts each
+ * mini-game in turn, records results into progress, then celebrates with a
+ * collectible. No fail states anywhere — every exit from here is a win.
+ */
+import Phaser from 'phaser';
+import { LEVELS } from '../content/levels';
+import { THEMES } from '../content/themes';
+import { planSession, wordsForLevel } from '../engine/session-planner';
+import type { RoundSpec, RoundResult } from '../engine/rounds';
+import { updateStat } from '../engine/adaptive';
+import { loadProgress, saveProgress, statFor } from '../services/progress';
+import { speakUI, chime } from '../services/audio';
+import { runFeedCreature } from '../games/feed-creature';
+import { runBuildWord } from '../games/build-word';
+import { runSentencePicture } from '../games/sentence-picture';
+import type { RunRound } from '../games/types';
+import {
+  GAME_W,
+  GAME_H,
+  readingText,
+  emojiText,
+  drawRealmBackground,
+  makeButton,
+  confettiBurst,
+  popIn,
+} from '../ui/kit';
+
+const RUNNERS: Record<RoundSpec['mechanic'], RunRound> = {
+  'feed-creature': runFeedCreature,
+  'build-word': runBuildWord,
+  'sentence-picture': runSentencePicture,
+};
+
+export class SessionScene extends Phaser.Scene {
+  private levelId = 1;
+  /** False once the scene shuts down (home button) — stops the round loop. */
+  private alive = true;
+
+  constructor() {
+    super('session');
+  }
+
+  init(data: { levelId?: number }): void {
+    this.levelId = data.levelId ?? 1;
+  }
+
+  create(): void {
+    this.alive = true;
+    this.events.once('shutdown', () => (this.alive = false));
+    const level = LEVELS.find((l) => l.id === this.levelId)!;
+    const theme = THEMES[level.realm];
+    drawRealmBackground(this, theme.bgTop, theme.bgBottom, theme.ambient);
+    this.cameras.main.fadeIn(300);
+
+    // home button — she can always leave, mid-session exits are fine
+    const home = makeButton(this, 62, 52, '🏠', () => this.scene.start('map'), {
+      emoji: true,
+      fontSize: 30,
+      width: 76,
+      height: 64,
+      fill: 0xffffff,
+    });
+    home.setAlpha(0.85);
+
+    void this.runChunk(level.id, theme);
+  }
+
+  private async runChunk(levelId: number, theme: (typeof THEMES)['cove']): Promise<void> {
+    const progress = loadProgress();
+    const rounds = planSession(levelId, progress);
+
+    // progress pips
+    const pips = rounds.map((_, i) =>
+      this.add
+        .circle(GAME_W / 2 + (i - (rounds.length - 1) / 2) * 34, 52, 10, 0xffffff, 0.25)
+        .setStrokeStyle(2, 0xffffff, 0.5),
+    );
+
+    void speakUI('lets-read', "Let's read!");
+
+    for (let i = 0; i < rounds.length; i++) {
+      const spec = rounds[i]!;
+      if (!this.alive) return; // she tapped home
+      const result = await RUNNERS[spec.mechanic](this, spec, { theme });
+      if (!this.alive) return;
+      pips[i]?.setFillStyle(0xffe9a8, 1);
+      this.recordResult(spec, result);
+    }
+
+    this.celebrate(levelId, theme);
+  }
+
+  private recordResult(spec: RoundSpec, result: RoundResult): void {
+    const progress = loadProgress();
+    if (spec.mechanic === 'sentence-picture') {
+      // sentence stats keyed by sentence id — same stat machinery
+      const stat = statFor(progress, `sent:${result.itemId}`);
+      progress.words[`sent:${result.itemId}`] = updateStat(stat, result);
+    } else {
+      const stat = statFor(progress, result.itemId);
+      progress.words[result.itemId] = updateStat(stat, result);
+    }
+    saveProgress(progress);
+  }
+
+  private celebrate(levelId: number, theme: (typeof THEMES)['cove']): void {
+    const progress = loadProgress();
+
+    // award a not-yet-collected collectible from this realm
+    const owned = new Set(progress.collections[theme.collectionKey]);
+    const prize = theme.collectibles.find((e) => !owned.has(e)) ?? theme.collectibles[0]!;
+    if (!owned.has(prize)) progress.collections[theme.collectionKey].push(prize);
+
+    // unlock the next level when ≥80% of this level's words are mastery ≥2
+    const levelWords = wordsForLevel(levelId, progress.bookLesson);
+    const quick = levelWords.filter((w) => (progress.words[w.id]?.mastery ?? 0) >= 2).length;
+    if (
+      levelWords.length > 0 &&
+      quick / levelWords.length >= 0.8 &&
+      progress.currentLevel === levelId &&
+      levelId < 9
+    ) {
+      progress.currentLevel = levelId + 1;
+    }
+    progress.sessions.push({ date: new Date().toISOString().slice(0, 10), rounds: 8 });
+    saveProgress(progress);
+
+    chime('fanfare');
+    const dim = this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.45);
+    const big = emojiText(this, GAME_W / 2, GAME_H / 2 - 70, prize, 150);
+    popIn(this, big);
+    const label = readingText(this, GAME_W / 2, GAME_H / 2 + 60, 'You did it!', 52, '#ffe9a8');
+    popIn(this, label, 200);
+    confettiBurst(this, GAME_W / 2, GAME_H / 2 - 100, theme.accent);
+    void speakUI('celebrate', `You did it! A new treasure for your collection!`);
+
+    const done = makeButton(
+      this,
+      GAME_W / 2,
+      GAME_H - 120,
+      '🗺️',
+      () => this.scene.start('map'),
+      { emoji: true, fontSize: 48, width: 140, height: 100, fill: 0xffe9a8 },
+    );
+    popIn(this, done, 600);
+  }
+}

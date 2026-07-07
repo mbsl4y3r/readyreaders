@@ -1,0 +1,29 @@
+{
+  "name": "readyreaders",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Evie's Reading Realms — a phonics fluency game that follows her 120-lesson reading book",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run validate && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "validate": "tsx scripts/validate-content.ts",
+    "recording-script": "tsx scripts/gen-recording-script.ts",
+    "audio-check": "tsx scripts/gen-audio-index.ts --check",
+    "fetch-assets": "tsx scripts/fetch-assets.ts"
+  },
+  "dependencies": {
+    "phaser": "^3.87.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "jsdom": "^29.1.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.1.0"
+  }
+}
