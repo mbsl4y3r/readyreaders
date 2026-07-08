@@ -43,6 +43,8 @@ export interface ProgressData {
   storiesRead: string[];
   /** Wardrobe currency — earned only by reading. */
   pearls: number;
+  /** Achievement badge ids already earned + celebrated (see engine/achievements). */
+  badges: string[];
   /** Cosmetic item ids owned (see avatar/catalog.ts). */
   cosmetics: string[];
   /** What Evie and Inky are wearing right now. */
@@ -69,6 +71,7 @@ export function freshProgress(): ProgressData {
     speedBest: 0,
     storiesRead: [],
     pearls: START_PEARLS,
+    badges: [],
     cosmetics: starterCosmetics(),
     avatar: defaultAvatar(),
     settings: { sessionCapMin: 18, musicOn: true },
@@ -98,6 +101,7 @@ export function loadProgress(): ProgressData {
     data.speedBest ??= 0;
     data.storiesRead ??= [];
     data.pearls ??= START_PEARLS;
+    data.badges ??= [];
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
     data.created ??= data.placed; // players from before the creator skip it
@@ -146,6 +150,7 @@ export function importCode(code: string): ProgressData | null {
     data.speedBest ??= 0;
     data.storiesRead ??= [];
     data.pearls ??= START_PEARLS;
+    data.badges ??= [];
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
     data.created ??= data.placed;

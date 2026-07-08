@@ -378,3 +378,34 @@ export function confettiBurst(scene: Phaser.Scene, x: number, y: number, tint: n
   emitter.explode(36, x, y);
   scene.time.delayedCall(1600, () => emitter.destroy());
 }
+
+/**
+ * A "New badge!" toast that slides down from the top and fades out. Used when
+ * an achievement is earned mid-celebration. Caller stamps the chime.
+ */
+export function badgeToast(
+  scene: Phaser.Scene,
+  emoji: string,
+  label: string,
+  delay = 0,
+): void {
+  const y0 = 96;
+  const c = scene.add.container(GAME_W / 2, y0 - 70).setDepth(100).setAlpha(0);
+  const bg = scene.add.graphics();
+  bg.fillStyle(0x241640, 0.96);
+  bg.fillRoundedRect(-210, -38, 420, 76, 20);
+  bg.lineStyle(2.5, 0xffe9a8, 1);
+  bg.strokeRoundedRect(-210, -38, 420, 76, 20);
+  c.add(bg);
+  c.add(emojiText(scene, -162, 0, emoji, 46));
+  c.add(readingText(scene, -122, -12, 'New badge!', 18, '#ffd27a').setOrigin(0, 0.5));
+  c.add(readingText(scene, -122, 13, label, 24, '#ffffff').setOrigin(0, 0.5));
+  scene.tweens.add({ targets: c, y: y0, alpha: 1, duration: 340, delay, ease: 'Back.easeOut' });
+  scene.tweens.add({
+    targets: c,
+    alpha: 0,
+    duration: 420,
+    delay: delay + 2700,
+    onComplete: () => c.destroy(),
+  });
+}

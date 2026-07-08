@@ -13,6 +13,7 @@ import type { Story } from '../content/types';
 import { THEMES } from '../content/themes';
 import { loadProgress, saveProgress } from '../services/progress';
 import { PEARLS_PER_STORY } from '../avatar/catalog';
+import { newlyEarned } from '../engine/achievements';
 import { speakUI, chime, playMusic } from '../services/audio';
 import {
   GAME_W,
@@ -24,6 +25,7 @@ import {
   popIn,
   wiggle,
   confettiBurst,
+  badgeToast,
 } from '../ui/kit';
 
 export class StoryScene extends Phaser.Scene {
@@ -243,6 +245,14 @@ export class StoryScene extends Phaser.Scene {
       view.add(shine);
       view.add(earned);
       [pearl, shine, earned].forEach((o) => popIn(this, o, 350));
+
+      // celebrate any story badges just earned (first story, bookworm, all…)
+      const fresh = newlyEarned(progress);
+      if (fresh.length > 0) {
+        fresh.forEach((b) => progress.badges.push(b.id));
+        saveProgress(progress);
+        fresh.slice(0, 3).forEach((b, i) => badgeToast(this, b.emoji, b.label, 700 + i * 1400));
+      }
     }
 
     // pass explicit empty data — Phaser's restart() reuses old data otherwise,

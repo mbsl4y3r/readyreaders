@@ -79,6 +79,7 @@ export function buildManifest(): Clip[] {
     // voyage, collection, stories
     ['voyage-anchor', 'Anchors away! Your reading adventure starts here!'],
     ['collection-book', 'Your collection book! Look at everything you found!'],
+    ['badges', 'Your badges! Look what you earned!'],
     ['story-shelf', 'Story pages! Pick a story to read!'],
     ['story-locked', 'Keep adventuring — this story unlocks soon!'],
     ['story-the-end', 'The end! You read the whole story!'],

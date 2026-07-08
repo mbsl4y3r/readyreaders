@@ -9,6 +9,7 @@ import { THEMES } from '../content/themes';
 import { planSession, planReview, levelMastered, phraseStatKey } from '../engine/session-planner';
 import type { RoundSpec, RoundResult } from '../engine/rounds';
 import { updateStat } from '../engine/adaptive';
+import { newlyEarned } from '../engine/achievements';
 import { loadProgress, saveProgress, statFor } from '../services/progress';
 import { PEARLS_PER_SESSION, PEARLS_SPEED_BEST } from '../avatar/catalog';
 import { speakUI, chime, playMusic } from '../services/audio';
@@ -29,6 +30,7 @@ import {
   makeButton,
   confettiBurst,
   popIn,
+  badgeToast,
 } from '../ui/kit';
 
 const RUNNERS: Record<RoundSpec['mechanic'], RunRound> = {
@@ -207,5 +209,19 @@ export class SessionScene extends Phaser.Scene {
       { emoji: true, fontSize: 48, width: 140, height: 100, fill: 0xffe9a8 },
     );
     popIn(this, done, 600);
+
+    this.awardBadges(progress);
+  }
+
+  /** Earn + celebrate any freshly-unlocked achievement badges. */
+  private awardBadges(progress: ReturnType<typeof loadProgress>): void {
+    const fresh = newlyEarned(progress);
+    if (fresh.length === 0) return;
+    fresh.forEach((b) => progress.badges.push(b.id));
+    saveProgress(progress);
+    fresh.slice(0, 3).forEach((b, i) => {
+      badgeToast(this, b.emoji, b.label, 900 + i * 1400);
+      this.time.delayedCall(900 + i * 1400, () => this.alive && chime('good'));
+    });
   }
 }

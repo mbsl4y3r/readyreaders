@@ -98,6 +98,14 @@ export class MapScene extends Phaser.Scene {
       height: 64,
       fill: 0xffe9a8,
     }).setAlpha(0.9);
+    // 🏅 achievements — the badge shelf
+    makeButton(this, GAME_W - 80, 282, '🏅', () => goTo('achievements'), {
+      emoji: true,
+      fontSize: 30,
+      width: 76,
+      height: 64,
+      fill: 0xffffff,
+    }).setAlpha(0.85);
 
     // session-cap sunset: past the daily cap the map turns to dusk and
     // suggests resting — a gentle wind-down, never a lock (parents decide)
@@ -163,15 +171,48 @@ export class MapScene extends Phaser.Scene {
       readingText(this, x, y + 72, `${level.id}`, 26, unlocked ? '#ffffff' : '#8a94a0');
     });
 
-    // parent gear: 2-second long-press
-    const gear = emojiText(this, GAME_W - 54, GAME_H - 46, '⚙️', 36).setAlpha(0.6);
-    gear.setInteractive({ useHandCursor: true });
-    let holdTimer: Phaser.Time.TimerEvent | null = null;
-    gear.on('pointerdown', () => {
-      holdTimer = this.time.delayedCall(2000, () => this.scene.start('parent'));
+    // parent gear: hold to open (a child-lock). Big invisible hit zone so it's
+    // easy to press, a filling ring so the grown-up sees it working, and a
+    // short hold — the old tiny-emoji + 2s + cancel-on-jitter combo felt dead.
+    const gx = GAME_W - 56;
+    const gy = GAME_H - 48;
+    const HOLD = 1200;
+    const gear = emojiText(this, gx, gy, '⚙️', 40).setAlpha(0.55);
+    const ring = this.add.graphics().setDepth(7);
+    const drawRing = (t: number) => {
+      ring.clear();
+      if (t <= 0) return;
+      ring.lineStyle(5, 0xffe9a8, 0.95);
+      ring.beginPath();
+      ring.arc(gx, gy, 32, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * t);
+      ring.strokePath();
+    };
+    const prog = { t: 0 };
+    let holdTween: Phaser.Tweens.Tween | null = null;
+    const cancel = () => {
+      holdTween?.remove();
+      holdTween = null;
+      ring.clear();
+      gear.setAlpha(0.55).setScale(1);
+    };
+    const zone = this.add.zone(gx, gy, 104, 104).setInteractive({ useHandCursor: true });
+    zone.on('pointerdown', () => {
+      cancel();
+      prog.t = 0;
+      gear.setAlpha(0.95);
+      holdTween = this.tweens.add({
+        targets: prog,
+        t: 1,
+        duration: HOLD,
+        ease: 'Linear',
+        onUpdate: () => drawRing(prog.t),
+        onComplete: () => {
+          ring.clear();
+          this.scene.start('parent');
+        },
+      });
     });
-    const cancel = () => holdTimer?.remove();
-    gear.on('pointerup', cancel);
-    gear.on('pointerout', cancel);
+    zone.on('pointerup', cancel);
+    zone.on('pointerout', cancel);
   }
 }
