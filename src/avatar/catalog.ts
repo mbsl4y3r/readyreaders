@@ -78,7 +78,11 @@ export type HeldId = 'seastar' | 'wand' | 'book' | 'bouquet' | 'balloon' | 'lant
 export type FaceId = 'freckles' | 'sunfreckles' | 'blushhearts';
 export type GlassesId = 'round' | 'star' | 'heart';
 export type EarringId = 'studs' | 'pearl' | 'stars' | 'hearts';
-export type PetColorId = 'violet' | 'rose' | 'sea' | 'coral' | 'gold' | 'midnight';
+// Pet colors carry a `pet-` prefix so their ids never collide with a same-named
+// hair color (there is a 'rose'/'midnight' in BOTH palettes). Ownership lives in
+// one flat id set (progress.cosmetics), so a shared id would let owning the free
+// creator pick in one category silently unlock the shop-only item in the other.
+export type PetColorId = 'violet' | 'pet-rose' | 'sea' | 'coral' | 'gold' | 'pet-midnight';
 export type PetHatId = 'petbow' | 'petflower' | 'party' | 'minicrown' | 'petstar' | 'petwizard';
 
 export interface AvatarConfig {
@@ -235,11 +239,11 @@ export const COSMETICS: CosmeticItem[] = [
   I('hearts', 'earrings', 'Heart Studs', 7, '💗'),
   // pet colors
   I('violet', 'petColor', 'Violet Inky', 0, '🟣', true),
-  I('rose', 'petColor', 'Rosy Inky', 8, '🩷', true),
+  I('pet-rose', 'petColor', 'Rosy Inky', 8, '🩷', true),
   I('sea', 'petColor', 'Sea-green Inky', 8, '🩵', true),
   I('coral', 'petColor', 'Coral Inky', 8, '🪸'),
   I('gold', 'petColor', 'Golden Inky', 10, '⭐'),
-  I('midnight', 'petColor', 'Midnight Inky', 10, '🌌'),
+  I('pet-midnight', 'petColor', 'Midnight Inky', 10, '🌌'),
   // pet hats
   I('petbow', 'petHat', 'Inky Ribbon', 5, '🎀'),
   I('petflower', 'petHat', 'Inky Bloom', 5, '🌼'),
@@ -249,6 +253,8 @@ export const COSMETICS: CosmeticItem[] = [
   I('minicrown', 'petHat', 'Mini Crown', 9, '👑'),
 ];
 
+// Ids are globally unique (pet colors are `pet-` prefixed), so this keyed-by-id
+// lookup is unambiguous — no last-wins collapse of two same-named categories.
 export const COSMETICS_BY_ID = new Map(COSMETICS.map((c) => [c.id, c]));
 
 /** Item ids owned before any pearls are spent (every price-0 item). */

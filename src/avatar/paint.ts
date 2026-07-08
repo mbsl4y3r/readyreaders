@@ -114,11 +114,11 @@ const EYE = '#3a2418';
 
 const PETS: Record<PetColorId, { base: string; deep: string }> = {
   violet: { base: '#b06bff', deep: '#7d3fd6' },
-  rose: { base: '#ff8ab5', deep: '#d65a8a' },
+  'pet-rose': { base: '#ff8ab5', deep: '#d65a8a' },
   sea: { base: '#5fd0c0', deep: '#2f9a8a' },
   coral: { base: '#ff8f6b', deep: '#e3564f' },
   gold: { base: '#ffcf6a', deep: '#e0a52e' },
-  midnight: { base: '#5b6bb0', deep: '#2a2f5c' },
+  'pet-midnight': { base: '#5b6bb0', deep: '#2a2f5c' },
 };
 
 // ---------------------------------------------------------------- color math
@@ -2285,7 +2285,9 @@ function drawHeadwear(ctx: Ctx, headwear: HeadwearId, hairStyle: HairStyleId): v
 // Logical box 160×170, dome centered on x=80.
 
 export function drawInkyInto(ctx: Ctx, config: AvatarConfig): void {
-  const pet = PETS[config.petColor];
+  // Fall back to violet for any legacy/unknown pet color (e.g. a pre-prefix
+  // save that stored the bare 'rose' id) so Inky always paints, never crashes.
+  const pet = PETS[config.petColor] ?? PETS.violet;
   const mid = mix(pet.base, pet.deep, 0.45);
 
   ctx.save();
