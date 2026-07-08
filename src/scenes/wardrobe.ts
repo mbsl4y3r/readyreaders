@@ -21,7 +21,7 @@ import {
   type CosmeticItem,
   type SkinId,
 } from '../avatar/catalog';
-import { paintEvie, paintInky, EVIE_H, INKY_H } from '../avatar/paint';
+import { paintEvie, paintInky } from '../avatar/paint';
 import { loadProgress, saveProgress, type ProgressData } from '../services/progress';
 import { speakUI, chime, playMusic } from '../services/audio';
 import {
@@ -171,7 +171,9 @@ export class WardrobeScene extends Phaser.Scene {
 
     paintEvie(this, this.progress.avatar, EVIE_KEY);
     this.evieImg = this.add.image(EVIE_X, EVIE_Y, EVIE_KEY);
-    this.evieImg.setScale(400 / EVIE_H);
+    // the painter renders at 2x resolution — scale from the texture's real
+    // pixel height or Evie doubles in size and her hit area smothers 🏠
+    this.evieImg.setScale(400 / this.evieImg.height);
     this.evieImg.setInteractive({ useHandCursor: true });
     this.evieImg.on('pointerup', () => {
       // pure joy, no function — tapping your friend just makes her happy
@@ -188,8 +190,8 @@ export class WardrobeScene extends Phaser.Scene {
     });
 
     paintInky(this, this.progress.avatar, INKY_KEY);
-    this.inkyScale = 130 / INKY_H;
     this.inkyImg = this.add.image(INKY_X, INKY_Y, INKY_KEY);
+    this.inkyScale = 130 / this.inkyImg.height;
     this.inkyImg.setScale(this.inkyScale);
     this.inkyImg.setInteractive({ useHandCursor: true });
     this.inkyImg.on('pointerup', () => {
@@ -214,7 +216,7 @@ export class WardrobeScene extends Phaser.Scene {
       : this.progress.avatar;
     paintEvie(this, cfg, EVIE_KEY);
     this.evieImg.setTexture(EVIE_KEY);
-    this.evieImg.setScale(400 / EVIE_H);
+    this.evieImg.setScale(400 / this.evieImg.height);
     paintInky(this, cfg, INKY_KEY);
     this.inkyImg.setTexture(INKY_KEY);
     this.inkyImg.setScale(this.inkyScale);

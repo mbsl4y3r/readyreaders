@@ -458,8 +458,8 @@ function drawBandeau(ctx: Ctx, colorway: string): void {
   ctx.moveTo(84, 130);
   ctx.quadraticCurveTo(92, 124.5, 100, 129.5);
   ctx.quadraticCurveTo(108, 124.5, 116, 130);
-  ctx.quadraticCurveTo(119, 140, 121, 147);
-  ctx.lineTo(79, 147);
+  ctx.quadraticCurveTo(119, 141, 121, 153);
+  ctx.lineTo(79, 153);
   ctx.quadraticCurveTo(81, 140, 84, 130);
   ctx.closePath();
   fillOutlined(ctx, c, 0.76, 1.5);
@@ -476,8 +476,8 @@ function drawBodice(ctx: Ctx, colorway: string): void {
   ctx.beginPath();
   ctx.moveTo(85, 120);
   ctx.quadraticCurveTo(100, 126, 115, 120); // soft neckline
-  ctx.bezierCurveTo(119, 132, 118, 142, 115, 149);
-  ctx.lineTo(85, 149);
+  ctx.bezierCurveTo(119, 132, 118, 144, 115, 153);
+  ctx.lineTo(85, 153);
   ctx.bezierCurveTo(82, 142, 81, 132, 85, 120);
   ctx.closePath();
   fillGradientOutlined(ctx, [lighten(top, 0.08), mix(top, bottom, 0.55)], 118, 152, 0.8, 1.5);

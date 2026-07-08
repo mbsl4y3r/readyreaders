@@ -76,9 +76,14 @@ async function playClipOr(
   id: string,
   fallback: (() => Promise<void>) | null,
 ): Promise<void> {
-  const buffer = await loadClip(kind, id);
-  if (buffer) return playBuffer(buffer);
-  if (fallback) return fallback();
+  duckMusic(); // words come first — music dips under every voice line
+  try {
+    const buffer = await loadClip(kind, id);
+    if (buffer) return await playBuffer(buffer);
+    if (fallback) return await fallback();
+  } finally {
+    unduckMusic();
+  }
 }
 
 /** Speak a word: recording if present, else TTS. */
@@ -103,7 +108,12 @@ export async function speakGrapheme(g: string): Promise<boolean> {
   const id = g.toLowerCase().replace(/[^a-z_']/g, '') || 'x';
   const buffer = await loadClip('graphemes', id);
   if (!buffer) return false;
-  await playBuffer(buffer);
+  duckMusic();
+  try {
+    await playBuffer(buffer);
+  } finally {
+    unduckMusic();
+  }
   return true;
 }
 
@@ -146,7 +156,31 @@ function synthChime(kind: 'good' | 'gentle' | 'fanfare'): void {
 // scene changes. A missing file is simply silence — tracks are drop-in.
 
 const MUSIC_VOLUME = 0.22;
+/** While anyone is speaking (recording or TTS), music dips to this. */
+const DUCKED_VOLUME = 0.06;
 const FADE_S = 0.7;
+const DUCK_S = 0.25;
+
+/** Ref-count so overlapping voice lines keep the music down until the last ends. */
+let duckCount = 0;
+
+function rampMusicTo(volume: number, seconds: number): void {
+  if (!ctx || !musicGain) return;
+  const now = ctx.currentTime;
+  musicGain.gain.cancelScheduledValues(now);
+  musicGain.gain.setValueAtTime(musicGain.gain.value, now);
+  musicGain.gain.linearRampToValueAtTime(volume, now + seconds);
+}
+
+function duckMusic(): void {
+  duckCount++;
+  rampMusicTo(DUCKED_VOLUME, DUCK_S);
+}
+
+function unduckMusic(): void {
+  duckCount = Math.max(0, duckCount - 1);
+  if (duckCount === 0) rampMusicTo(MUSIC_VOLUME, FADE_S);
+}
 
 let musicEnabled = true;
 let musicId: string | null = null;
