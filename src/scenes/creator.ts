@@ -64,16 +64,24 @@ interface StepDef {
   /** null marks the skin-swatch step (identity, not a cosmetic slot). */
   category: CosmeticCategory | null;
   prompt: string;
+  /** Voice-clip id for the prompt — a pre-reader hears every step (clip-manifest). */
+  clip: string;
 }
 
 /**
  * Step order: skin first, then exactly the catalog's CREATION_CATEGORIES
  * (hairStyle, hairColor, outfit, face, petColor). Built from the contract so
- * the flow stays honest if that list is ever reordered or extended.
+ * the flow stays honest if that list is ever reordered or extended. Each
+ * step's `clip` mirrors an entry in scripts/clip-manifest.ts so the prompt is
+ * spoken (recording or TTS) — the creator is a solo, pre-reading moment.
  */
 const STEPS: StepDef[] = [
-  { category: null, prompt: 'Pick your skin' },
-  ...CREATION_CATEGORIES.map((c) => ({ category: c, prompt: PROMPTS[c] ?? c })),
+  { category: null, prompt: 'Pick your skin', clip: 'creator-step-skin' },
+  ...CREATION_CATEGORIES.map((c) => ({
+    category: c,
+    prompt: PROMPTS[c] ?? c,
+    clip: `creator-step-${c}`,
+  })),
 ];
 
 // ---- stage geometry --------------------------------------------------------
@@ -140,7 +148,11 @@ export class CreatorScene extends Phaser.Scene {
     ensureSparkTexture(this);
 
     readingText(this, GAME_W / 2, 56, 'Make your Evie! ✨', 40, '#ffe9a8');
-    void speakUI('creator-welcome', "Let's make your very own Evie!");
+    // welcome, then name the very first step so a pre-reader knows what to do
+    // (later steps are voiced on the step change — see goToStep)
+    void speakUI('creator-welcome', "Let's make your very own Evie!").then(() => {
+      if (this.alive && this.stepIndex === 0) this.speakStep();
+    });
 
     this.buildStage();
     this.buildRackCard();
@@ -254,15 +266,27 @@ export class CreatorScene extends Phaser.Scene {
     this.buildNav(layer);
   }
 
-  /** A row of step dots — filled gold for the current step, faint otherwise. */
+  /**
+   * A row of step dots that actually READS as progress (the only cue a
+   * non-reader has besides the spoken prompt): a bright gold current dot, solid
+   * gold for steps already done behind it, faint white for steps still ahead.
+   */
   private buildDots(layer: Phaser.GameObjects.Container): void {
     const g = this.add.graphics();
     const gap = 28;
     const x0 = RACK_CX - ((STEPS.length - 1) * gap) / 2;
     STEPS.forEach((_, i) => {
-      const done = i === this.stepIndex;
-      g.fillStyle(done ? 0xffe9a8 : 0xffffff, done ? 1 : 0.35);
-      g.fillCircle(x0 + i * gap, 226, done ? 7 : 5);
+      const x = x0 + i * gap;
+      if (i === this.stepIndex) {
+        g.fillStyle(0xffe9a8, 1); // here now — biggest, brightest
+        g.fillCircle(x, 226, 7);
+      } else if (i < this.stepIndex) {
+        g.fillStyle(0xffe9a8, 0.8); // already done — a gold trail filling up
+        g.fillCircle(x, 226, 5.5);
+      } else {
+        g.fillStyle(0xffffff, 0.3); // still to come — faint
+        g.fillCircle(x, 226, 5);
+      }
     });
     layer.add(g);
   }
@@ -365,6 +389,13 @@ export class CreatorScene extends Phaser.Scene {
     this.stepIndex = Phaser.Math.Clamp(i, 0, STEPS.length - 1);
     chime('gentle');
     this.renderStep(true);
+    this.speakStep(); // voice the new step's prompt for a non-reading child
+  }
+
+  /** Speak the current step's prompt so a pre-reader knows what to pick. */
+  private speakStep(): void {
+    const step = STEPS[this.stepIndex]!;
+    void speakUI(step.clip, step.prompt);
   }
 
   // ---------------------------------------------------------------- choices

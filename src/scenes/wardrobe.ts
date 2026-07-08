@@ -52,9 +52,13 @@ const TAB_DEFS: { id: TabId; name: string; emoji: string }[] = [
 // Six tabs share the panel width (x 516→1008). Stepping 82 from 558 with a
 // 76px button keeps a 6px gap, the first tab's left edge at 520 and the last
 // tab's right edge at 1006 — inside the panel, touch targets still ≥64px.
+// makeButton floors width at 96, which would overlap and spill the panel, so
+// fitTab() redraws each tab to exactly TAB_W after it's built.
 const TAB_X0 = 558;
 const TAB_STEP = 82;
 const TAB_W = 76;
+/** Tab row (centre y 138, height 76) bottom edge — the rack must sit clear of it. */
+const TAB_BOTTOM = 176;
 
 /** Skin tones: identity swatches, never priced. Order matches SkinId. */
 const SKINS: { id: SkinId; color: number }[] = [
@@ -290,8 +294,30 @@ export class WardrobeScene extends Phaser.Scene {
       });
       tab.label.setY(-12);
       tab.add(readingText(this, 0, 20, def.name, 15, '#26323f'));
+      this.fitTab(tab);
       this.tabs.set(def.id, tab);
     });
+  }
+
+  /**
+   * makeButton's width floor (96) would make six TAB_STEP=82 tabs overlap by
+   * 14px — Phaser's topOnly input would then route a tab's right edge to its
+   * neighbour — and visibly spill past the panel chrome. Redraw the backdrop
+   * and shrink the tap rectangle to the intended TAB_W so each tab is a crisp,
+   * non-overlapping 76px that sits inside the panel.
+   */
+  private fitTab(tab: Button): void {
+    const w = TAB_W;
+    const h = 76;
+    // mirror kit.ts drawButtonBg: soft drop shadow under a rounded white face
+    tab.bg.clear();
+    tab.bg.fillStyle(0x000000, 0.25);
+    tab.bg.fillRoundedRect(-w / 2 + 3, -h / 2 + 5, w, h, 20);
+    tab.bg.fillStyle(0xffffff, 1);
+    tab.bg.fillRoundedRect(-w / 2, -h / 2, w, h, 20);
+    tab.setSize(w, h);
+    tab.setInteractive(new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h), Phaser.Geom.Rectangle.Contains);
+    if (tab.input) tab.input.cursor = 'pointer';
   }
 
   private switchTab(tab: TabId): void {
@@ -366,9 +392,14 @@ export class WardrobeScene extends Phaser.Scene {
    */
   private gateChipInput(): void {
     const cy = this.content?.y ?? PANEL_TOP;
+    const half = CHIP_H / 2;
     for (const { obj, y } of this.chipHits) {
-      const worldY = cy + y;
-      const visible = worldY > PANEL_TOP + 18 && worldY < PANEL_BOTTOM - 10;
+      // Test the chip's TOP EDGE, not its centre: a centre-plus-margin test
+      // dead-zoned chips that were still ~half visible through the mask. The
+      // lower bound (TAB_BOTTOM) stops a scrolled-up chip's hit box — which the
+      // mask can't clip — from poking into the tab row and stealing tab taps.
+      const top = cy + y - half;
+      const visible = top >= TAB_BOTTOM && top < PANEL_BOTTOM;
       if (obj.input) obj.input.enabled = visible;
     }
   }

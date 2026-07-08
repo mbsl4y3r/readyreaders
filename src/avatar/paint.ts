@@ -1082,37 +1082,40 @@ function drawTinyHeart(
 // ---------------------------------------------------------------- earrings
 
 function drawEarrings(ctx: Ctx, kind: EarringId, _hairStyle: HairStyleId): void {
-  // Ear lobes sit near (60, 92) / (140, 92); riding the hairline keeps the
-  // earring readable even when the ear itself is under the hair.
+  // The ear sits at (60, 86) / (140, 86), r7 — its lobe bottom is ~y90. Studs,
+  // stars and hearts ride ON the lobe (y90) so they read as an earring on the
+  // ear, not a gold dot floating mid-cheek on the hair; the pearl drop hangs
+  // just below it. Painted after the hair so a bought earring is never fully
+  // swallowed by a voluminous style, but kept up on the lobe for all styles.
+  const ly = 90;
   for (const s of [-1, 1]) {
     const ex = 100 + s * 40;
-    const ey = 96;
     if (kind === 'studs') {
       ctx.beginPath();
-      ctx.arc(ex, ey, 2.2, 0, Math.PI * 2);
+      ctx.arc(ex, ly, 2.2, 0, Math.PI * 2);
       fillOutlined(ctx, GOLD, 0.7, 0.9);
       ctx.fillStyle = '#fff6d0';
       ctx.beginPath();
-      ctx.arc(ex - 0.7, ey - 0.7, 0.8, 0, Math.PI * 2);
+      ctx.arc(ex - 0.7, ly - 0.7, 0.8, 0, Math.PI * 2);
       ctx.fill();
     } else if (kind === 'pearl') {
       ctx.strokeStyle = GOLD_EDGE;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(ex, ey - 3.5);
-      ctx.lineTo(ex, ey - 0.5);
+      ctx.moveTo(ex, ly - 1.5);
+      ctx.lineTo(ex, ly + 1.5);
       ctx.stroke();
-      ellipsePath(ctx, ex, ey + 2.5, 2.4, 3, 0);
+      ellipsePath(ctx, ex, ly + 4.5, 2.4, 3, 0);
       fillOutlined(ctx, PEARL, 0.9, 0.8);
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(ex - 0.8, ey + 1.6, 0.9, 0, Math.PI * 2);
+      ctx.arc(ex - 0.8, ly + 3.6, 0.9, 0, Math.PI * 2);
       ctx.fill();
     } else if (kind === 'stars') {
-      starPath(ctx, ex, ey + 1, 3.4, 1.5, 5, -Math.PI / 2);
+      starPath(ctx, ex, ly, 3.4, 1.5, 5, -Math.PI / 2);
       fillOutlined(ctx, GOLD, 0.7, 0.9);
     } else {
-      drawTinyHeart(ctx, ex, ey + 1, 2.4, '#ff6f9d', 1);
+      drawTinyHeart(ctx, ex, ly, 2.4, '#ff6f9d', 1);
     }
   }
 }
@@ -1448,6 +1451,64 @@ function drawNecklace(ctx: Ctx, necklace: NecklaceId): void {
     }
     return;
   }
+  if (necklace === 'ribbon') {
+    // a satin choker band hugging the throat, with a little bow at centre
+    const band = '#ff7aa8';
+    ctx.beginPath();
+    ctx.moveTo(83, 116);
+    ctx.quadraticCurveTo(100, 123, 117, 116); // top edge
+    ctx.lineTo(117, 119);
+    ctx.quadraticCurveTo(100, 127, 83, 119); // bottom edge dips at the throat
+    ctx.closePath();
+    fillOutlined(ctx, band, 0.78, 1.1);
+    // centred bow: two small loops + a knot
+    ctx.save();
+    ctx.translate(100, 120);
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(s * 4, -5, s * 10, -5, s * 10.5, -1);
+      ctx.bezierCurveTo(s * 11, 3, s * 5, 4, 0, 0);
+      ctx.closePath();
+      fillOutlined(ctx, band, 0.76, 1);
+    }
+    ctx.beginPath();
+    ctx.arc(0, 0, 2.1, 0, Math.PI * 2);
+    fillOutlined(ctx, shade(band, 0.86), 0.76, 1);
+    ctx.restore();
+    return;
+  }
+  if (necklace === 'starbead') {
+    // a beaded strand — pastel round beads alternating with tiny gold stars,
+    // a little gold star pendant swinging from the centre
+    for (let i = 0; i < 9; i++) {
+      const t = i / 8;
+      const x = 82 + t * 36;
+      const y = 123 + Math.sin(t * Math.PI) * 9;
+      if (i % 2 === 0) {
+        ctx.beginPath();
+        ctx.arc(x, y, 2.3, 0, Math.PI * 2);
+        fillOutlined(ctx, '#a9c4ff', 0.8, 0.8);
+        ctx.beginPath();
+        ctx.arc(x - 0.8, y - 0.8, 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+      } else {
+        starPath(ctx, x, y, 2.5, 1.1, 5, -Math.PI / 2);
+        fillOutlined(ctx, GOLD, 0.72, 0.8);
+      }
+    }
+    // link + star pendant hanging below the lowest (centre) bead
+    ctx.strokeStyle = GOLD_EDGE;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(100, 133);
+    ctx.lineTo(100, 135);
+    ctx.stroke();
+    starPath(ctx, 100, 140, 4.6, 1.9, 5, -Math.PI / 2);
+    fillOutlined(ctx, GOLD, 0.72, 1.1);
+    return;
+  }
   // fine gold chain for locket / heartgem
   ctx.strokeStyle = GOLD_EDGE;
   ctx.lineWidth = 1.3;
@@ -1476,7 +1537,7 @@ function drawNecklace(ctx: Ctx, necklace: NecklaceId): void {
     }
     ctx.restore();
   } else {
-    // faceted pink heart
+    // heartgem: faceted pink heart pendant
     ctx.save();
     ctx.translate(100, 132);
     ctx.beginPath();

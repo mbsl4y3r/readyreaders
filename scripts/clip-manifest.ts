@@ -89,6 +89,14 @@ export function buildManifest(): Clip[] {
     // first-run character creator
     ['creator-welcome', "Let's make your very own Evie!"],
     ['creator-done', "Yay! Let's start your adventure!"],
+    // one spoken prompt per creator step (a pre-reader plays this solo) —
+    // keep these in sync with the PROMPTS/STEPS in src/scenes/creator.ts
+    ['creator-step-skin', 'Pick your skin'],
+    ['creator-step-hairStyle', 'Pick a hairstyle'],
+    ['creator-step-hairColor', 'Choose a hair color'],
+    ['creator-step-outfit', 'Dress up!'],
+    ['creator-step-face', 'Add a face'],
+    ['creator-step-petColor', 'Your pet Inky'],
     ...LEVELS.map(
       (l): [string, string] => [`level-${l.id}`, `${THEMES[l.realm].name}! Here we go!`],
     ),

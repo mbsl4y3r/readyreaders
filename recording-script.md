@@ -9,7 +9,7 @@ Name each file exactly as shown and drop it into the matching folder under
 "shuh", /t/ not "tuh" — and never the letter name. (Same as the book:
 *aaa, mmm, nnn.*)
 
-Total clips: 882
+Total clips: 890
 
 
 ## 1 · Letter sounds (record these FIRST — the game stays silent on tile-taps without them)
@@ -140,7 +140,7 @@ Folder: `public/audio/graphemes/` · 119 clips
 
 ## 2 · Game narration
 
-Folder: `public/audio/ui/` · 123 clips
+Folder: `public/audio/ui/` · 131 clips
 
 | File | Say | Note |
 | --- | --- | --- |
@@ -182,6 +182,14 @@ Folder: `public/audio/ui/` · 123 clips
 | `new-outfit.mp3` | Ooh! You look wonderful! |  |
 | `need-pearls.mp3` | Read to earn more pearls! |  |
 | `wardrobe-nudge.mp3` | Let's go read to earn more pearls! |  |
+| `creator-welcome.mp3` | Let's make your very own Evie! |  |
+| `creator-done.mp3` | Yay! Let's start your adventure! |  |
+| `creator-step-skin.mp3` | Pick your skin |  |
+| `creator-step-hairStyle.mp3` | Pick a hairstyle |  |
+| `creator-step-hairColor.mp3` | Choose a hair color |  |
+| `creator-step-outfit.mp3` | Dress up! |  |
+| `creator-step-face.mp3` | Add a face |  |
+| `creator-step-petColor.mp3` | Your pet Inky |  |
 | `level-1.mp3` | Coral Cove! Here we go! |  |
 | `level-2.mp3` | Coral Cove! Here we go! |  |
 | `level-3.mp3` | Whisker Woods! Here we go! |  |
