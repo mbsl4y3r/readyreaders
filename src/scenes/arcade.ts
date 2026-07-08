@@ -86,7 +86,7 @@ export class ArcadeScene extends Phaser.Scene {
     }
   }
 
-  update(time: number, delta: number): void {
+  override update(time: number, delta: number): void {
     if (!this.alive) return;
     if (this.playing && this.active) {
       this.active.update(time, delta);

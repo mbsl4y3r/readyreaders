@@ -50,8 +50,7 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   }
 
   const regenerate = () => {
-    for (let i = 0; i < bricks.length; i++) {
-      const b = bricks[i];
+    for (const b of bricks) {
       b.active = true;
       b.rect.setVisible(true);
       b.rect.setFillStyle(brickColors[Math.floor(Math.random() * brickColors.length)]);
@@ -126,8 +125,7 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
 
   const hitBrick = () => {
     let bounced = false;
-    for (let i = 0; i < bricks.length; i++) {
-      const b = bricks[i];
+    for (const b of bricks) {
       if (!b.active) continue;
       const rx = b.rect.x;
       const ry = b.rect.y;
