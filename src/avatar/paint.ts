@@ -397,11 +397,66 @@ function drawBackHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen:
     ctx.globalAlpha = 1;
   } else {
     // pony / bun / braids / spacebuns / sidebraid: neat cap slightly larger
-    // than the skull; the distinctive pieces are painted in the front pass.
+    // than the skull. Braids hang from BEHIND the head here (anchored up top,
+    // their attachment hidden by the head) — only the fringe is drawn in front.
     ctx.beginPath();
     ctx.arc(HEAD_CX, HEAD_CY - 2, HEAD_R + 4, 0, Math.PI * 2);
     fillOutlined(ctx, base, 0.8, 1.8);
+    if (style === 'braids') {
+      drawBackPlait(ctx, base, -1);
+      drawBackPlait(ctx, base, 1);
+    } else if (style === 'sidebraid') {
+      drawBackPlait(ctx, base, -1);
+    }
   }
+}
+
+/**
+ * One plait hanging from behind the head. The top beans sit under the head
+ * silhouette (so the braid reads as anchored up top, not floating in front),
+ * and the rest drapes down the side. Drawn in the back pass, before the head.
+ * s = -1 hangs on the left, +1 on the right.
+ */
+function drawBackPlait(ctx: Ctx, base: string, s: number): void {
+  const beans: ReadonlyArray<readonly [number, number, number]> = [
+    [26, 58, 8.4], // tucked behind the head
+    [28, 78, 8.4],
+    [30, 98, 8.2],
+    [34, 116, 7.8], // emerges below the head from here down
+    [37, 133, 7.4],
+    [39, 149, 7.0],
+    [40, 165, 6.6],
+  ];
+  beans.forEach(([dx, y, r], i) => {
+    const x = 100 + s * dx;
+    const tilt = (i % 2 === 0 ? 1 : -1) * 0.4 * s;
+    ellipsePath(ctx, x, y, r, r * 0.78 + 3, tilt);
+    fillOutlined(ctx, base, 0.8, 1.4);
+  });
+  // groove hints on the visible lower part
+  ctx.strokeStyle = shade(base, 0.8);
+  ctx.lineWidth = 1.1;
+  for (let i = 3; i < beans.length - 1; i++) {
+    const [dx, y] = beans[i]!;
+    const x = 100 + s * dx;
+    ctx.beginPath();
+    ctx.moveTo(x - 5, y + 6);
+    ctx.quadraticCurveTo(x, y + 10, x + 5, y + 6);
+    ctx.stroke();
+  }
+  // tie + tip wisp
+  const [ldx, ly] = beans[beans.length - 1]!;
+  const tx = 100 + s * ldx;
+  const ty = ly + 11;
+  ctx.beginPath();
+  ctx.arc(tx, ty, 3, 0, Math.PI * 2);
+  fillOutlined(ctx, '#ff8ab5', 0.78, 1.1);
+  ctx.beginPath();
+  ctx.moveTo(tx - 3.5, ty + 2);
+  ctx.quadraticCurveTo(tx, ty + 11, tx + 3.5, ty + 2);
+  ctx.closePath();
+  ctx.fillStyle = shade(base, 0.9);
+  ctx.fill();
 }
 
 // ---------------------------------------------------------------- outfits
@@ -1979,85 +2034,13 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     ctx.bezierCurveTo(58, 70, 57, 82, 56, 94);
     ctx.closePath();
     fillOutlined(ctx, base, 0.8, 1.7);
-    // the plait — bean segments drifting down over the left shoulder.
-    // kept left of the face circle (x<=~54 up top) so no bean sits on the
-    // cheek; it gathers by the ear and drapes down past the shoulder
-    const seg: ReadonlyArray<readonly [number, number]> = [
-      [54, 106],
-      [52, 122],
-      [51, 138],
-      [51, 154],
-      [51, 169],
-      [52, 184],
-    ];
-    let r = 9;
-    seg.forEach(([bx, by], i) => {
-      const tilt = (i % 2 === 0 ? 1 : -1) * 0.4;
-      ellipsePath(ctx, bx + (i % 2 === 0 ? 1.6 : -1.6), by, r, r * 0.78 + 3, tilt);
-      fillOutlined(ctx, base, 0.8, 1.4);
-      r -= 0.5;
-    });
-    // plait groove hints
-    ctx.strokeStyle = shade(base, 0.8);
-    ctx.lineWidth = 1.1;
-    for (let i = 0; i < seg.length - 1; i++) {
-      const [bx, by] = seg[i]!;
-      ctx.beginPath();
-      ctx.moveTo(bx - 5, by + 6);
-      ctx.quadraticCurveTo(bx, by + 10, bx + 5, by + 6);
-      ctx.stroke();
-    }
-    // tie + tip wisp
-    const tieX = 52;
-    const tieY = 193;
-    ctx.beginPath();
-    ctx.arc(tieX, tieY, 3.2, 0, Math.PI * 2);
-    fillOutlined(ctx, '#ff8ab5', 0.78, 1.1);
-    ctx.beginPath();
-    ctx.moveTo(tieX - 3.5, tieY + 2);
-    ctx.quadraticCurveTo(tieX, tieY + 12, tieX + 3.5, tieY + 2);
-    ctx.closePath();
-    ctx.fillStyle = shade(base, 0.9);
-    ctx.fill();
+    // the plait itself hangs from BEHIND the head (drawn in the back pass),
+    // so up front we draw only the swept fringe.
     sheenArc();
   } else {
-    // braids: center part + two plaits framing the face
+    // braids: center part + bangs. The two plaits hang from behind the head
+    // (back pass) so they stay anchored up top and never cover the face.
     crownCap(100, 46);
-    for (const s of [-1, 1]) {
-      // offset 44 keeps the plaits just outside the face circle (edge x58/142)
-      // so the top beans hang beside the cheeks, not over them
-      const bx = 100 + s * 44;
-      // 5 alternating bean-shaped segments, shrinking downward
-      let r = 8.6;
-      for (let i = 0; i < 5; i++) {
-        const y = 112 + i * 15.5; // start below the cheek line (~y100)
-        const tilt = (i % 2 === 0 ? 1 : -1) * 0.5 * s;
-        ellipsePath(ctx, bx + s * (i % 2 === 0 ? 1.5 : -1.5), y, r, r * 0.76 + 3, tilt);
-        fillOutlined(ctx, base, 0.8, 1.4);
-        r -= 0.75;
-      }
-      // tie + tip wisp
-      const tieY = 112 + 4.6 * 15.5 + 8;
-      ctx.beginPath();
-      ctx.arc(bx, tieY, 3, 0, Math.PI * 2);
-      fillOutlined(ctx, '#ff8ab5', 0.78, 1.1);
-      ctx.beginPath();
-      ctx.moveTo(bx - 3.5, tieY + 2);
-      ctx.quadraticCurveTo(bx, tieY + 11, bx + 3.5, tieY + 2);
-      ctx.closePath();
-      ctx.fillStyle = shade(base, 0.9);
-      ctx.fill();
-      // plait groove hints
-      ctx.strokeStyle = shade(base, 0.8);
-      ctx.lineWidth = 1.1;
-      for (let i = 0; i < 4; i++) {
-        const y = 119 + i * 15.5;
-        ctx.beginPath();
-        ctx.moveTo(bx - 4, y);
-        ctx.quadraticCurveTo(bx, y + 3.5, bx + 4, y);
-        ctx.stroke();
-      }
-    }
     sheenArc();
   }
 }
