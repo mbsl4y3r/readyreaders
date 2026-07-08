@@ -1,8 +1,11 @@
 /**
  * Parent screen (behind the 2s long-press): a calm, grouped dashboard —
  * progress at a glance, two stepper controls (book marker + levels open),
- * what-to-practice and per-level fluency, then account actions. Panels and a
- * slate/gold palette keep it readable and tidy on the 1024×720 canvas.
+ * what-to-practice and per-level fluency, then account actions.
+ *
+ * The kid-facing makeButton enforces a big 72px minimum for little fingers;
+ * this adult screen uses its own compact `chip` button so the controls stay
+ * small and the layout breathes.
  */
 import Phaser from 'phaser';
 import { LESSONS } from '../content/lessons';
@@ -17,7 +20,7 @@ import {
 } from '../services/progress';
 import { setMusicEnabled } from '../services/audio';
 import { allCosmeticIds } from '../avatar/catalog';
-import { GAME_W, GAME_H, readingText, makeButton } from '../ui/kit';
+import { GAME_W, GAME_H, readingText, emojiText } from '../ui/kit';
 
 /** Parent-facing names for the mastery ladder (see engine/adaptive.ts). */
 const MASTERY_LABELS = ['learning', 'known', 'quick', 'automatic'] as const;
@@ -40,6 +43,13 @@ const RX = 524;
 const LC = LX + COL_W / 2; // left column centre
 const RC = RX + COL_W / 2; // right column centre
 
+interface ChipOpts {
+  fill?: number;
+  textColor?: string;
+  emoji?: boolean;
+  fontSize?: number;
+}
+
 export class ParentScene extends Phaser.Scene {
   constructor() {
     super('parent');
@@ -53,21 +63,13 @@ export class ParentScene extends Phaser.Scene {
 
     readingText(this, cx, 36, 'Parent corner', 30, '#ffe9a8');
 
-    const musicBtn = makeButton(
-      this,
-      GAME_W - 58,
-      38,
-      progress.settings.musicOn ? '🎵' : '🔇',
-      () => {
-        const p = loadProgress();
-        p.settings.musicOn = !p.settings.musicOn;
-        saveProgress(p);
-        setMusicEnabled(p.settings.musicOn);
-        musicBtn.label.setText(p.settings.musicOn ? '🎵' : '🔇');
-      },
-      { emoji: true, fontSize: 22, width: 56, height: 50, fill: SLATE },
-    );
-    musicBtn.setAlpha(0.95);
+    const music = this.chip(GAME_W - 54, 38, 50, 46, progress.settings.musicOn ? '🎵' : '🔇', () => {
+      const p = loadProgress();
+      p.settings.musicOn = !p.settings.musicOn;
+      saveProgress(p);
+      setMusicEnabled(p.settings.musicOn);
+      (music.list[1] as Phaser.GameObjects.Text).setText(p.settings.musicOn ? '🎵' : '🔇');
+    }, { fill: SLATE, emoji: true, fontSize: 22 });
 
     // ---- stats strip ----
     const wordStats = Object.entries(progress.words).filter(([k]) => !k.includes(':'));
@@ -88,12 +90,11 @@ export class ParentScene extends Phaser.Scene {
       '#cdd8e2',
     );
 
-    // ---- control panels: book lesson + levels open (label top · stepper
-    // middle · hint below, all clear of each other) ----
+    // ---- control panels: book lesson + levels open ----
     this.panel(LX, 128, COL_W, 122);
     this.eyebrow(LX + 22, 152, 'BOOK LESSON');
     const focus = readingText(this, LC, 232, '', 16, MUTED);
-    this.stepper(LC, 194, () => `${loadProgress().bookLesson}`, (d) => {
+    this.stepper(LC, 192, () => `${loadProgress().bookLesson}`, (d) => {
       const p = loadProgress();
       p.bookLesson = Math.min(120, Math.max(1, p.bookLesson + d));
       saveProgress(p);
@@ -104,7 +105,7 @@ export class ParentScene extends Phaser.Scene {
     this.panel(RX, 128, COL_W, 122);
     this.eyebrow(RX + 22, 152, 'LEVELS OPEN');
     readingText(this, RC, 232, 'unlock map stops', 16, MUTED);
-    this.stepper(RC, 194, () => `1–${loadProgress().currentLevel} of 9`, (d) => {
+    this.stepper(RC, 192, () => `1–${loadProgress().currentLevel} of 9`, (d) => {
       const p = loadProgress();
       p.currentLevel = Math.min(9, Math.max(1, p.currentLevel + d));
       saveProgress(p);
@@ -139,14 +140,15 @@ export class ParentScene extends Phaser.Scene {
       readingText(this, RX + COL_W - 22, y, `${quick}/${pool.length}  ·  ${pct}%`, 16, MUTED).setOrigin(1, 0.5);
     }
 
-    // ---- account actions ----
-    const wide = COL_W;
-    this.action(LC, 482, wide, 'Export progress', SLATE, SLATE_TXT, () => {
+    // ---- account actions: small chips, clearly separated rows ----
+    const W = 360;
+    const H = 44;
+    this.chip(LC, 486, W, H, 'Export progress', () => {
       const code = exportCode(loadProgress());
       void navigator.clipboard?.writeText(code).catch(() => {});
       window.prompt('Progress code (copied to clipboard — save it somewhere safe):', code);
-    });
-    this.action(RC, 482, wide, 'Import progress', SLATE, SLATE_TXT, () => {
+    }, { fill: SLATE, textColor: SLATE_TXT, fontSize: 20 });
+    this.chip(RC, 486, W, H, 'Import progress', () => {
       const code = window.prompt('Paste the progress code:');
       if (!code) return;
       const data = importCode(code);
@@ -156,32 +158,65 @@ export class ParentScene extends Phaser.Scene {
       } else {
         window.alert("That code didn't work — check it and try again.");
       }
+    }, { fill: SLATE, textColor: SLATE_TXT, fontSize: 20 });
+    this.chip(LC, 548, W, H, 'Placement voyage ⛵', () => this.scene.start('voyage', { fromParent: true }), {
+      fill: SLATE,
+      textColor: SLATE_TXT,
+      fontSize: 20,
     });
-    this.action(LC, 552, wide, 'Placement voyage ⛵', SLATE, SLATE_TXT, () =>
-      this.scene.start('voyage', { fromParent: true }),
-    );
-    this.action(RC, 552, wide, 'Reset all progress', 0x8f4a54, '#ffe1e1', () => {
+    this.chip(RC, 548, W, H, 'Reset all progress', () => {
       if (window.confirm('Really erase ALL of Evie’s progress? This cannot be undone.')) {
         resetProgress();
         this.scene.restart();
       }
-    });
+    }, { fill: 0x8f4a54, textColor: '#ffe1e1', fontSize: 20 });
 
-    makeButton(this, cx, 628, '← Back to the map', () => this.scene.start('map'), {
-      fontSize: 24,
-      height: 56,
-      width: 360,
+    this.chip(cx, 614, 300, 48, '← Back to the map', () => this.scene.start('map'), {
       fill: GOLD,
+      textColor: '#26323f',
+      fontSize: 22,
     });
 
     // discreet debug unlock (beta testing) — password gated
-    makeButton(this, 40, 692, '🐞', () => this.debugUnlock(), {
-      emoji: true,
-      fontSize: 20,
-      width: 52,
-      height: 42,
+    this.chip(38, 692, 46, 40, '🐞', () => this.debugUnlock(), {
       fill: 0x2b3644,
-    }).setAlpha(0.5);
+      emoji: true,
+      fontSize: 18,
+    }).setAlpha(0.55);
+  }
+
+  /**
+   * A compact rounded button for the adult screen (no 72px floor). Returns
+   * the container; its children are [bg, label].
+   */
+  private chip(
+    cx: number,
+    y: number,
+    w: number,
+    h: number,
+    label: string,
+    onTap: () => void,
+    opts: ChipOpts = {},
+  ): Phaser.GameObjects.Container {
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.22);
+    bg.fillRoundedRect(-w / 2 + 2, -h / 2 + 3, w, h, 11);
+    bg.fillStyle(opts.fill ?? SLATE, 1);
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 11);
+    const text = (opts.emoji ? emojiText : readingText)(
+      this,
+      0,
+      0,
+      label,
+      opts.fontSize ?? 20,
+      opts.textColor ?? SLATE_TXT,
+    );
+    const c = this.add.container(cx, y, [bg, text]);
+    c.setSize(w, h);
+    c.setInteractive({ useHandCursor: true });
+    c.on('pointerdown', () => this.tweens.add({ targets: c, scale: 0.95, duration: 70, yoyo: true }));
+    c.on('pointerup', onTap);
+    return c;
   }
 
   /** Rounded section panel with a subtle border. */
@@ -201,33 +236,16 @@ export class ParentScene extends Phaser.Scene {
   /** Centred "[−] value [+]" control with the value clear of both buttons. */
   private stepper(cx: number, y: number, value: () => string, onDelta: (d: number) => void): void {
     const val = readingText(this, cx, y, value(), 30, '#ffffff');
-    makeButton(this, cx - 118, y, '−', () => { onDelta(-1); val.setText(value()); }, {
-      width: 54,
-      height: 54,
-      fontSize: 36,
+    this.chip(cx - 112, y, 48, 48, '−', () => { onDelta(-1); val.setText(value()); }, {
       fill: SLATE,
       textColor: SLATE_TXT,
+      fontSize: 32,
     });
-    makeButton(this, cx + 118, y, '+', () => { onDelta(1); val.setText(value()); }, {
-      width: 54,
-      height: 54,
-      fontSize: 36,
+    this.chip(cx + 112, y, 48, 48, '+', () => { onDelta(1); val.setText(value()); }, {
       fill: SLATE,
       textColor: SLATE_TXT,
+      fontSize: 32,
     });
-  }
-
-  /** A full-width account button in the shared style. */
-  private action(
-    cx: number,
-    y: number,
-    w: number,
-    label: string,
-    fill: number,
-    textColor: string,
-    onTap: () => void,
-  ): void {
-    makeButton(this, cx, y, label, onTap, { fontSize: 22, height: 54, width: w, fill, textColor });
   }
 
   /** Password 'bingo' opens every asset + mode for beta testing. */
