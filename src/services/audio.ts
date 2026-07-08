@@ -60,13 +60,36 @@ async function loadClip(kind: ClipKind, id: string): Promise<AudioBuffer | null>
   return null;
 }
 
-function playBuffer(buffer: AudioBuffer): Promise<void> {
+/**
+ * Home recordings are quieter than the music/sfx, so voice clips get a
+ * playback boost. A gentle compressor sits before the destination to catch
+ * any peaks the gain pushes toward clipping (family mics vary a lot).
+ */
+const VOICE_GAIN = 1.9;
+
+const voiceComp: DynamicsCompressorNode | null = ctx ? ctx.createDynamicsCompressor() : null;
+if (ctx && voiceComp) {
+  voiceComp.threshold.value = -8;
+  voiceComp.ratio.value = 4;
+  voiceComp.attack.value = 0.003;
+  voiceComp.release.value = 0.12;
+  voiceComp.connect(ctx.destination);
+}
+
+function playBuffer(buffer: AudioBuffer, gain = 1): Promise<void> {
   return new Promise((resolve) => {
     if (!ctx) return resolve();
     const source = ctx.createBufferSource();
     source.buffer = buffer;
-    source.connect(ctx.destination);
     source.onended = () => resolve();
+    if (gain !== 1) {
+      // boosted voice → through a gain node into the limiter, not raw output
+      const g = ctx.createGain();
+      g.gain.value = gain;
+      source.connect(g).connect(voiceComp ?? ctx.destination);
+    } else {
+      source.connect(ctx.destination);
+    }
     source.start(0);
   });
 }
@@ -79,7 +102,7 @@ async function playClipOr(
   duckMusic(); // words come first — music dips under every voice line
   try {
     const buffer = await loadClip(kind, id);
-    if (buffer) return await playBuffer(buffer);
+    if (buffer) return await playBuffer(buffer, VOICE_GAIN);
     if (fallback) return await fallback();
   } finally {
     unduckMusic();
@@ -110,7 +133,7 @@ export async function speakGrapheme(g: string): Promise<boolean> {
   if (!buffer) return false;
   duckMusic();
   try {
-    await playBuffer(buffer);
+    await playBuffer(buffer, VOICE_GAIN);
   } finally {
     unduckMusic();
   }

@@ -262,6 +262,11 @@ export function starterCosmetics(): string[] {
   return COSMETICS.filter((c) => c.price === 0).map((c) => c.id);
 }
 
+/** Every cosmetic id — for the debug "unlock all" beta-test mode. */
+export function allCosmeticIds(): string[] {
+  return COSMETICS.map((c) => c.id);
+}
+
 /** Categories where "none" (bare) is a valid choice — a take-it-off chip. */
 export const OPTIONAL_CATEGORIES: CosmeticCategory[] = [
   'headwear',

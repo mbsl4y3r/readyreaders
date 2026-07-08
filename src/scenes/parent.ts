@@ -16,6 +16,7 @@ import {
   importCode,
 } from '../services/progress';
 import { setMusicEnabled } from '../services/audio';
+import { allCosmeticIds } from '../avatar/catalog';
 import { GAME_W, GAME_H, readingText, makeButton } from '../ui/kit';
 
 /** Parent-facing names for the mastery ladder (see engine/adaptive.ts). */
@@ -133,6 +134,21 @@ export class ParentScene extends Phaser.Scene {
       );
     }
 
+    // --- furthest level: unlock/relock map stops by hand (levels also open
+    // on their own once ~80% of a level's words are read quickly) ---
+    readingText(this, leftX, 400, 'Levels open', 20, '#ffe9a8').setOrigin(0, 0.5);
+    const levelLabel = readingText(this, leftX, 432, '', 24, '#ffffff').setOrigin(0, 0.5);
+    const showLevel = () => levelLabel.setText(`1–${loadProgress().currentLevel} of 9`);
+    showLevel();
+    const bumpLevel = (delta: number) => {
+      const p = loadProgress();
+      p.currentLevel = Math.min(9, Math.max(1, p.currentLevel + delta));
+      saveProgress(p);
+      showLevel();
+    };
+    makeButton(this, leftX + 300, 432, '−', () => bumpLevel(-1), { width: 64, height: 54, fontSize: 40 });
+    makeButton(this, leftX + 372, 432, '+', () => bumpLevel(1), { width: 64, height: 54, fontSize: 40 });
+
     // --- export / import ---
     makeButton(
       this,
@@ -195,6 +211,35 @@ export class ParentScene extends Phaser.Scene {
       height: 72,
       fill: 0xffe9a8,
     });
+
+    // --- discreet debug unlock (beta testing) — password gated ---
+    makeButton(this, 44, 690, '🐞', () => this.debugUnlock(), {
+      emoji: true,
+      fontSize: 22,
+      width: 56,
+      height: 48,
+      fill: 0x2b3644,
+    }).setAlpha(0.5);
+  }
+
+  /** Password 'bingo' opens every asset + mode for beta testing. */
+  private debugUnlock(): void {
+    const pw = window.prompt('Debug password:');
+    if (pw === null) return;
+    if (pw.trim().toLowerCase() !== 'bingo') {
+      window.alert('Nope.');
+      return;
+    }
+    const p = loadProgress();
+    p.created = true;
+    p.placed = true;
+    p.currentLevel = 9; // every map stop open
+    p.bookLesson = 120; // all content decodable/available
+    p.pearls = 9999;
+    p.cosmetics = allCosmeticIds(); // own everything in the wardrobe
+    saveProgress(p);
+    window.alert('Debug mode on — all levels, stories, and wardrobe items unlocked. 🐞');
+    this.scene.start('map');
   }
 
   private markerText(n: number, label: string): string {
