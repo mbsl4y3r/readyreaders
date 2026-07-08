@@ -65,4 +65,73 @@ export const SENTENCES: Sentence[] = [
   S('s030', 'Mom can chop the log with an ax.', ['mom', 'can', 'chop', 'the', 'log', 'with', 'an', 'ax'], 28, '👩🪓🪵', ['👩🪓🐟', '👦🪓🪵'], 'Read it in a big strong voice!'),
   S('s031', 'The moth is on the path.', ['the', 'moth', 'is', 'on', 'the', 'path'], 19, '🦋🛤️', ['🦋🛁', '🐟🛤️']),
   S('s032', 'Quick, get the cat, Philip!', ['quick', 'get', 'the', 'cat', 'philip'], 19, '👦🐱💨', ['👦🐶💨', '👧🐱']),
+
+  // ---- Level 4 (book lessons 31–45) ----
+  S('s033', 'A frog can jump and swim.', ['a', 'frog', 'can', 'jump', 'and', 'swim'], 31, '🐸🤸🏊', ['🐸😴', '🐟🤸'], 'Read it like a bouncy frog!'),
+  S('s034', 'The king can sing a song.', ['the', 'king', 'can', 'sing', 'a', 'song'], 37, '🤴🎤🎵', ['🤴😴', '👸🎤🎵'], 'Sing it like a king!'),
+  S('s035', 'Tam and Max want ham.', ['tam', 'and', 'max', 'want', 'ham'], 41, '👧👦🍖', ['👧🍖', '👧👦🥚']),
+  S('s036', 'Her wand is pink.', ['her', 'wand', 'is', 'pink'], 43, '🪄🩷', ['🪄🟥', '💍🩷'], 'Read it like a magic spell!'),
+  S('s037', 'Max got a pink drink.', ['max', 'got', 'a', 'pink', 'drink'], 43, '👦🩷🥤', ['👦☕', '👧🩷🥤']),
+  S('s038', 'Mom and Dad had lunch.', ['mom', 'and', 'dad', 'had', 'lunch'], 43, '👩👨🥪', ['👩🥪', '👨👦🥪']),
+  S('s039', 'A bug sat on a branch.', ['a', 'bug', 'sat', 'on', 'a', 'branch'], 43, '🐛🌿', ['🐛🪨', '🐜🌿']),
+  S('s040', 'The gift is soft.', ['the', 'gift', 'is', 'soft'], 45, '🎁🧸', ['🎁🪨', '📦🧸']),
+  S('s041', 'Sam can lift the raft.', ['sam', 'can', 'lift', 'the', 'raft'], 45, '👦🏋️🛶', ['👦🏋️📦', '👧🏋️🛶'], 'Read it in a big strong voice!'),
+
+  // ---- Level 5 (book lessons 46–65) ----
+  S('s042', 'The elf hid on the shelf.', ['the', 'elf', 'hid', 'on', 'the', 'shelf'], 49, '🧝📚', ['🧝🛏️', '👦📚'], 'Read it in a tiny elf voice!'),
+  S('s043', 'Dan and Jill walk and talk.', ['dan', 'and', 'jill', 'walk', 'and', 'talk'], 49, '👦👧🚶💬', ['👦👧🏃', '👦👧😴']),
+  S('s044', 'The pup can fetch the hat.', ['the', 'pup', 'can', 'fetch', 'the', 'hat'], 51, '🐕👒💨', ['🐕🧦', '🐱👒'], 'Read it like an excited puppy!'),
+  S('s045', 'The sun can melt it.', ['the', 'sun', 'can', 'melt', 'it'], 51, '☀️🫠', ['☀️🧊', '🌙🫠']),
+  S('s046', 'One duck sat on the bridge.', ['one', 'duck', 'sat', 'on', 'the', 'bridge'], 53, '🦆🌉', ['🦆🪵', '🐔🌉']),
+  S('s047', 'The prince can dance and sing.', ['the', 'prince', 'can', 'dance', 'and', 'sing'], 53, '🤴🕺🎵', ['🤴😴', '👸💃🎵'], 'Read it like a fancy prince!'),
+  S('s048', 'Tam and Sam had fudge.', ['tam', 'and', 'sam', 'had', 'fudge'], 53, '👧👦🍫', ['👧🍫', '👧👦🍪']),
+  S('s049', 'The clock on the shelf is black.', ['the', 'clock', 'on', 'the', 'shelf', 'is', 'black'], 55, '🕐⬛', ['🕐🟥', '🔔⬛']),
+  S('s050', 'Her dress is fresh and pink.', ['her', 'dress', 'is', 'fresh', 'and', 'pink'], 57, '👗🩷', ['👗⬛', '👖🩷']),
+  S('s051', 'Smell the fresh spring grass.', ['smell', 'the', 'fresh', 'spring', 'grass'], 61, '👃🌿🌸', ['👃🍫', '👀🌿'], 'Take a big sniff as you read!'),
+
+  // ---- Level 6 (book lessons 66–77) ----
+  S('s052', 'The snake is in the lake.', ['the', 'snake', 'is', 'in', 'the', 'lake'], 66, '🐍🏞️', ['🐍🏖️', '🐊🏞️'], 'Read it in a hissy snake voice!'),
+  S('s053', 'Mom made a cake.', ['mom', 'made', 'a', 'cake'], 66, '👩🎂', ['👩🧁', '👧🎂']),
+  S('s054', 'The whale made a big wave.', ['the', 'whale', 'made', 'a', 'big', 'wave'], 66, '🐋🌊', ['🐋😴', '🐟🌊'], 'Read it in a big whale voice!'),
+  S('s055', 'Max and Tam are brave.', ['max', 'and', 'tam', 'are', 'brave'], 66, '👦👧💪', ['👦👧🙈', '👦💪']),
+  S('s056', 'The train is in the rain.', ['the', 'train', 'is', 'in', 'the', 'rain'], 70, '🚂🌧️', ['🚂☀️', '🚗🌧️']),
+  S('s057', 'The snail said, "Wait!"', ['the', 'snail', 'said', 'wait'], 70, '🐌✋', ['🐌💤', '🐢✋'], 'Read it slooowly like a snail.'),
+  S('s058', 'Jill can play all day.', ['jill', 'can', 'play', 'all', 'day'], 72, '👧🛝', ['👧😴', '👦🛝']),
+  S('s059', 'The ship can sail away.', ['the', 'ship', 'can', 'sail', 'away'], 72, '🚢💨', ['🚢⚓', '⛵💨']),
+  S('s060', 'A hawk sat on a branch at dawn.', ['a', 'hawk', 'sat', 'on', 'a', 'branch', 'at', 'dawn'], 76, '🦅🌿🌅', ['🦅🌿🌙', '🦆🌿🌅']),
+  S('s061', 'Dad can draw a whale.', ['dad', 'can', 'draw', 'a', 'whale'], 76, '👨🖍️🐋', ['👨🖍️🐍', '👧🖍️🐋']),
+
+  // ---- Level 7 (book lessons 78–95) ----
+  S('s062', 'The star is far, far away.', ['the', 'star', 'is', 'far', 'far', 'away'], 80, '⭐🌌', ['🌙🌌', '⭐🏠'], 'Read it in a dreamy voice.'),
+  S('s063', 'The queen fed the sheep.', ['the', 'queen', 'fed', 'the', 'sheep'], 82, '👸🐑', ['👸🐄', '🤴🐑'], 'Read it in a royal voice!'),
+  S('s064', 'He has a red car.', ['he', 'has', 'a', 'red', 'car'], 84, '👨🟥🚗', ['👨🚐', '👩🟥🚗']),
+  S('s065', 'She can see the green tree.', ['she', 'can', 'see', 'the', 'green', 'tree'], 84, '👧👀🌳', ['👧👀🌵', '👦👀🌳']),
+  S('s066', 'The shark is in the dark sea.', ['the', 'shark', 'is', 'in', 'the', 'dark', 'sea'], 86, '🦈🌊🌑', ['🦈🌊☀️', '🐬🌊🌑'], 'Read it in a deep, dark voice.'),
+  S('s067', 'We can eat a peach on the beach.', ['we', 'can', 'eat', 'a', 'peach', 'on', 'the', 'beach'], 86, '🍑🏖️😋', ['🍑🏠', '🍎🏖️']),
+  S('s068', 'Pete had a dream.', ['pete', 'had', 'a', 'dream'], 87, '👦💭', ['👦📖', '👧💭'], 'Read it in a sleepy voice.'),
+  S('s069', 'My pie is sweet.', ['my', 'pie', 'is', 'sweet'], 92, '🥧🍭', ['🥧🌶️', '🍕🍭']),
+  S('s070', 'A fly is in the sky.', ['a', 'fly', 'is', 'in', 'the', 'sky'], 92, '🪰☁️', ['🪰🏠', '🐦☁️']),
+  S('s071', 'Mom can buy a bun and milk.', ['mom', 'can', 'buy', 'a', 'bun', 'and', 'milk'], 94, '👩🥯🥛', ['👩🥯', '👩🥛🍞']),
+
+  // ---- Level 8 (book lessons 96–115) ----
+  S('s072', 'She can ride a bike.', ['she', 'can', 'ride', 'a', 'bike'], 96, '👧🚲', ['👧🛴', '👦🚲'], 'Read it fast like a race!'),
+  S('s073', 'My kite can fly high.', ['my', 'kite', 'can', 'fly', 'high'], 98, '🪁☁️', ['🪁🌳', '🎈☁️']),
+  S('s074', 'The light is bright at night.', ['the', 'light', 'is', 'bright', 'at', 'night'], 98, '💡🌙✨', ['💡🌅', '🕯️🌙']),
+  S('s075', 'The dog dug up a bone.', ['the', 'dog', 'dug', 'up', 'a', 'bone'], 103, '🐶🦴', ['🐶🥾', '🐱🦴'], 'Read it like a happy dog!'),
+  S('s076', 'The goat is on the boat.', ['the', 'goat', 'is', 'on', 'the', 'boat'], 105, '🐐🛥️', ['🐐🚂', '🐄🛥️'], 'Read it like a silly goat!'),
+  S('s077', 'Look at the moon.', ['look', 'at', 'the', 'moon'], 107, '👀🌕', ['👀☀️', '👀⭐'], 'Read it in a hushed night voice.'),
+  S('s078', 'A cow can shout out loud.', ['a', 'cow', 'can', 'shout', 'out', 'loud'], 109, '🐄📣', ['🐄😴', '🐖📣'], 'Shout it out — MOO!'),
+  S('s079', 'The boy has a blue toy.', ['the', 'boy', 'has', 'a', 'blue', 'toy'], 113, '👦🟦🧸', ['👦🟥🧸', '👧🟦🧸']),
+  S('s080', 'The cute mule ate the fruit.', ['the', 'cute', 'mule', 'ate', 'the', 'fruit'], 113, '🫏🍉', ['🫏🌿', '🐴🍉']),
+  S('s081', 'A rose grew at home.', ['a', 'rose', 'grew', 'at', 'home'], 115, '🌹🏠', ['🌻🏠', '🌹⛺']),
+
+  // ---- Level 9 (book lessons 116–120) ----
+  S('s082', 'The earth is my home.', ['the', 'earth', 'is', 'my', 'home'], 116, '🌍🏠', ['🌕🏠', '🌍🚀'], 'Read it in a proud voice!'),
+  S('s083', 'A little bird sat on the girl.', ['a', 'little', 'bird', 'sat', 'on', 'the', 'girl'], 117, '🐦👧', ['🐦🌳', '🦋👧'], 'Read it in a tiny bird voice!'),
+  S('s084', 'The turtle is purple.', ['the', 'turtle', 'is', 'purple'], 117, '🐢🟪', ['🐢🟩', '🐸🟪'], 'Read it slooowly like a turtle.'),
+  S('s085', 'The lamb is little and sweet.', ['the', 'lamb', 'is', 'little', 'and', 'sweet'], 119, '🐑💕', ['🐐💕', '🐑😴']),
+  S('s086', 'Light the candle at night.', ['light', 'the', 'candle', 'at', 'night'], 117, '🕯️🌙', ['🕯️☀️', '💡🌙'], 'Read it in a soft bedtime voice.'),
+  S('s087', 'The girl had a special day.', ['the', 'girl', 'had', 'a', 'special', 'day'], 118, '👧🎉', ['👧😢', '👦🎉']),
+  S('s088', 'She can write with a pen.', ['she', 'can', 'write', 'with', 'a', 'pen'], 119, '👧✍️', ['👧📖', '👦✍️']),
+  S('s089', 'The knight had corn on a fork.', ['the', 'knight', 'had', 'corn', 'on', 'a', 'fork'], 119, '🛡️🌽🍴', ['🛡️🥧🍴', '🤴🌽🍴'], 'Read it like a noble knight!'),
 ];
