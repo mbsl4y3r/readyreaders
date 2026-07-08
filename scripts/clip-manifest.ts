@@ -6,6 +6,7 @@
 import { WORDS } from '../src/content/words';
 import { PHRASES } from '../src/content/phrases';
 import { SENTENCES } from '../src/content/sentences';
+import { STORIES } from '../src/content/stories';
 import { THEMES } from '../src/content/themes';
 import { LEVELS } from '../src/content/levels';
 
@@ -38,7 +39,9 @@ export function buildManifest(): Clip[] {
     });
   }
 
-  // UI narration
+  // UI narration — every static speakUI(...) id in src/ must appear here
+  // (tests/clip-manifest.test.ts enforces this so new lines are never
+  // silently missing from the family recording script)
   const ui: [string, string][] = [
     ['welcome', "Welcome to Evie's Reading Realms!"],
     ['lets-read', "Let's read!"],
@@ -55,11 +58,55 @@ export function buildManifest(): Clip[] {
     ['listen-match', 'Listen, then tap the match:'],
     ['read-again-try', 'Read the sentence one more time, then try again!'],
     ['celebrate', 'You did it! A new treasure for your collection!'],
+    // magic phrases
+    ['read-phrase', 'Read the magic phrase. Then tap "I read it!"'],
+    ['tap-heard', 'Tap the word you heard!'],
+    ['listen-tap', 'Listen again, then tap it!'],
+    ['this-word', 'This one! Tap it!'],
+    ['phrases-hub', 'Magic phrases! Pick one to read!'],
+    // memory words
+    ['memory-word-intro', 'This is a memory word. The heart part breaks the rules — we just remember it!'],
+    ['memory-word-build', 'Now you build it — you remember!'],
+    ['memory-this-one', 'It goes like this — this one!'],
+    ['you-remembered-it', 'You remembered it!'],
+    // lightning round + word families
+    ['lightning-round', 'Lightning round! Ready… set… read!'],
+    ['lightning-done', 'You read five words — so fast!'],
+    ['family-sort-intro', 'Sort the words into their families!'],
+    ['this-family', 'It goes in this family! Tap it!'],
+    ['family-sort-done', 'You sorted the whole family!'],
+    // voyage, collection, stories
+    ['voyage-anchor', 'Anchors away! Your reading adventure starts here!'],
+    ['collection-book', 'Your collection book! Look at everything you found!'],
+    ['story-shelf', 'Story pages! Pick a story to read!'],
+    ['story-locked', 'Keep adventuring — this story unlocks soon!'],
+    ['story-the-end', 'The end! You read the whole story!'],
+    // wardrobe
+    ['wardrobe-welcome', "Evie's wardrobe! Let's play dress-up!"],
+    ['new-outfit', 'Ooh! You look wonderful!'],
+    ['need-pearls', 'Read to earn more pearls!'],
+    ['wardrobe-nudge', "Let's go read to earn more pearls!"],
     ...LEVELS.map(
       (l): [string, string] => [`level-${l.id}`, `${THEMES[l.realm].name}! Here we go!`],
     ),
+    ...(['cove', 'woods', 'castle'] as const).map(
+      (r): [string, string] => [`collection-tab-${r}`, `${THEMES[r].name}!`],
+    ),
   ];
   for (const [id, line] of ui) clips.push({ kind: 'ui', id, scriptLine: line, ttsFallback: true });
+
+  // story pages — the bedtime-story voice is worth recording well
+  for (const story of STORIES) {
+    story.pages.forEach((page, i) => {
+      clips.push({
+        kind: 'ui',
+        id: `story-${story.id}-p${i + 1}`,
+        scriptLine: page.text,
+        note: `"${story.title}" page ${i + 1} — cozy storytime voice`,
+        ttsFallback: true,
+      });
+    });
+  }
 
   // words (by book lesson so the highest-value ones record first)
   for (const w of [...WORDS].sort((a, b) => a.lesson - b.lesson)) {

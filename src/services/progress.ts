@@ -3,6 +3,7 @@
  * Per-word latency/mastery stats drive the adaptive queue.
  * Export/import as a copy-paste code guards against iOS storage eviction.
  */
+import { defaultAvatar, starterCosmetics, START_PEARLS, type AvatarConfig } from '../avatar/catalog';
 
 export interface WordStat {
   exposures: number;
@@ -38,6 +39,12 @@ export interface ProgressData {
   speedBest: number;
   /** Story pages already read (story ids) — the bookshelf remembers. */
   storiesRead: string[];
+  /** Wardrobe currency — earned only by reading. */
+  pearls: number;
+  /** Cosmetic item ids owned (see avatar/catalog.ts). */
+  cosmetics: string[];
+  /** What Evie and Inky are wearing right now. */
+  avatar: AvatarConfig;
   settings: {
     sessionCapMin: number;
   };
@@ -56,6 +63,9 @@ export function freshProgress(): ProgressData {
     sessions: [],
     speedBest: 0,
     storiesRead: [],
+    pearls: START_PEARLS,
+    cosmetics: starterCosmetics(),
+    avatar: defaultAvatar(),
     settings: { sessionCapMin: 18 },
   };
 }
@@ -82,6 +92,9 @@ export function loadProgress(): ProgressData {
     data.placed ??= data.sessions.length > 0;
     data.speedBest ??= 0;
     data.storiesRead ??= [];
+    data.pearls ??= START_PEARLS;
+    data.cosmetics ??= starterCosmetics();
+    data.avatar ??= defaultAvatar();
     return data;
   } catch {
     return freshProgress();
@@ -122,6 +135,9 @@ export function importCode(code: string): ProgressData | null {
     data.placed ??= data.sessions.length > 0;
     data.speedBest ??= 0;
     data.storiesRead ??= [];
+    data.pearls ??= START_PEARLS;
+    data.cosmetics ??= starterCosmetics();
+    data.avatar ??= defaultAvatar();
     return data;
   } catch {
     return null;

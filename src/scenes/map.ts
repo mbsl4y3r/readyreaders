@@ -43,6 +43,12 @@ export class MapScene extends Phaser.Scene {
     emojiText(this, 80, 60, '🐚', 34);
     readingText(this, 130, 60, `${total}`, 34, '#ffffff');
 
+    // pearl purse — the wardrobe currency, always visible so earning feels real
+    const pearl = this.add.circle(80, 206, 12, 0xffffff, 1).setStrokeStyle(2, 0xd8e6ee, 1);
+    pearl.setDepth(1);
+    this.add.circle(76, 202, 3.5, 0xffffff, 0.95).setDepth(1);
+    readingText(this, 130, 206, `${progress.pearls}`, 30, '#ffffff');
+
     // side doors off the map — icon-only, scenes greet with their own audio
     const goTo = (key: string) => {
       this.cameras.main.fadeOut(300);
@@ -66,6 +72,14 @@ export class MapScene extends Phaser.Scene {
     }).setAlpha(0.85);
     // 📖 story pages under the sparkles — the castle's bookshelf
     makeButton(this, GAME_W - 80, 134, '📖', () => goTo('story'), {
+      emoji: true,
+      fontSize: 30,
+      width: 76,
+      height: 64,
+      fill: 0xffffff,
+    }).setAlpha(0.85);
+    // 👗 the wardrobe — dress-up with pearls earned by reading
+    makeButton(this, GAME_W - 80, 208, '👗', () => goTo('wardrobe'), {
       emoji: true,
       fontSize: 30,
       width: 76,

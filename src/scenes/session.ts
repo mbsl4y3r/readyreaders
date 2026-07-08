@@ -10,6 +10,7 @@ import { planSession, wordsForLevel, phraseStatKey } from '../engine/session-pla
 import type { RoundSpec, RoundResult } from '../engine/rounds';
 import { updateStat } from '../engine/adaptive';
 import { loadProgress, saveProgress, statFor } from '../services/progress';
+import { PEARLS_PER_SESSION, PEARLS_SPEED_BEST } from '../avatar/catalog';
 import { speakUI, chime } from '../services/audio';
 import { runFeedCreature } from '../games/feed-creature';
 import { runBuildWord } from '../games/build-word';
@@ -110,6 +111,7 @@ export class SessionScene extends Phaser.Scene {
       if (!result.assisted && result.latencyMs > 0) {
         if (progress.speedBest === 0 || result.latencyMs < progress.speedBest) {
           progress.speedBest = result.latencyMs;
+          progress.pearls += PEARLS_SPEED_BEST; // a new best earns bonus pearls
         }
       }
       saveProgress(progress);
@@ -153,6 +155,7 @@ export class SessionScene extends Phaser.Scene {
       rounds: 8,
       minutes: Math.max(1, Math.round((Date.now() - this.startedAt) / 60_000)),
     });
+    progress.pearls += PEARLS_PER_SESSION; // reading is the only pearl faucet
     saveProgress(progress);
 
     chime('fanfare');
@@ -163,6 +166,20 @@ export class SessionScene extends Phaser.Scene {
     popIn(this, label, 200);
     confettiBurst(this, GAME_W / 2, GAME_H / 2 - 100, theme.accent);
     void speakUI('celebrate', `You did it! A new treasure for your collection!`);
+
+    // pearls earned by this reading — the wardrobe currency
+    const pearl = this.add.circle(GAME_W / 2 - 52, GAME_H / 2 + 128, 13, 0xffffff, 1);
+    pearl.setStrokeStyle(2, 0xd8e6ee, 1);
+    const pearlShine = this.add.circle(GAME_W / 2 - 56, GAME_H / 2 + 123, 4, 0xffffff, 0.9);
+    const earned = readingText(
+      this,
+      GAME_W / 2 + 26,
+      GAME_H / 2 + 128,
+      `+${PEARLS_PER_SESSION} pearls!`,
+      34,
+      '#ffffff',
+    );
+    [pearl, pearlShine, earned].forEach((o) => popIn(this, o, 450));
 
     const done = makeButton(
       this,

@@ -7,6 +7,7 @@ import { VoyageScene } from './scenes/voyage';
 import { PhrasesHubScene } from './scenes/phrases-hub';
 import { CollectionScene } from './scenes/collection';
 import { StoryScene } from './scenes/story';
+import { WardrobeScene } from './scenes/wardrobe';
 import { GAME_W, GAME_H } from './ui/kit';
 
 const game = new Phaser.Game({
@@ -28,6 +29,7 @@ const game = new Phaser.Game({
     PhrasesHubScene,
     CollectionScene,
     StoryScene,
+    WardrobeScene,
   ],
 });
 

@@ -12,6 +12,7 @@ import { STORIES } from '../content/stories';
 import type { Story } from '../content/types';
 import { THEMES } from '../content/themes';
 import { loadProgress, saveProgress } from '../services/progress';
+import { PEARLS_PER_STORY } from '../avatar/catalog';
 import { speakUI, chime } from '../services/audio';
 import {
   GAME_W,
@@ -220,8 +221,10 @@ export class StoryScene extends Phaser.Scene {
   /** Warm ending: confetti, 'The end!', and the shelf remembers the read. */
   private finish(story: Story, view: Phaser.GameObjects.Container): void {
     const progress = loadProgress();
-    if (!progress.storiesRead.includes(story.id)) {
+    const firstRead = !progress.storiesRead.includes(story.id);
+    if (firstRead) {
       progress.storiesRead.push(story.id);
+      progress.pearls += PEARLS_PER_STORY; // first read of a story earns pearls
       saveProgress(progress);
     }
 
@@ -231,6 +234,15 @@ export class StoryScene extends Phaser.Scene {
     view.add(end);
     popIn(this, end);
     void speakUI('story-the-end', 'The end! You read the whole story!');
+    if (firstRead) {
+      const pearl = this.add.circle(GAME_W / 2 - 92, 566, 11, 0xffffff, 1).setStrokeStyle(2, 0xd8e6ee, 1);
+      const shine = this.add.circle(GAME_W / 2 - 96, 562, 3, 0xffffff, 0.95);
+      const earned = readingText(this, GAME_W / 2 + 8, 566, `+${PEARLS_PER_STORY} pearls!`, 26, '#ffffff');
+      view.add(pearl);
+      view.add(shine);
+      view.add(earned);
+      [pearl, shine, earned].forEach((o) => popIn(this, o, 350));
+    }
 
     // pass explicit empty data — Phaser's restart() reuses old data otherwise,
     // which would reopen this same story instead of the shelf
