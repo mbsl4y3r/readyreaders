@@ -87,6 +87,17 @@ export class MapScene extends Phaser.Scene {
       height: 64,
       fill: 0xffffff,
     }).setAlpha(0.85);
+    // 🔁 review — a gentler second-session pass over words she's already met
+    makeButton(this, 80, 280, '🔁', () => {
+      this.cameras.main.fadeOut(300);
+      this.time.delayedCall(330, () => this.scene.start('session', { review: true }));
+    }, {
+      emoji: true,
+      fontSize: 30,
+      width: 76,
+      height: 64,
+      fill: 0xffe9a8,
+    }).setAlpha(0.9);
 
     // session-cap sunset: past the daily cap the map turns to dusk and
     // suggests resting — a gentle wind-down, never a lock (parents decide)

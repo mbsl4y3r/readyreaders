@@ -9,6 +9,8 @@ import {
   speedRoundFor,
   familySortFor,
   rimeOf,
+  levelMastered,
+  planReview,
 } from '../src/engine/session-planner';
 import { freshProgress, freshStat } from '../src/services/progress';
 import { getWord, WORDS_BY_ID } from '../src/content/words';
@@ -187,6 +189,50 @@ describe('family sort', () => {
     for (const id of wordIds) {
       const w = getWord(id);
       expect(families.some((f) => w.text.toLowerCase().endsWith(f))).toBe(true);
+    }
+  });
+});
+
+describe('levelMastered (gentle unlock)', () => {
+  it('is false on a fresh save and true once 65% of words are known', () => {
+    expect(levelMastered(1, freshProgress())).toBe(false);
+
+    const progress = freshProgress();
+    const words = wordsForLevel(1, progress.bookLesson);
+    // mark exactly ~70% at mastery ≥1 (known)
+    const n = Math.ceil(words.length * 0.7);
+    words.slice(0, n).forEach((w) => {
+      progress.words[w.id] = { ...freshStat(), exposures: 3, firstTryCorrect: 2, mastery: 1 };
+    });
+    expect(levelMastered(1, progress)).toBe(true);
+
+    // only ~40% known → still locked
+    const partial = freshProgress();
+    words.slice(0, Math.floor(words.length * 0.4)).forEach((w) => {
+      partial.words[w.id] = { ...freshStat(), exposures: 3, firstTryCorrect: 2, mastery: 1 };
+    });
+    expect(levelMastered(1, partial)).toBe(false);
+  });
+});
+
+describe('planReview', () => {
+  it('falls back to a normal session before anything is seen', () => {
+    const rounds = planReview(freshProgress(), rng);
+    expect(rounds.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('drills only already-seen words — never introduces new ones', () => {
+    const progress = freshProgress();
+    const seen = wordsForLevel(1, progress.bookLesson).slice(0, 6);
+    seen.forEach((w) => {
+      progress.words[w.id] = { ...freshStat(), exposures: 4, firstTryCorrect: 3, mastery: 2 };
+    });
+    const seenIds = new Set(seen.map((w) => w.id));
+    const rounds = planReview(progress, rng);
+    const wordRounds = rounds.filter((r) => r.wordId);
+    expect(wordRounds.length).toBeGreaterThan(0);
+    for (const r of wordRounds) {
+      expect(seenIds.has(r.wordId!), `review used unseen word ${r.wordId}`).toBe(true);
     }
   });
 });

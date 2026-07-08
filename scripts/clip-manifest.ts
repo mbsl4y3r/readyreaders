@@ -72,6 +72,7 @@ export function buildManifest(): Clip[] {
     // lightning round + word families
     ['lightning-round', 'Lightning round! Ready… set… read!'],
     ['lightning-done', 'You read five words — so fast!'],
+    ['review-done', 'Great reviewing! Your reading is getting stronger!'],
     ['family-sort-intro', 'Sort the words into their families!'],
     ['this-family', 'It goes in this family! Tap it!'],
     ['family-sort-done', 'You sorted the whole family!'],

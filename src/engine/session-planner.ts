@@ -16,6 +16,22 @@ import type { RoundSpec } from './rounds';
 /** The game may introduce material slightly ahead of the parent's book marker. */
 export const BOOK_LOOKAHEAD = 2;
 
+/**
+ * A level opens the next once this fraction of its words are at least
+ * "known" (read accurately — mastery ≥ 1). Gentle on purpose: a real
+ * six-year-old should feel steady forward progress, not a locked wall.
+ */
+export const UNLOCK_MASTERY = 1;
+export const UNLOCK_FRACTION = 0.65;
+
+/** True when a level has been read well enough to open the next one. */
+export function levelMastered(levelId: number, progress: ProgressData): boolean {
+  const words = wordsForLevel(levelId, progress.bookLesson);
+  if (words.length === 0) return false;
+  const got = words.filter((w) => (progress.words[w.id]?.mastery ?? 0) >= UNLOCK_MASTERY).length;
+  return got / words.length >= UNLOCK_FRACTION;
+}
+
 export function lessonCapFor(levelId: number, bookLesson: number): number {
   const level = LEVELS.find((l) => l.id === levelId);
   if (!level) throw new Error(`Unknown level ${levelId}`);
@@ -239,6 +255,67 @@ export function planSession(
 
   // the lightning round caps the session — fluency is the finish line
   const speed = speedRoundFor(levelId, progress, random);
+  if (speed) rounds.push(speed);
+
+  return rounds;
+}
+
+/**
+ * A REVIEW chunk — for the second session of the day. Practises only words
+ * (and sentences/phrases) she has already SEEN, spaced-repetition style, with
+ * no new frontier material. Reinforcement, keyed to progress.currentLevel's
+ * realm. Falls back to a normal session before anything has been seen.
+ */
+export function planReview(progress: ProgressData, random: () => number = Math.random): RoundSpec[] {
+  const level = LEVELS.find((l) => l.id === progress.currentLevel) ?? LEVELS[0]!;
+  const realm = level.realm;
+  const wordById = new Map(WORDS.map((w) => [w.id, w]));
+
+  const seenIds = Object.keys(progress.words).filter(
+    (id) => !id.includes(':') && (progress.words[id]?.exposures ?? 0) > 0 && wordById.has(id),
+  );
+  if (seenIds.length === 0) return planSession(level.id, progress, random); // nothing to review yet
+
+  const queue = planQueue({ newIds: [], seenIds, stats: progress.words, slots: 6, random });
+  const pool = seenIds.map((id) => wordById.get(id)!);
+  const rounds: RoundSpec[] = [];
+  queue.forEach((id, i) => {
+    const word = wordById.get(id);
+    if (!word) return;
+    if (i % 2 === 0) {
+      rounds.push({
+        mechanic: 'feed-creature',
+        wordId: id,
+        distractorIds: pickDistractors(word, pool.length >= 3 ? pool : WORDS, random),
+        realm,
+      });
+    } else {
+      rounds.push({ mechanic: 'build-word', wordId: id, realm });
+    }
+  });
+
+  // sentences she's already met (fall back to any she can read now)
+  const seenSent = Object.keys(progress.words)
+    .filter((k) => k.startsWith('sent:') && (progress.words[k]?.exposures ?? 0) > 0)
+    .map((k) => k.slice(5));
+  const cap = lessonCapFor(level.id, progress.bookLesson);
+  const sentPool = seenSent.length
+    ? seenSent
+    : SENTENCES.filter((s) => s.lesson <= cap).map((s) => s.id);
+  const sents = shuffle(sentPool, random).slice(0, 2);
+  if (sents[0]) rounds.splice(Math.min(3, rounds.length), 0, { mechanic: 'sentence-picture', sentenceId: sents[0], realm });
+  if (sents[1]) rounds.push({ mechanic: 'sentence-picture', sentenceId: sents[1], realm });
+
+  // one magic phrase she's seen (or one she can read now)
+  const seenPhr = Object.keys(progress.words)
+    .filter((k) => k.startsWith('phr:') && (progress.words[k]?.exposures ?? 0) > 0)
+    .map((k) => k.slice(4));
+  const phrPool = seenPhr.length ? seenPhr : PHRASES.filter((p) => p.lesson <= cap).map((p) => p.id);
+  const phrPick = shuffle(phrPool, random)[0];
+  if (phrPick) rounds.splice(Math.min(5, rounds.length), 0, { mechanic: 'magic-phrase', phraseId: phrPick, realm });
+
+  // cap it with a lightning round of known words when there are enough
+  const speed = speedRoundFor(level.id, progress, random);
   if (speed) rounds.push(speed);
 
   return rounds;

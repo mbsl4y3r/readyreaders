@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 import { LEVELS } from '../content/levels';
 import { THEMES } from '../content/themes';
-import { planSession, wordsForLevel, phraseStatKey } from '../engine/session-planner';
+import { planSession, planReview, levelMastered, phraseStatKey } from '../engine/session-planner';
 import type { RoundSpec, RoundResult } from '../engine/rounds';
 import { updateStat } from '../engine/adaptive';
 import { loadProgress, saveProgress, statFor } from '../services/progress';
@@ -43,6 +43,8 @@ const RUNNERS: Record<RoundSpec['mechanic'], RunRound> = {
 
 export class SessionScene extends Phaser.Scene {
   private levelId = 1;
+  /** Review mode: reinforce already-seen words, no new material, no unlock. */
+  private review = false;
   /** False once the scene shuts down (home button) — stops the round loop. */
   private alive = true;
   /** Wall-clock start of this chunk — celebrate() logs real minutes played. */
@@ -52,8 +54,10 @@ export class SessionScene extends Phaser.Scene {
     super('session');
   }
 
-  init(data: { levelId?: number }): void {
-    this.levelId = data.levelId ?? 1;
+  init(data: { levelId?: number; review?: boolean }): void {
+    this.review = data.review ?? false;
+    // a review spans everything she's learned; anchor its look to the frontier
+    this.levelId = data.levelId ?? (this.review ? loadProgress().currentLevel : 1);
   }
 
   create(): void {
@@ -81,7 +85,7 @@ export class SessionScene extends Phaser.Scene {
 
   private async runChunk(levelId: number, theme: (typeof THEMES)['cove']): Promise<void> {
     const progress = loadProgress();
-    const rounds = planSession(levelId, progress);
+    const rounds = this.review ? planReview(progress) : planSession(levelId, progress);
 
     // progress pips
     const pips = rounds.map((_, i) =>
@@ -135,19 +139,21 @@ export class SessionScene extends Phaser.Scene {
   private celebrate(levelId: number, theme: (typeof THEMES)['cove']): void {
     const progress = loadProgress();
 
-    // award a not-yet-collected collectible from this realm
+    // review = a not-yet-collected collectible only on a fresh level win;
+    // reviews shower a star instead so treasures stay tied to progress
     const owned = new Set(progress.collections[theme.collectionKey]);
-    const prize = theme.collectibles.find((e) => !owned.has(e)) ?? theme.collectibles[0]!;
-    if (!owned.has(prize)) progress.collections[theme.collectionKey].push(prize);
+    const prize = this.review
+      ? '⭐'
+      : theme.collectibles.find((e) => !owned.has(e)) ?? theme.collectibles[0]!;
+    if (!this.review && !owned.has(prize)) progress.collections[theme.collectionKey].push(prize);
 
-    // unlock the next level when ≥80% of this level's words are mastery ≥2
-    const levelWords = wordsForLevel(levelId, progress.bookLesson);
-    const quick = levelWords.filter((w) => (progress.words[w.id]?.mastery ?? 0) >= 2).length;
+    // open the next level once this one is read well enough (gentle threshold).
+    // review never unlocks — it reinforces — but its mastery gains count next win.
     if (
-      levelWords.length > 0 &&
-      quick / levelWords.length >= 0.8 &&
+      !this.review &&
       progress.currentLevel === levelId &&
-      levelId < 9
+      levelId < 9 &&
+      levelMastered(levelId, progress)
     ) {
       progress.currentLevel = levelId + 1;
     }
@@ -163,10 +169,20 @@ export class SessionScene extends Phaser.Scene {
     const dim = this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.45);
     const big = emojiText(this, GAME_W / 2, GAME_H / 2 - 70, prize, 150);
     popIn(this, big);
-    const label = readingText(this, GAME_W / 2, GAME_H / 2 + 60, 'You did it!', 52, '#ffe9a8');
+    const label = readingText(
+      this,
+      GAME_W / 2,
+      GAME_H / 2 + 60,
+      this.review ? 'Great reviewing!' : 'You did it!',
+      52,
+      '#ffe9a8',
+    );
     popIn(this, label, 200);
     confettiBurst(this, GAME_W / 2, GAME_H / 2 - 100, theme.accent);
-    void speakUI('celebrate', `You did it! A new treasure for your collection!`);
+    void speakUI(
+      this.review ? 'review-done' : 'celebrate',
+      this.review ? 'Great reviewing! Your reading is getting stronger!' : 'You did it! A new treasure for your collection!',
+    );
 
     // pearls earned by this reading — the wardrobe currency
     const pearl = this.add.circle(GAME_W / 2 - 52, GAME_H / 2 + 128, 13, 0xffffff, 1);
