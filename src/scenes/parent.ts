@@ -26,7 +26,7 @@ export class ParentScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.add.rectangle(GAME_W / 2, 720 / 2, GAME_W, 720, 0x1d2733, 1);
+    this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x1d2733, 1);
     readingText(this, GAME_W / 2, 40, 'Parent corner', 36, '#ffe9a8');
 
     const progress = loadProgress();
