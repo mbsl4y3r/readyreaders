@@ -23,3 +23,10 @@ const game = new Phaser.Game({
 
 // introspection hook for automated tests
 (window as unknown as { __game: Phaser.Game }).__game = game;
+
+// Offline support (iPad home-screen app): register the service worker in
+// production only — in dev it would cache stale modules and fight HMR.
+// BASE_URL keeps the path correct under the /readyreaders/ GitHub Pages base.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
+}
