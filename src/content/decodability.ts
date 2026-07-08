@@ -43,9 +43,41 @@ export function checkWordAt(word: Word, lesson: number): DecodabilityIssue | nul
   return null;
 }
 
+/** A split grapheme ("a_e", "i_e", "o_e") wraps around later letters. */
+export function isSplitGrapheme(g: string): boolean {
+  return g.includes('_');
+}
+
+/**
+ * Join graphemes into the spelled word, honoring split graphemes: the part
+ * before the underscore sits in place, the part after lands at the end of
+ * the word ("cake" = ["c","a_e","k"] → c·a…k + e).
+ */
+export function spellGraphemes(graphemes: string[]): string {
+  let main = '';
+  let tail = '';
+  for (const g of graphemes) {
+    const cut = g.indexOf('_');
+    if (cut === -1) {
+      main += g;
+    } else {
+      main += g.slice(0, cut);
+      tail += g.slice(cut + 1);
+    }
+  }
+  return main + tail;
+}
+
 /** Graphemes must spell the word exactly (ignoring case). */
 export function checkSpelling(word: Word): DecodabilityIssue | null {
-  const joined = word.graphemes.join('').toLowerCase();
+  const splits = word.graphemes.filter(isSplitGrapheme).length;
+  if (splits > 1) {
+    return {
+      wordId: word.id,
+      problem: `${splits} split graphemes — the wrap-around spelling rule only supports one`,
+    };
+  }
+  const joined = spellGraphemes(word.graphemes).toLowerCase();
   if (joined !== word.text.toLowerCase()) {
     return {
       wordId: word.id,

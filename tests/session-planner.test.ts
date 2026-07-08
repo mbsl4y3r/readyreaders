@@ -6,8 +6,11 @@ import {
   phrasesForLevel,
   memoryWordsForLevel,
   pickDistractors,
+  speedRoundFor,
+  familySortFor,
+  rimeOf,
 } from '../src/engine/session-planner';
-import { freshProgress } from '../src/services/progress';
+import { freshProgress, freshStat } from '../src/services/progress';
 import { getWord, WORDS_BY_ID } from '../src/content/words';
 import { SENTENCES } from '../src/content/sentences';
 import { PHRASES } from '../src/content/phrases';
@@ -126,6 +129,65 @@ describe('planSession phrase and memory rounds', () => {
     // level 1 always has an unmastered heart word ("was") on a fresh save
     const rounds = planSession(1, freshProgress(), rng);
     expect(rounds.filter((r) => r.mechanic === 'memory-word')).toHaveLength(1);
+  });
+});
+
+describe('speed round', () => {
+  /** A save where every level-1 word is known (mastery 1+). */
+  const knownProgress = () => {
+    const progress = freshProgress();
+    for (const w of wordsForLevel(1, 17)) {
+      progress.words[w.id] = { ...freshStat(), exposures: 3, firstTryCorrect: 3, mastery: 1 };
+    }
+    return progress;
+  };
+
+  it('never fires on a fresh save — fluency practice needs known words first', () => {
+    expect(speedRoundFor(1, freshProgress(), rng)).toBeNull();
+    const rounds = planSession(1, freshProgress(), rng);
+    expect(rounds.filter((r) => r.mechanic === 'speed-round')).toHaveLength(0);
+  });
+
+  it('picks 5 known words once the level has them, and caps the session', () => {
+    const spec = speedRoundFor(1, knownProgress(), rng);
+    expect(spec).not.toBeNull();
+    expect(spec!.speedWordIds).toHaveLength(5);
+    expect(new Set(spec!.speedWordIds).size).toBe(5);
+
+    const rounds = planSession(1, knownProgress(), rng);
+    const speed = rounds.filter((r) => r.mechanic === 'speed-round');
+    expect(speed).toHaveLength(1);
+    expect(rounds.at(-1)!.mechanic).toBe('speed-round'); // fluency is the finish line
+  });
+
+  it('excludes mastery-0 words even when others qualify', () => {
+    const progress = knownProgress();
+    progress.words['sat'] = { ...freshStat(), exposures: 2, mastery: 0 };
+    for (let i = 0; i < 20; i++) {
+      const spec = speedRoundFor(1, progress, rng);
+      expect(spec!.speedWordIds).not.toContain('sat');
+    }
+  });
+});
+
+describe('family sort', () => {
+  it('rimeOf groups by the last two graphemes and skips rule-breakers', () => {
+    expect(rimeOf(getWord('cat'))).toBe('at');
+    expect(rimeOf(getWord('man'))).toBe('an');
+    expect(rimeOf(getWord('was'))).toBeNull(); // memory word — no pattern lesson
+  });
+
+  it('builds two families with 2–3 words each, all genuinely ending in their family', () => {
+    const spec = familySortFor(1, freshProgress(), rng);
+    expect(spec).not.toBeNull();
+    const { families, wordIds } = spec!.family!;
+    expect(families[0]).not.toBe(families[1]);
+    expect(wordIds.length).toBeGreaterThanOrEqual(4);
+    expect(wordIds.length).toBeLessThanOrEqual(6);
+    for (const id of wordIds) {
+      const w = getWord(id);
+      expect(families.some((f) => w.text.toLowerCase().endsWith(f))).toBe(true);
+    }
   });
 });
 

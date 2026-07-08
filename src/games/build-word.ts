@@ -80,11 +80,13 @@ export const runBuildWord: RunRound = (scene, spec, ctx) => {
       const g = graphemes[gi]!;
       const x = GAME_W / 2 + (trayIdx - (order.length - 1) / 2) * (tileW + 22);
       const isVowel = 'aeiou'.includes(g.toLowerCase());
+      // split graphemes ("a_e") read as a‿e — the e reaches back over the word
+      const label = (nextSlot === 0 && gi === 0 ? g : g.toLowerCase()).replace('_', '‿');
       const tile = makeButton(
         scene,
         x,
         trayY,
-        nextSlot === 0 && gi === 0 ? g : g.toLowerCase(),
+        label,
         () => onTile(gi),
         {
           width: tileW,

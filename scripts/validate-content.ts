@@ -8,6 +8,7 @@ import { LESSONS } from '../src/content/lessons';
 import { WORDS, WORDS_BY_ID } from '../src/content/words';
 import { PHRASES } from '../src/content/phrases';
 import { SENTENCES } from '../src/content/sentences';
+import { STORIES } from '../src/content/stories';
 import { LEVELS } from '../src/content/levels';
 import { checkWordAt, checkSpelling, tokenize } from '../src/content/decodability';
 
@@ -82,12 +83,24 @@ for (const s of SENTENCES) {
   }
 }
 
+// -- stories: every page reads like a sentence, unlock levels must exist --
+for (const story of STORIES) {
+  if (story.unlockLevel < 1 || story.unlockLevel > LEVELS.length) {
+    errors.push(`story ${story.id}: unlockLevel ${story.unlockLevel} outside levels 1..${LEVELS.length}`);
+  }
+  if (story.pages.length === 0) errors.push(`story ${story.id}: has no pages`);
+  story.pages.forEach((page, i) => {
+    checkTextItem(`story ${story.id} page`, `${i + 1}`, page.text, page.wordIds, story.lesson);
+    if (!page.emojiScene) errors.push(`story ${story.id} page ${i + 1}: missing emoji scene`);
+  });
+}
+
 if (errors.length > 0) {
   console.error(`\n✗ Content validation failed with ${errors.length} error(s):\n`);
   for (const e of errors) console.error(`  - ${e}`);
   process.exit(1);
 } else {
   console.log(
-    `✓ Content valid: ${LESSONS.length} lessons, ${WORDS.length} words, ${PHRASES.length} phrases, ${SENTENCES.length} sentences`,
+    `✓ Content valid: ${LESSONS.length} lessons, ${WORDS.length} words, ${PHRASES.length} phrases, ${SENTENCES.length} sentences, ${STORIES.length} stories`,
   );
 }

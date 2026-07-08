@@ -72,7 +72,8 @@ export const runMemoryWord: RunRound = (scene, spec, ctx) => {
         scene,
         slotX(gi),
         slotY,
-        gi === 0 ? g : g.toLowerCase(),
+        // split graphemes ("a_e") read as a‿e — the e reaches back over the word
+        (gi === 0 ? g : g.toLowerCase()).replace('_', '‿'),
         () => onTile(gi),
         {
           width: tileW,

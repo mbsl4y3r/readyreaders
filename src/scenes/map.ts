@@ -64,6 +64,43 @@ export class MapScene extends Phaser.Scene {
       height: 64,
       fill: 0xffffff,
     }).setAlpha(0.85);
+    // 📖 story pages under the sparkles — the castle's bookshelf
+    makeButton(this, GAME_W - 80, 134, '📖', () => goTo('story'), {
+      emoji: true,
+      fontSize: 30,
+      width: 76,
+      height: 64,
+      fill: 0xffffff,
+    }).setAlpha(0.85);
+
+    // session-cap sunset: past the daily cap the map turns to dusk and
+    // suggests resting — a gentle wind-down, never a lock (parents decide)
+    const today = new Date().toISOString().slice(0, 10);
+    const minutesToday = progress.sessions
+      .filter((s) => s.date === today)
+      .reduce((sum, s) => sum + (s.minutes ?? 0), 0);
+    if (minutesToday >= progress.settings.sessionCapMin) {
+      this.add
+        .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x1a1035, 0.35)
+        .setDepth(5);
+      const moon = emojiText(this, GAME_W / 2 - 205, 116, '🌙', 40).setDepth(6);
+      const note = readingText(
+        this,
+        GAME_W / 2 + 24,
+        116,
+        'What a lot of reading today! ⭐',
+        30,
+        '#ffe9a8',
+      ).setDepth(6);
+      this.tweens.add({
+        targets: [moon, note],
+        alpha: 0.75,
+        duration: 1800,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
 
     LEVELS.forEach((level, i) => {
       const [x, y] = STOP_POS[i]!;

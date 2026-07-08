@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { checkWordAt, checkSpelling, tokenize } from '../src/content/decodability';
+import {
+  checkWordAt,
+  checkSpelling,
+  tokenize,
+  spellGraphemes,
+  isSplitGrapheme,
+} from '../src/content/decodability';
 import { graphemesTaughtBy, memoryWordsTaughtBy, LESSONS } from '../src/content/lessons';
 import type { Word } from '../src/content/types';
 
@@ -71,5 +77,28 @@ describe('tokenize', () => {
   it('strips punctuation and lowercases', () => {
     expect(tokenize('Quick, Jill, fix it!')).toEqual(['quick', 'jill', 'fix', 'it']);
     expect(tokenize('A man has a hat.')).toEqual(['a', 'man', 'has', 'a', 'hat']);
+  });
+});
+
+describe('split graphemes (transforming e)', () => {
+  it('spellGraphemes wraps the post-underscore part to the word end', () => {
+    expect(isSplitGrapheme('a_e')).toBe(true);
+    expect(isSplitGrapheme('sh')).toBe(false);
+    expect(spellGraphemes(['c', 'a_e', 'k'])).toBe('cake');
+    expect(spellGraphemes(['s', 'm', 'i_e', 'l'])).toBe('smile');
+    expect(spellGraphemes(['h', 'o_e', 'm'])).toBe('home');
+    expect(spellGraphemes(['c', 'a', 't'])).toBe('cat'); // no-op without a split
+  });
+
+  it('checkSpelling accepts wrap-around words and rejects double splits', () => {
+    expect(checkSpelling(word('cake', ['c', 'a_e', 'k']))).toBeNull();
+    expect(checkSpelling(word('cake', ['c', 'a_e', 't']))).not.toBeNull();
+    expect(checkSpelling(word('cakie', ['c', 'a_e', 'k', 'i_e']))).not.toBeNull();
+  });
+
+  it('split graphemes gate on their own lesson like any unit', () => {
+    const cake = word('cake', ['c', 'a_e', 'k'], { lesson: 66 });
+    expect(checkWordAt(cake, 65)).not.toBeNull(); // a_e taught at 66
+    expect(checkWordAt(cake, 66)).toBeNull();
   });
 });

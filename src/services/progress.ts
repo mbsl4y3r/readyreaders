@@ -33,7 +33,11 @@ export interface ProgressData {
     pets: string[];
     charms: string[];
   };
-  sessions: { date: string; rounds: number }[];
+  sessions: { date: string; rounds: number; minutes?: number }[];
+  /** Best lightning-round total time, ms (0 = not yet played). */
+  speedBest: number;
+  /** Story pages already read (story ids) — the bookshelf remembers. */
+  storiesRead: string[];
   settings: {
     sessionCapMin: number;
   };
@@ -50,6 +54,8 @@ export function freshProgress(): ProgressData {
     words: {},
     collections: { treasures: [], pets: [], charms: [] },
     sessions: [],
+    speedBest: 0,
+    storiesRead: [],
     settings: { sessionCapMin: 18 },
   };
 }
@@ -74,6 +80,8 @@ export function loadProgress(): ProgressData {
     if (data.version !== 1) return freshProgress();
     // saves from before the placement voyage existed were already mid-journey
     data.placed ??= data.sessions.length > 0;
+    data.speedBest ??= 0;
+    data.storiesRead ??= [];
     return data;
   } catch {
     return freshProgress();
@@ -112,6 +120,8 @@ export function importCode(code: string): ProgressData | null {
     const data = JSON.parse(decodeURIComponent(escape(atob(code.trim())))) as ProgressData;
     if (data.version !== 1 || typeof data.words !== 'object') return null;
     data.placed ??= data.sessions.length > 0;
+    data.speedBest ??= 0;
+    data.storiesRead ??= [];
     return data;
   } catch {
     return null;

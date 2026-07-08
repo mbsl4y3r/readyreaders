@@ -64,3 +64,26 @@ describe('placement voyage flag', () => {
     expect(importCode(unplayed)?.placed).toBe(false);
   });
 });
+
+describe('phase 2 field migrations', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('fresh saves carry speedBest 0 and an empty bookshelf', () => {
+    expect(freshProgress().speedBest).toBe(0);
+    expect(freshProgress().storiesRead).toEqual([]);
+  });
+
+  it('phase-1 saves gain the new fields on load and on import', () => {
+    const data = freshProgress() as unknown as Record<string, unknown>;
+    delete data['speedBest'];
+    delete data['storiesRead'];
+    localStorage.setItem('readyreaders.v1', JSON.stringify(data));
+    const loaded = loadProgress();
+    expect(loaded.speedBest).toBe(0);
+    expect(loaded.storiesRead).toEqual([]);
+
+    const imported = importCode(btoa(JSON.stringify(data)));
+    expect(imported?.speedBest).toBe(0);
+    expect(imported?.storiesRead).toEqual([]);
+  });
+});

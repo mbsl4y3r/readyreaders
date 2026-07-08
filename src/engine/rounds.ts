@@ -5,7 +5,9 @@ export type MechanicId =
   | 'feed-creature'
   | 'sentence-picture'
   | 'magic-phrase'
-  | 'memory-word';
+  | 'memory-word'
+  | 'speed-round'
+  | 'family-sort';
 
 export interface RoundSpec {
   mechanic: MechanicId;
@@ -17,6 +19,10 @@ export interface RoundSpec {
   sentenceId?: string;
   /** Magic-phrase rounds. */
   phraseId?: string;
+  /** Speed rounds: 5 already-known words, read against the clock. */
+  speedWordIds?: string[];
+  /** Family-sort rounds: two rime families and the word cards to sort. */
+  family?: { families: [string, string]; wordIds: string[] };
   realm: RealmId;
 }
 

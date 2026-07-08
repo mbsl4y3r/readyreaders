@@ -8,17 +8,23 @@
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0b2545" />
+    <!-- Relative hrefs: the site is served from /readyreaders/ on GitHub Pages -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
     <title>Evie's Reading Realms</title>
     <style>
       @font-face {
         font-family: 'Andika';
-        src: url('/fonts/andika/Andika-Regular.woff2') format('woff2');
+        /* Relative URL: vite does not rewrite url() in inline <style> for the
+           /readyreaders/ production base, so absolute /fonts/ would 404. */
+        src: url('./fonts/andika/Andika-Regular.woff2') format('woff2');
         font-weight: 400;
         font-display: block;
       }
       @font-face {
         font-family: 'Andika';
-        src: url('/fonts/andika/Andika-Bold.woff2') format('woff2');
+        src: url('./fonts/andika/Andika-Bold.woff2') format('woff2');
         font-weight: 700;
         font-display: block;
       }

@@ -9,7 +9,8 @@ import { SENTENCES } from '../content/sentences';
 import { PHRASES } from '../content/phrases';
 import type { Phrase, Word } from '../content/types';
 import type { ProgressData } from '../services/progress';
-import { planQueue } from './adaptive';
+import { planQueue, speedRoundPool } from './adaptive';
+import { isSplitGrapheme } from '../content/decodability';
 import type { RoundSpec } from './rounds';
 
 /** The game may introduce material slightly ahead of the parent's book marker. */
@@ -45,6 +46,71 @@ export const phraseStatKey = (phraseId: string): string => `phr:${phraseId}`;
 /** Memory words (heart-marked) in this level's readable range. */
 export function memoryWordsForLevel(levelId: number, bookLesson: number): Word[] {
   return wordsForLevel(levelId, bookLesson).filter((w) => (w.heartIndexes?.length ?? 0) > 0);
+}
+
+/**
+ * The lightning round: 5 words she already reads accurately (mastery ≥ 1 —
+ * fluency practice NEVER runs on shaky material), or null when the level
+ * hasn't built up enough known words yet.
+ */
+export function speedRoundFor(
+  levelId: number,
+  progress: ProgressData,
+  random: () => number = Math.random,
+): RoundSpec | null {
+  const level = LEVELS.find((l) => l.id === levelId);
+  if (!level) return null;
+  const pool = speedRoundPool(
+    wordsForLevel(levelId, progress.bookLesson).map((w) => w.id),
+    progress.words,
+  );
+  if (pool.length < 5) return null;
+  return {
+    mechanic: 'speed-round',
+    speedWordIds: shuffle(pool, random).slice(0, 5),
+    realm: level.realm,
+  };
+}
+
+/** Rime family of a word: its graphemes from the last vowel-ish unit on ("cat" → "at"). */
+export function rimeOf(word: Word): string | null {
+  if (word.graphemes.length < 2) return null;
+  if (word.heartIndexes?.length) return null; // rule-breakers don't teach patterns
+  if (word.graphemes.some(isSplitGrapheme)) return null; // wrap-arounds sort visually wrong
+  return word.graphemes.slice(-2).join('').toLowerCase();
+}
+
+/**
+ * A family-sort round: two rime families from this level with ≥2 sortable
+ * words each (4–6 cards total), or null when the level can't support one.
+ */
+export function familySortFor(
+  levelId: number,
+  progress: ProgressData,
+  random: () => number = Math.random,
+): RoundSpec | null {
+  const level = LEVELS.find((l) => l.id === levelId);
+  if (!level) return null;
+  const byRime = new Map<string, Word[]>();
+  for (const w of wordsForLevel(levelId, progress.bookLesson)) {
+    const rime = rimeOf(w);
+    if (!rime) continue;
+    (byRime.get(rime) ?? byRime.set(rime, []).get(rime)!).push(w);
+  }
+  const families = shuffle(
+    [...byRime.entries()].filter(([, ws]) => ws.length >= 2),
+    random,
+  ).slice(0, 2);
+  if (families.length < 2) return null;
+  const wordIds = shuffle(
+    families.flatMap(([, ws]) => shuffle(ws, random).slice(0, 3).map((w) => w.id)),
+    random,
+  );
+  return {
+    mechanic: 'family-sort',
+    family: { families: [families[0]![0], families[1]![0]], wordIds },
+    realm: level.realm,
+  };
 }
 
 /** Pick 2 written-choice distractors that force full decoding (minimal pairs). */
@@ -164,6 +230,16 @@ export function planSession(
       realm: level.realm,
     });
   }
+
+  // family-sort in roughly every other session (pattern play, not core drill)
+  if (random() < 0.5) {
+    const family = familySortFor(levelId, progress, random);
+    if (family) rounds.splice(Math.min(2, rounds.length), 0, family);
+  }
+
+  // the lightning round caps the session — fluency is the finish line
+  const speed = speedRoundFor(levelId, progress, random);
+  if (speed) rounds.push(speed);
 
   return rounds;
 }

@@ -16,6 +16,8 @@ import { runBuildWord } from '../games/build-word';
 import { runSentencePicture } from '../games/sentence-picture';
 import { runMagicPhrase } from '../games/magic-phrase';
 import { runMemoryWord } from '../games/memory-word';
+import { runSpeedRound } from '../games/speed-round';
+import { runFamilySort } from '../games/family-sort';
 import type { RunRound } from '../games/types';
 import {
   GAME_W,
@@ -34,12 +36,16 @@ const RUNNERS: Record<RoundSpec['mechanic'], RunRound> = {
   'sentence-picture': runSentencePicture,
   'magic-phrase': runMagicPhrase,
   'memory-word': runMemoryWord,
+  'speed-round': runSpeedRound,
+  'family-sort': runFamilySort,
 };
 
 export class SessionScene extends Phaser.Scene {
   private levelId = 1;
   /** False once the scene shuts down (home button) — stops the round loop. */
   private alive = true;
+  /** Wall-clock start of this chunk — celebrate() logs real minutes played. */
+  private startedAt = 0;
 
   constructor() {
     super('session');
@@ -51,6 +57,7 @@ export class SessionScene extends Phaser.Scene {
 
   create(): void {
     this.alive = true;
+    this.startedAt = Date.now();
     this.events.once('shutdown', () => (this.alive = false));
     const level = LEVELS.find((l) => l.id === this.levelId)!;
     const theme = THEMES[level.realm];
@@ -97,6 +104,18 @@ export class SessionScene extends Phaser.Scene {
 
   private recordResult(spec: RoundSpec, result: RoundResult): void {
     const progress = loadProgress();
+    if (spec.mechanic === 'speed-round') {
+      // the lightning round is celebration, not assessment: no per-word
+      // stats, just the personal best — and only from a clean, unassisted run
+      if (!result.assisted && result.latencyMs > 0) {
+        if (progress.speedBest === 0 || result.latencyMs < progress.speedBest) {
+          progress.speedBest = result.latencyMs;
+        }
+      }
+      saveProgress(progress);
+      return;
+    }
+    if (spec.mechanic === 'family-sort') return; // pattern play — no stats
     // sentence and phrase stats live under prefixed keys so they never
     // collide with word ids — same stat machinery either way
     const key =
@@ -129,7 +148,11 @@ export class SessionScene extends Phaser.Scene {
     ) {
       progress.currentLevel = levelId + 1;
     }
-    progress.sessions.push({ date: new Date().toISOString().slice(0, 10), rounds: 8 });
+    progress.sessions.push({
+      date: new Date().toISOString().slice(0, 10),
+      rounds: 8,
+      minutes: Math.max(1, Math.round((Date.now() - this.startedAt) / 60_000)),
+    });
     saveProgress(progress);
 
     chime('fanfare');

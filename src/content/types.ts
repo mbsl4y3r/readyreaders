@@ -58,6 +58,23 @@ export interface Phrase {
   lesson: number;
 }
 
+/**
+ * A decodable mini-story — Starlight Castle's story pages. Pure reward
+ * reading: unlocked by reaching a level, no stats, no wrong answers.
+ */
+export interface Story {
+  id: string;
+  /** Shown on the cover; may use taught memory words. */
+  title: string;
+  realm: RealmId;
+  /** The story appears once progress.currentLevel reaches this. */
+  unlockLevel: number;
+  /** Each page: a short decodable text; its emoji scene appears AFTER the read. */
+  pages: { text: string; wordIds: string[]; emojiScene: string }[];
+  /** Decodability lesson for the whole story (≥ the max any page needs). */
+  lesson: number;
+}
+
 export interface Sentence {
   id: string;
   text: string;
