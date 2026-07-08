@@ -5,7 +5,10 @@
  *
  * Security model: kind+id from the client are only ever LOOKED UP in the
  * manifest, never used to build a path directly — that is what makes
- * traversal impossible. Bound to 127.0.0.1 so nothing off-machine can write.
+ * traversal impossible. Bound to 127.0.0.1 so nothing off-machine can write
+ * — except inside a Codespace, where loopback-only isn't reachable through
+ * the forwarding proxy and the real access gate is its private-port GitHub
+ * auth instead.
  * Run: npm run recorder
  */
 import http from 'node:http';
@@ -23,6 +26,8 @@ const PAGE = join(ROOT, 'tools', 'recorder', 'index.html');
 const LAMEJS = join(ROOT, 'node_modules', '@breezystack', 'lamejs', 'dist', 'lamejs.iife.js');
 
 const PORT = 5179;
+// loopback-only on a laptop; Codespaces' forwarding proxy needs all-interfaces
+const HOST = process.env.CODESPACES ? '0.0.0.0' : '127.0.0.1';
 const EXTS = ['mp3', 'm4a', 'wav'] as const;
 const SAVE_FORMATS = ['mp3', 'wav'] as const;
 
@@ -158,7 +163,7 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, '127.0.0.1', () => {
+server.listen(PORT, HOST, () => {
   console.log(`Recorder: http://localhost:${PORT} (mic needs localhost or https)`);
   console.log(`  ${manifest.length} clips in the manifest; MP3 encoder ${existsSync(LAMEJS) ? 'available' : 'MISSING — will save WAV'}`);
 });
