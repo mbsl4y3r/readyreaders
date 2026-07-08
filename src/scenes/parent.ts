@@ -15,6 +15,7 @@ import {
   exportCode,
   importCode,
 } from '../services/progress';
+import { setMusicEnabled } from '../services/audio';
 import { GAME_W, GAME_H, readingText, makeButton } from '../ui/kit';
 
 /** Parent-facing names for the mastery ladder (see engine/adaptive.ts). */
@@ -30,6 +31,23 @@ export class ParentScene extends Phaser.Scene {
     readingText(this, GAME_W / 2, 40, 'Parent corner', 36, '#ffe9a8');
 
     const progress = loadProgress();
+
+    // music toggle — the only sound switch in the house
+    const musicBtn = makeButton(
+      this,
+      GAME_W - 80,
+      52,
+      progress.settings.musicOn ? '🎵' : '🔇',
+      () => {
+        const p = loadProgress();
+        p.settings.musicOn = !p.settings.musicOn;
+        saveProgress(p);
+        setMusicEnabled(p.settings.musicOn);
+        musicBtn.label.setText(p.settings.musicOn ? '🎵' : '🔇');
+      },
+      { emoji: true, fontSize: 28, width: 76, height: 64, fill: 0xffffff },
+    );
+    musicBtn.setAlpha(0.9);
     // sentence + phrase stats share the words map under ':'-prefixed keys —
     // keep every word number on this screen honest by skipping them
     const wordStats = Object.entries(progress.words).filter(([k]) => !k.includes(':'));

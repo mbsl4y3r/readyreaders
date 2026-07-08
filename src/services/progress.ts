@@ -47,6 +47,8 @@ export interface ProgressData {
   avatar: AvatarConfig;
   settings: {
     sessionCapMin: number;
+    /** Background music on/off (parent corner). */
+    musicOn: boolean;
   };
 }
 
@@ -66,7 +68,7 @@ export function freshProgress(): ProgressData {
     pearls: START_PEARLS,
     cosmetics: starterCosmetics(),
     avatar: defaultAvatar(),
-    settings: { sessionCapMin: 18 },
+    settings: { sessionCapMin: 18, musicOn: true },
   };
 }
 
@@ -95,6 +97,7 @@ export function loadProgress(): ProgressData {
     data.pearls ??= START_PEARLS;
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
+    data.settings.musicOn ??= true;
     return data;
   } catch {
     return freshProgress();
@@ -138,6 +141,7 @@ export function importCode(code: string): ProgressData | null {
     data.pearls ??= START_PEARLS;
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
+    data.settings.musicOn ??= true;
     return data;
   } catch {
     return null;

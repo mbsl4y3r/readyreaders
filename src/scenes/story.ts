@@ -13,7 +13,7 @@ import type { Story } from '../content/types';
 import { THEMES } from '../content/themes';
 import { loadProgress, saveProgress } from '../services/progress';
 import { PEARLS_PER_STORY } from '../avatar/catalog';
-import { speakUI, chime } from '../services/audio';
+import { speakUI, chime, playMusic } from '../services/audio';
 import {
   GAME_W,
   GAME_H,
@@ -53,6 +53,7 @@ export class StoryScene extends Phaser.Scene {
     const theme = THEMES.castle;
     drawRealmBackground(this, theme.bgTop, theme.bgBottom, theme.ambient);
     this.cameras.main.fadeIn(300);
+    playMusic('story');
 
     // home button — she can always leave, even mid-story
     const home = makeButton(this, 62, 52, '🏠', () => this.scene.start('map'), {

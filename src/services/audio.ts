@@ -5,10 +5,16 @@
  * Clips live in public/audio/{words,phrases,sentences,graphemes,ui}/<id>.mp3
  * (m4a also accepted). An index of what actually exists is generated at build
  * time; at runtime we simply try the file and remember misses.
+ *
+ * Music and sound effects are drop-in the same way: looping tracks under
+ * public/audio/music/<id>.*, effect files under public/audio/sfx/<kind>.* —
+ * absent files mean silence (music) or the synthesized chime (sfx), so the
+ * game is complete without them and upgrades itself when they appear.
+ * See docs/music-and-sfx.md for the Gemini prompts and Kenney shopping list.
  */
 import { speak } from './tts';
 
-type ClipKind = 'words' | 'phrases' | 'sentences' | 'graphemes' | 'ui';
+type ClipKind = 'words' | 'phrases' | 'sentences' | 'graphemes' | 'ui' | 'music' | 'sfx';
 
 const ctx: AudioContext | null =
   typeof window !== 'undefined' && 'AudioContext' in window ? new AudioContext() : null;
@@ -106,8 +112,17 @@ export function speakUI(id: string, text: string): Promise<void> {
   return playClipOr('ui', id, () => speak(text));
 }
 
-/** Short synthesized chime for correct answers (no asset needed). */
+/** Chime kinds double as sfx file names: public/audio/sfx/<kind>.mp3. */
 export function chime(kind: 'good' | 'gentle' | 'fanfare'): void {
+  // a real sound file (e.g. from a Kenney pack) beats the oscillator —
+  // but never block the game on the fetch; synth is the instant fallback
+  void loadClip('sfx', kind).then((buffer) => {
+    if (buffer) return playBuffer(buffer);
+    synthChime(kind);
+  });
+}
+
+function synthChime(kind: 'good' | 'gentle' | 'fanfare'): void {
   if (!ctx) return;
   const notes =
     kind === 'good' ? [523.25, 659.25] : kind === 'gentle' ? [392] : [523.25, 659.25, 783.99, 1046.5];
@@ -124,4 +139,83 @@ export function chime(kind: 'good' | 'gentle' | 'fanfare'): void {
     osc.start(now + i * 0.09);
     osc.stop(now + i * 0.09 + 0.4);
   });
+}
+
+// ---- background music ----------------------------------------------------
+// One looping track at a time, quiet under the voice clips, crossfaded on
+// scene changes. A missing file is simply silence — tracks are drop-in.
+
+const MUSIC_VOLUME = 0.22;
+const FADE_S = 0.7;
+
+let musicEnabled = true;
+let musicId: string | null = null;
+let musicSource: AudioBufferSourceNode | null = null;
+let musicGain: GainNode | null = null;
+/** Guards against a slow decode finishing after a newer playMusic call. */
+let musicToken = 0;
+
+function stopCurrent(fade: boolean): void {
+  if (!ctx || !musicSource || !musicGain) {
+    musicSource = null;
+    musicGain = null;
+    return;
+  }
+  const src = musicSource;
+  const gain = musicGain;
+  musicSource = null;
+  musicGain = null;
+  const now = ctx.currentTime;
+  gain.gain.cancelScheduledValues(now);
+  if (fade) {
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.linearRampToValueAtTime(0.0001, now + FADE_S);
+    src.stop(now + FADE_S + 0.05);
+  } else {
+    src.stop();
+  }
+}
+
+/** Start (or keep) the looping track for this part of the game. */
+export function playMusic(id: string): void {
+  if (!ctx) return;
+  if (musicId === id && musicSource) return; // already playing this one
+  musicId = id;
+  if (!musicEnabled) return;
+  const token = ++musicToken;
+  void loadClip('music', id).then((buffer) => {
+    if (!ctx || !buffer) return;
+    if (token !== musicToken || musicId !== id) return; // superseded meanwhile
+    stopCurrent(true);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+    const gain = ctx.createGain();
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(MUSIC_VOLUME, now + FADE_S);
+    src.connect(gain).connect(ctx.destination);
+    src.start();
+    musicSource = src;
+    musicGain = gain;
+  });
+}
+
+export function stopMusic(): void {
+  musicId = null;
+  musicToken++;
+  stopCurrent(true);
+}
+
+/** Parent-corner toggle; also called at boot from saved settings. */
+export function setMusicEnabled(on: boolean): void {
+  musicEnabled = on;
+  if (!on) {
+    musicToken++;
+    stopCurrent(true);
+  } else if (musicId) {
+    const id = musicId;
+    musicId = null; // force a restart of the remembered track
+    playMusic(id);
+  }
 }

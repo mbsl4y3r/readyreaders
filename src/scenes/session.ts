@@ -11,7 +11,7 @@ import type { RoundSpec, RoundResult } from '../engine/rounds';
 import { updateStat } from '../engine/adaptive';
 import { loadProgress, saveProgress, statFor } from '../services/progress';
 import { PEARLS_PER_SESSION, PEARLS_SPEED_BEST } from '../avatar/catalog';
-import { speakUI, chime } from '../services/audio';
+import { speakUI, chime, playMusic } from '../services/audio';
 import { runFeedCreature } from '../games/feed-creature';
 import { runBuildWord } from '../games/build-word';
 import { runSentencePicture } from '../games/sentence-picture';
@@ -64,6 +64,7 @@ export class SessionScene extends Phaser.Scene {
     const theme = THEMES[level.realm];
     drawRealmBackground(this, theme.bgTop, theme.bgBottom, theme.ambient);
     this.cameras.main.fadeIn(300);
+    playMusic(level.realm); // each realm has its own track (drop-in, optional)
 
     // home button — she can always leave, mid-session exits are fine
     const home = makeButton(this, 62, 52, '🏠', () => this.scene.start('map'), {

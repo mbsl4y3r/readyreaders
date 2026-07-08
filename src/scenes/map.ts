@@ -8,7 +8,7 @@ import Phaser from 'phaser';
 import { LEVELS } from '../content/levels';
 import { THEMES } from '../content/themes';
 import { loadProgress } from '../services/progress';
-import { speakUI } from '../services/audio';
+import { speakUI, playMusic } from '../services/audio';
 import { GAME_W, GAME_H, readingText, emojiText, drawRealmBackground, makeButton } from '../ui/kit';
 
 const STOP_POS: [number, number][] = [
@@ -25,6 +25,7 @@ export class MapScene extends Phaser.Scene {
     const progress = loadProgress();
     drawRealmBackground(this, 0x14213d, 0x081c15, ['🌊', '🌲', '✨']);
     this.cameras.main.fadeIn(300);
+    playMusic('map');
 
     readingText(this, GAME_W / 2, 56, "Evie's Reading Realms", 40, '#ffe9a8');
 

@@ -67,6 +67,10 @@ records straight into the repo with the exact right filenames, and shows
 what's still missing. When you're done, just commit the new files under
 `public/audio/`.
 
+Background **music** and **sound effects** are drop-in too — see
+`docs/music-and-sfx.md` for ready-to-paste Gemini music prompts and the
+Kenney sfx shopping list (with the iPad-safe conversion one-liner).
+
 No laptop handy? Open a **GitHub Codespace** on this repo instead — it
 installs everything and starts the recorder automatically. Wait for the
 "Family voice recorder" port notification, click **Open in Browser** (keep
