@@ -28,6 +28,8 @@ export interface ProgressData {
   bookLesson: number;
   /** True once the placement voyage has confirmed the starting frontier. */
   placed: boolean;
+  /** True once the first-run character creator has made Evie her own. */
+  created: boolean;
   words: Record<string, WordStat>;
   collections: {
     treasures: string[];
@@ -60,6 +62,7 @@ export function freshProgress(): ProgressData {
     currentLevel: 1,
     bookLesson: 17,
     placed: false,
+    created: false,
     words: {},
     collections: { treasures: [], pets: [], charms: [] },
     sessions: [],
@@ -97,6 +100,10 @@ export function loadProgress(): ProgressData {
     data.pearls ??= START_PEARLS;
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
+    data.created ??= data.placed; // players from before the creator skip it
+    data.avatar.face ??= null;
+    data.avatar.glasses ??= null;
+    data.avatar.earrings ??= null;
     data.settings.musicOn ??= true;
     return data;
   } catch {
@@ -141,6 +148,10 @@ export function importCode(code: string): ProgressData | null {
     data.pearls ??= START_PEARLS;
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
+    data.created ??= data.placed;
+    data.avatar.face ??= null;
+    data.avatar.glasses ??= null;
+    data.avatar.earrings ??= null;
     data.settings.musicOn ??= true;
     return data;
   } catch {

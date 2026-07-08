@@ -35,9 +35,9 @@ export class BootScene extends Phaser.Scene {
       const progress = loadProgress();
       setMusicEnabled(progress.settings.musicOn); // honor the parent toggle from launch
       void speakUI('welcome', "Welcome to Evie's Reading Realms!");
-      // first-ever launch sails the placement voyage so the map opens at the
-      // right frontier; after that the star always goes straight to the map
-      const next = progress.placed ? 'map' : 'voyage';
+      // first launch: make your character, then a grown-up sets the book
+      // marker (the voyage); after both, the star goes straight to the map
+      const next = !progress.created ? 'creator' : !progress.placed ? 'voyage' : 'map';
       this.cameras.main.fadeOut(350);
       this.time.delayedCall(380, () => this.scene.start(next));
     });

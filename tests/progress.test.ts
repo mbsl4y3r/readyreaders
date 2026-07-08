@@ -87,3 +87,41 @@ describe('phase 2 field migrations', () => {
     expect(imported?.storiesRead).toEqual([]);
   });
 });
+
+describe('character-creation flag + avatar migration', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('fresh saves start uncreated so boot routes to the creator', () => {
+    expect(freshProgress().created).toBe(false);
+    expect(freshProgress().avatar.face).toBeNull();
+  });
+
+  it('a placed save from before the creator counts as already created', () => {
+    const data = freshProgress() as unknown as Record<string, unknown>;
+    data['placed'] = true;
+    delete data['created'];
+    localStorage.setItem('readyreaders.v1', JSON.stringify(data));
+    expect(loadProgress().created).toBe(true);
+  });
+
+  it('an un-placed pre-creator save still gets the creator', () => {
+    const data = freshProgress() as unknown as Record<string, unknown>;
+    data['placed'] = false;
+    delete data['created'];
+    localStorage.setItem('readyreaders.v1', JSON.stringify(data));
+    expect(loadProgress().created).toBe(false);
+  });
+
+  it('backfills the new avatar face/glasses/earrings slots as null', () => {
+    const data = freshProgress();
+    const raw = data as unknown as { avatar: Record<string, unknown> };
+    delete raw.avatar['face'];
+    delete raw.avatar['glasses'];
+    delete raw.avatar['earrings'];
+    localStorage.setItem('readyreaders.v1', JSON.stringify(data));
+    const loaded = loadProgress();
+    expect(loaded.avatar.face).toBeNull();
+    expect(loaded.avatar.glasses).toBeNull();
+    expect(loaded.avatar.earrings).toBeNull();
+  });
+});
