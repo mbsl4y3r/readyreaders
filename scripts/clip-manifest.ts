@@ -86,6 +86,9 @@ export function buildManifest(): Clip[] {
     ['new-outfit', 'Ooh! You look wonderful!'],
     ['need-pearls', 'Read to earn more pearls!'],
     ['wardrobe-nudge', "Let's go read to earn more pearls!"],
+    // first-run character creator
+    ['creator-welcome', "Let's make your very own Evie!"],
+    ['creator-done', "Yay! Let's start your adventure!"],
     ...LEVELS.map(
       (l): [string, string] => [`level-${l.id}`, `${THEMES[l.realm].name}! Here we go!`],
     ),

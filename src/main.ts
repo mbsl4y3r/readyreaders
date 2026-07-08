@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/boot';
+import { CreatorScene } from './scenes/creator';
 import { MapScene } from './scenes/map';
 import { SessionScene } from './scenes/session';
 import { ParentScene } from './scenes/parent';
@@ -22,6 +23,7 @@ const game = new Phaser.Game({
   },
   scene: [
     BootScene,
+    CreatorScene,
     MapScene,
     SessionScene,
     ParentScene,

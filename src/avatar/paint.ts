@@ -463,6 +463,24 @@ function drawTail(ctx: Ctx, colorway: string): void {
     }
     ctx.globalAlpha = 1;
   }
+
+  if (colorway === 'pearl') {
+    // faint iridescent pastel sheen streaks
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 6;
+    for (const [x, y, c] of [
+      [84, 156, '#ffd9ec'],
+      [100, 180, '#d9ecff'],
+      [92, 204, '#e2ffe9'],
+    ] as const) {
+      ctx.strokeStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 18, y + 26);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
   ctx.restore();
 
   if (colorway === 'midnight') {
@@ -553,6 +571,56 @@ function drawGownSkirt(ctx: Ctx, colorway: string): void {
       ctx.stroke();
     }
     ctx.restore();
+  }
+  if (colorway === 'winter') {
+    // tiny 6-spoke snowflakes drifting down the skirt
+    ctx.save();
+    ctx.strokeStyle = '#ffffff';
+    ctx.globalAlpha = 0.9;
+    ctx.lineWidth = 1;
+    const flakes: ReadonlyArray<readonly [number, number, number]> = [
+      [72, 178, 3.4],
+      [110, 168, 3],
+      [128, 202, 3.6],
+      [86, 210, 3.2],
+      [118, 224, 3],
+      [58, 210, 3],
+      [98, 194, 3.4],
+    ];
+    for (const [x, y, r] of flakes) {
+      for (let k = 0; k < 3; k++) {
+        const a = (k * Math.PI) / 3;
+        ctx.beginPath();
+        ctx.moveTo(x - Math.cos(a) * r, y - Math.sin(a) * r);
+        ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+  if (colorway === 'starlight') {
+    // scattered white star dots + one bigger sparkle
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = 0.9;
+    const dots: ReadonlyArray<readonly [number, number, number]> = [
+      [74, 186, 1.3],
+      [110, 172, 1.1],
+      [128, 206, 1.4],
+      [88, 214, 1.1],
+      [118, 228, 1.3],
+      [58, 214, 1.1],
+      [98, 198, 1],
+      [136, 184, 1.2],
+      [70, 232, 1],
+    ];
+    for (const [x, y, r] of dots) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    sparkle(ctx, 82, 176, 3.4, 0.95);
   }
 }
 
@@ -1161,6 +1229,171 @@ function drawHeld(ctx: Ctx, held: HeldId): void {
     sparkle(ctx, hx - 27, hy - 36, 2.4, 0.9);
     sparkle(ctx, hx - 6, hy - 42, 2.0, 0.85);
     sparkle(ctx, hx - 28, hy - 22, 1.7, 0.8);
+  } else if (held === 'book') {
+    // small closed storybook, cover facing us
+    ctx.save();
+    ctx.translate(hx - 1, hy - 3);
+    ctx.rotate(-0.16);
+    ctx.beginPath();
+    ctx.moveTo(-11, -9);
+    ctx.lineTo(9, -9);
+    ctx.quadraticCurveTo(12, -9, 12, -6);
+    ctx.lineTo(12, 10);
+    ctx.quadraticCurveTo(12, 13, 9, 13);
+    ctx.lineTo(-11, 13);
+    ctx.closePath();
+    fillOutlined(ctx, '#d4453f', 0.72, 1.6);
+    // darker spine down the left
+    ctx.fillStyle = '#b5322c';
+    ctx.beginPath();
+    ctx.moveTo(-11, -9);
+    ctx.lineTo(-6, -9);
+    ctx.lineTo(-6, 13);
+    ctx.lineTo(-11, 13);
+    ctx.closePath();
+    ctx.fill();
+    // page edges peeking on the right
+    ctx.fillStyle = '#fff7e8';
+    ctx.beginPath();
+    ctx.moveTo(12, -6);
+    ctx.lineTo(14, -4);
+    ctx.lineTo(14, 9);
+    ctx.lineTo(12, 11);
+    ctx.closePath();
+    ctx.fill();
+    // gold star emblem
+    starPath(ctx, 2, 2, 4, 1.8, 5, -Math.PI / 2);
+    fillOutlined(ctx, GOLD, 0.72, 0.9);
+    // bookmark ribbon from the top
+    ctx.fillStyle = '#ffd36a';
+    ctx.beginPath();
+    ctx.moveTo(6, -9);
+    ctx.lineTo(9, -9);
+    ctx.lineTo(9, 4);
+    ctx.lineTo(7.5, 1.5);
+    ctx.lineTo(6, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  } else if (held === 'bouquet') {
+    ctx.save();
+    ctx.translate(hx, hy);
+    // stems
+    ctx.strokeStyle = '#4bae6a';
+    ctx.lineWidth = 2;
+    for (const dx of [-6, 0, 6]) {
+      ctx.beginPath();
+      ctx.moveTo(dx * 0.4, 6);
+      ctx.lineTo(dx, -14);
+      ctx.stroke();
+    }
+    // leaves
+    ctx.fillStyle = '#57c07a';
+    for (const [lxx, lyy, rot] of [
+      [-3, -3, -0.6],
+      [4, -1, 0.6],
+    ] as const) {
+      ctx.save();
+      ctx.translate(lxx, lyy);
+      ctx.rotate(rot);
+      ellipsePath(ctx, 0, 0, 2.2, 4.5, 0);
+      ctx.fill();
+      ctx.restore();
+    }
+    // blooms
+    const blooms: ReadonlyArray<readonly [number, number, string]> = [
+      [-7, -16, '#ff7fae'],
+      [0, -21, '#ffd36a'],
+      [7, -15, '#a98cff'],
+    ];
+    for (const [bx, by, c] of blooms) {
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI / 2 + (i * Math.PI * 2) / 5;
+        ctx.beginPath();
+        ctx.arc(bx + Math.cos(a) * 3.1, by + Math.sin(a) * 3.1, 2.4, 0, Math.PI * 2);
+        fillOutlined(ctx, c, 0.78, 0.9);
+      }
+      ctx.beginPath();
+      ctx.arc(bx, by, 2, 0, Math.PI * 2);
+      fillOutlined(ctx, GOLD, 0.74, 0.8);
+    }
+    ctx.restore();
+  } else if (held === 'balloon') {
+    // thin string from the hand up to a round balloon floating beside her
+    ctx.strokeStyle = '#c9b98a';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.quadraticCurveTo(hx - 6, hy - 40, hx - 2, hy - 60);
+    ctx.stroke();
+    const bx = hx - 2;
+    const by = hy - 74;
+    ctx.beginPath();
+    ctx.moveTo(bx, by + 16);
+    ctx.bezierCurveTo(bx - 14, by + 12, bx - 15, by - 6, bx, by - 14);
+    ctx.bezierCurveTo(bx + 15, by - 6, bx + 14, by + 12, bx, by + 16);
+    ctx.closePath();
+    fillOutlined(ctx, '#ff6f8f', 0.76, 1.6);
+    // knot
+    ctx.beginPath();
+    ctx.moveTo(bx - 2.5, by + 15);
+    ctx.lineTo(bx + 2.5, by + 15);
+    ctx.lineTo(bx, by + 19);
+    ctx.closePath();
+    fillOutlined(ctx, '#e0566f', 0.8, 1);
+    // gentle highlight
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#ffffff';
+    ellipsePath(ctx, bx - 5, by - 5, 3, 4.5, -0.4);
+    ctx.fill();
+    ctx.restore();
+  } else if (held === 'lantern') {
+    ctx.save();
+    ctx.translate(hx - 2, hy - 6);
+    // handle ring
+    ctx.strokeStyle = GOLD_EDGE;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(0, -14, 4, Math.PI * 1.08, Math.PI * 1.92);
+    ctx.stroke();
+    // star topper
+    starPath(ctx, 0, -18, 4.5, 2, 5, -Math.PI / 2);
+    fillOutlined(ctx, GOLD, 0.72, 1);
+    // glass body
+    ctx.beginPath();
+    ctx.moveTo(-7, -8);
+    ctx.quadraticCurveTo(-9, 4, -6, 10);
+    ctx.lineTo(6, 10);
+    ctx.quadraticCurveTo(9, 4, 7, -8);
+    ctx.quadraticCurveTo(0, -11, -7, -8);
+    ctx.closePath();
+    fillOutlined(ctx, '#ffe6a3', 0.82, 1.4);
+    // warm glow
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    const gg = ctx.createRadialGradient(0, 1, 1, 0, 1, 8);
+    gg.addColorStop(0, '#fff3c4');
+    gg.addColorStop(1, 'rgba(255,200,90,0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath();
+    ctx.arc(0, 1, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    // little flame
+    ctx.fillStyle = '#ff9a3c';
+    ellipsePath(ctx, 0, 2, 2, 3.4, 0);
+    ctx.fill();
+    // frame caps
+    ctx.strokeStyle = GOLD_EDGE;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-7, -8);
+    ctx.lineTo(7, -8);
+    ctx.moveTo(-6, 10);
+    ctx.lineTo(6, 10);
+    ctx.stroke();
+    ctx.restore();
   } else {
     // plump orange-pink sea star
     ctx.save();
@@ -1879,6 +2112,140 @@ function drawHeadwear(ctx: Ctx, headwear: HeadwearId, hairStyle: HairStyleId): v
     starPath(ctx, 79, 52, 8, 3.4, 5, -Math.PI / 2 + 0.25);
     fillOutlined(ctx, GOLD, 0.72, 1.3);
     sparkle(ctx, 86, 45, 1.8, 0.85);
+  } else if (headwear === 'headband') {
+    ctx.save();
+    ctx.translate(0, topY);
+    const band = '#ff8fb5';
+    // band arc riding the hairline over the crown
+    ctx.strokeStyle = band;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(HEAD_CX, HEAD_CY - 2, HEAD_R + 1, Math.PI * 1.14, Math.PI * 1.86);
+    ctx.stroke();
+    // top sheen
+    ctx.strokeStyle = lighten(band, 0.4);
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(HEAD_CX, HEAD_CY - 2, HEAD_R - 1, Math.PI * 1.2, Math.PI * 1.8);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    // tiny side bow near the right end
+    ctx.save();
+    ctx.translate(126, 52);
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(s * 5, -5, s * 11, -5, s * 11, -0.5);
+      ctx.bezierCurveTo(s * 11, 4, s * 5, 4.5, 0, 0);
+      ctx.closePath();
+      fillOutlined(ctx, '#ff6f9d', 0.78, 1.1);
+    }
+    ctx.beginPath();
+    ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+    fillOutlined(ctx, '#ff5f8f', 0.76, 0.9);
+    ctx.restore();
+    ctx.restore();
+  } else if (headwear === 'sunhat') {
+    ctx.save();
+    ctx.translate(0, topY);
+    const straw = '#f0d091';
+    const strawDeep = '#d8ad5f';
+    // wide floppy brim
+    ellipsePath(ctx, 100, 50, 52, 13, 0);
+    fillGradientOutlined(ctx, [lighten(straw, 0.1), strawDeep], 38, 63, 0.8, 1.6);
+    // straw texture radiating across the brim
+    ctx.strokeStyle = strawDeep;
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 1;
+    for (let i = -4; i <= 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(100 + i * 6, 46);
+      ctx.lineTo(100 + i * 13, 56);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // rounded crown dome
+    ctx.beginPath();
+    ctx.moveTo(73, 50);
+    ctx.bezierCurveTo(70, 26, 130, 26, 127, 50);
+    ctx.quadraticCurveTo(100, 44, 73, 50);
+    ctx.closePath();
+    fillGradientOutlined(ctx, [lighten(straw, 0.14), straw], 26, 52, 0.8, 1.5);
+    // ribbon band round the crown base + little bow
+    ctx.beginPath();
+    ctx.moveTo(73, 47);
+    ctx.quadraticCurveTo(100, 54, 127, 47);
+    ctx.lineTo(127, 52);
+    ctx.quadraticCurveTo(100, 59, 73, 52);
+    ctx.closePath();
+    fillOutlined(ctx, '#ff8fb5', 0.8, 1.2);
+    ctx.save();
+    ctx.translate(120, 50);
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(s * 5, -4, s * 10, -4, s * 10, -0.5);
+      ctx.bezierCurveTo(s * 10, 4, s * 5, 4, 0, 0);
+      ctx.closePath();
+      fillOutlined(ctx, '#ff6f9d', 0.78, 1);
+    }
+    ctx.restore();
+    ctx.restore();
+  } else if (headwear === 'earmuffs') {
+    ctx.save();
+    ctx.translate(0, topY);
+    const band = '#e08fb5';
+    const muff = '#ffb0cf';
+    // band over the crown, ends meeting the muffs at ear height
+    ctx.strokeStyle = band;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(100, 76, 44, Math.PI, Math.PI * 2);
+    ctx.stroke();
+    // fuzzy muffs over each ear
+    for (const s of [-1, 1]) {
+      const mx = 100 + s * 44;
+      const my = 78;
+      ctx.beginPath();
+      const N = 12;
+      for (let i = 0; i <= N; i++) {
+        const a = (i / N) * Math.PI * 2;
+        const rr = 10 + (i % 2 === 0 ? 1.6 : -0.4);
+        const px = mx + Math.cos(a) * rr;
+        const py = my + Math.sin(a) * rr;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      fillOutlined(ctx, muff, 0.82, 1.4);
+      ctx.beginPath();
+      ctx.arc(mx, my, 5.5, 0, Math.PI * 2);
+      fillOutlined(ctx, shade(muff, 0.9), 0.82, 1);
+    }
+    ctx.restore();
+  } else if (headwear === 'flowercrown') {
+    ctx.save();
+    ctx.translate(0, topY);
+    // a ring of little blooms following the hairline
+    const N = 6;
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1);
+      const a = Math.PI * (1.12 + t * 0.76);
+      const cx = 100 + Math.cos(a) * (HEAD_R + 3);
+      const cy = 78 + Math.sin(a) * (HEAD_R + 3);
+      const petalC = i % 2 === 0 ? '#ff8fb5' : '#ffffff';
+      for (let p = 0; p < 5; p++) {
+        const pa = -Math.PI / 2 + (p * Math.PI * 2) / 5;
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(pa) * 3, cy + Math.sin(pa) * 3, 2.6, 0, Math.PI * 2);
+        fillOutlined(ctx, petalC, 0.82, 0.9);
+      }
+      ctx.beginPath();
+      ctx.arc(cx, cy, 2.2, 0, Math.PI * 2);
+      fillOutlined(ctx, GOLD, 0.74, 0.8);
+    }
+    ctx.restore();
   } else {
     // big two-loop ribbon bow on top
     ctx.save();
@@ -2097,6 +2464,49 @@ function drawPetHat(ctx: Ctx, hat: PetHatId): void {
     ctx.beginPath();
     ctx.arc(0, -10, 4.5, 0, Math.PI * 2);
     fillOutlined(ctx, '#ff6fa0', 0.78, 1.1);
+    ctx.restore();
+  } else if (hat === 'petstar') {
+    // a little gold star perched on the dome
+    ctx.save();
+    ctx.translate(80, 12);
+    starPath(ctx, 0, 0, 11, 4.8, 5, -Math.PI / 2);
+    fillOutlined(ctx, GOLD, 0.72, 1.4);
+    starPath(ctx, 0, 0, 5.6, 2.4, 5, -Math.PI / 2);
+    fillOutlined(ctx, lighten(GOLD, 0.35), 0.8, 0.8);
+    sparkle(ctx, 9, -8, 2, 0.85);
+    ctx.restore();
+  } else if (hat === 'petwizard') {
+    // small pointed wizard hat with a star + moon (kept short to fit)
+    ctx.save();
+    ctx.translate(80, 20);
+    // cone (slightly bent tip)
+    ctx.beginPath();
+    ctx.moveTo(-15, 3);
+    ctx.quadraticCurveTo(0, 7, 15, 3);
+    ctx.lineTo(3, -18);
+    ctx.quadraticCurveTo(1, -21, -2, -18);
+    ctx.closePath();
+    fillGradientOutlined(ctx, ['#6b5bc4', '#3f3286'], -18, 5, 0.8, 1.5);
+    // brim
+    ellipsePath(ctx, 0, 4, 18, 5, 0);
+    fillOutlined(ctx, '#4a3a9c', 0.8, 1.4);
+    // tip star
+    starPath(ctx, 1, -19, 3, 1.4, 5, -Math.PI / 2);
+    fillOutlined(ctx, GOLD, 0.72, 0.8);
+    // little gold star on the cone
+    starPath(ctx, -5, -6, 2.8, 1.2, 5, -Math.PI / 2);
+    fillOutlined(ctx, GOLD, 0.72, 0.7);
+    // crescent moon carved from two circles
+    ctx.save();
+    ctx.fillStyle = '#ffe08a';
+    ctx.beginPath();
+    ctx.arc(5, -9, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#463699';
+    ctx.beginPath();
+    ctx.arc(6.6, -10.2, 2.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
     ctx.restore();
   } else {
     // mini 3-point gold crown
