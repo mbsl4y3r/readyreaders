@@ -1979,14 +1979,16 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     ctx.bezierCurveTo(58, 70, 57, 82, 56, 94);
     ctx.closePath();
     fillOutlined(ctx, base, 0.8, 1.7);
-    // the plait — bean segments drifting down over the left shoulder
+    // the plait — bean segments drifting down over the left shoulder.
+    // kept left of the face circle (x<=~54 up top) so no bean sits on the
+    // cheek; it gathers by the ear and drapes down past the shoulder
     const seg: ReadonlyArray<readonly [number, number]> = [
-      [67, 100],
-      [63, 116],
-      [61, 132],
-      [60, 148],
-      [60, 164],
-      [61, 179],
+      [54, 106],
+      [52, 122],
+      [51, 138],
+      [51, 154],
+      [51, 169],
+      [52, 184],
     ];
     let r = 9;
     seg.forEach(([bx, by], i) => {
@@ -2006,8 +2008,8 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.stroke();
     }
     // tie + tip wisp
-    const tieX = 61;
-    const tieY = 188;
+    const tieX = 52;
+    const tieY = 193;
     ctx.beginPath();
     ctx.arc(tieX, tieY, 3.2, 0, Math.PI * 2);
     fillOutlined(ctx, '#ff8ab5', 0.78, 1.1);
@@ -2022,18 +2024,20 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     // braids: center part + two plaits framing the face
     crownCap(100, 46);
     for (const s of [-1, 1]) {
-      const bx = 100 + s * 38;
+      // offset 44 keeps the plaits just outside the face circle (edge x58/142)
+      // so the top beans hang beside the cheeks, not over them
+      const bx = 100 + s * 44;
       // 5 alternating bean-shaped segments, shrinking downward
       let r = 8.6;
       for (let i = 0; i < 5; i++) {
-        const y = 104 + i * 15.5;
+        const y = 112 + i * 15.5; // start below the cheek line (~y100)
         const tilt = (i % 2 === 0 ? 1 : -1) * 0.5 * s;
         ellipsePath(ctx, bx + s * (i % 2 === 0 ? 1.5 : -1.5), y, r, r * 0.76 + 3, tilt);
         fillOutlined(ctx, base, 0.8, 1.4);
         r -= 0.75;
       }
       // tie + tip wisp
-      const tieY = 104 + 4.6 * 15.5 + 8;
+      const tieY = 112 + 4.6 * 15.5 + 8;
       ctx.beginPath();
       ctx.arc(bx, tieY, 3, 0, Math.PI * 2);
       fillOutlined(ctx, '#ff8ab5', 0.78, 1.1);
@@ -2047,7 +2051,7 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.strokeStyle = shade(base, 0.8);
       ctx.lineWidth = 1.1;
       for (let i = 0; i < 4; i++) {
-        const y = 111 + i * 15.5;
+        const y = 119 + i * 15.5;
         ctx.beginPath();
         ctx.moveTo(bx - 4, y);
         ctx.quadraticCurveTo(bx, y + 3.5, bx + 4, y);
