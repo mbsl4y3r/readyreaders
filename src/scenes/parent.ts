@@ -165,10 +165,15 @@ export class ParentScene extends Phaser.Scene {
       fontSize: 20,
     });
     this.chip(RC, 548, W, H, 'Reset all progress', () => {
-      if (window.confirm('Really erase ALL of Evie’s progress? This cannot be undone.')) {
-        resetProgress();
-        this.scene.restart();
+      // a grown-up gate so little fingers can't wipe the save
+      const ans = window.prompt('To erase ALL progress, answer: what year was the USA founded?');
+      if (ans === null) return;
+      if (ans.trim() !== '1776') {
+        window.alert('Not quite — progress is safe.');
+        return;
       }
+      resetProgress();
+      this.scene.restart();
     }, { fill: 0x8f4a54, textColor: '#ffe1e1', fontSize: 20 });
 
     this.chip(cx, 614, 300, 48, '← Back to the map', () => this.scene.start('map'), {
