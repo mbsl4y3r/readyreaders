@@ -115,6 +115,14 @@ export class MapScene extends Phaser.Scene {
       height: 64,
       fill: 0xffffff,
     }).setAlpha(0.85);
+    // 🕹️ the Games Arcade — spend pearls on a play pass, earned by reading
+    makeButton(this, 80, 354, '🕹️', () => goTo('arcade'), {
+      emoji: true,
+      fontSize: 30,
+      width: 76,
+      height: 64,
+      fill: 0xffe9a8,
+    }).setAlpha(0.92);
 
     // session-cap sunset: past the daily cap the map turns to dusk and
     // suggests resting — a gentle wind-down, never a lock (parents decide)

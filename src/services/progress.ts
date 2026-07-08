@@ -45,6 +45,10 @@ export interface ProgressData {
   pearls: number;
   /** Achievement badge ids already earned + celebrated (see engine/achievements). */
   badges: string[];
+  /** Best score per arcade game id (see content/arcade-games). */
+  arcadeBest: Record<string, number>;
+  /** Epoch ms until which the Games Arcade play pass is active (0 = none). */
+  arcadePassUntil: number;
   /** Cosmetic item ids owned (see avatar/catalog.ts). */
   cosmetics: string[];
   /** What Evie and Inky are wearing right now. */
@@ -72,6 +76,8 @@ export function freshProgress(): ProgressData {
     storiesRead: [],
     pearls: START_PEARLS,
     badges: [],
+    arcadeBest: {},
+    arcadePassUntil: 0,
     cosmetics: starterCosmetics(),
     avatar: defaultAvatar(),
     settings: { sessionCapMin: 18, musicOn: true },
@@ -102,6 +108,8 @@ export function loadProgress(): ProgressData {
     data.storiesRead ??= [];
     data.pearls ??= START_PEARLS;
     data.badges ??= [];
+    data.arcadeBest ??= {};
+    data.arcadePassUntil ??= 0;
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
     data.created ??= data.placed; // players from before the creator skip it
@@ -151,6 +159,8 @@ export function importCode(code: string): ProgressData | null {
     data.storiesRead ??= [];
     data.pearls ??= START_PEARLS;
     data.badges ??= [];
+    data.arcadeBest ??= {};
+    data.arcadePassUntil ??= 0;
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
     data.created ??= data.placed;

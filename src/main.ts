@@ -10,6 +10,7 @@ import { CollectionScene } from './scenes/collection';
 import { StoryScene } from './scenes/story';
 import { WardrobeScene } from './scenes/wardrobe';
 import { AchievementsScene } from './scenes/achievements';
+import { ArcadeScene } from './scenes/arcade';
 import { GAME_W, GAME_H } from './ui/kit';
 
 const game = new Phaser.Game({
@@ -34,6 +35,7 @@ const game = new Phaser.Game({
     StoryScene,
     WardrobeScene,
     AchievementsScene,
+    ArcadeScene,
   ],
 });
 

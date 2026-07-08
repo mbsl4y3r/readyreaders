@@ -9,6 +9,7 @@ import { SENTENCES } from '../src/content/sentences';
 import { STORIES } from '../src/content/stories';
 import { THEMES } from '../src/content/themes';
 import { LEVELS } from '../src/content/levels';
+import { ARCADE_GAMES, ARCADE_ANNOUNCE } from '../src/content/arcade-games';
 
 export interface Clip {
   kind: 'graphemes' | 'ui' | 'words' | 'phrases' | 'sentences';
@@ -99,6 +100,11 @@ export function buildManifest(): Clip[] {
     ['creator-step-outfit', 'Dress up!'],
     ['creator-step-face', 'Add a face'],
     ['creator-step-petColor', 'Your pet Inky'],
+    // Games Arcade — a grown-up records these in a wacky announcer voice
+    ['arcade-hub', ARCADE_ANNOUNCE.hub!],
+    ...ARCADE_GAMES.map(
+      (g): [string, string] => [`arcade-${g.id}`, ARCADE_ANNOUNCE[g.id] ?? g.title],
+    ),
     ...LEVELS.map(
       (l): [string, string] => [`level-${l.id}`, `${THEMES[l.realm].name}! Here we go!`],
     ),
