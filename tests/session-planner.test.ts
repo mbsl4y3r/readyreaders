@@ -13,6 +13,7 @@ import {
   planReview,
 } from '../src/engine/session-planner';
 import { freshProgress, freshStat } from '../src/services/progress';
+import { highestLevelForBookLesson } from '../src/content/levels';
 import { getWord, WORDS_BY_ID } from '../src/content/words';
 import { SENTENCES } from '../src/content/sentences';
 import { PHRASES } from '../src/content/phrases';
@@ -190,6 +191,17 @@ describe('family sort', () => {
       const w = getWord(id);
       expect(families.some((f) => w.text.toLowerCase().endsWith(f))).toBe(true);
     }
+  });
+});
+
+describe('highestLevelForBookLesson (island opens with the book marker)', () => {
+  it('opens the next level once the marker reaches its first lesson', () => {
+    expect(highestLevelForBookLesson(1)).toBe(1);
+    expect(highestLevelForBookLesson(9)).toBe(1);
+    expect(highestLevelForBookLesson(10)).toBe(2); // level 2 starts at lesson 10
+    expect(highestLevelForBookLesson(17)).toBe(2); // fresh-save default → levels 1–2
+    expect(highestLevelForBookLesson(18)).toBe(3);
+    expect(highestLevelForBookLesson(120)).toBe(9);
   });
 });
 

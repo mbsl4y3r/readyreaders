@@ -20,3 +20,15 @@ export function levelForLesson(lesson: number): Level {
   if (!level) throw new Error(`No level covers lesson ${lesson}`);
   return level;
 }
+
+/**
+ * How far the island has opened for a given book-lesson marker: the highest
+ * level whose first lesson the marker has reached. This is what unlocks map
+ * stops — the island opens in step with the parent's book marker, so the game
+ * never runs ahead of the physical phonics book.
+ */
+export function highestLevelForBookLesson(bookLesson: number): number {
+  let id = 1;
+  for (const l of LEVELS) if (bookLesson >= l.lessonRange[0]) id = l.id;
+  return id;
+}

@@ -5,9 +5,9 @@
  * the gear.
  */
 import Phaser from 'phaser';
-import { LEVELS } from '../content/levels';
+import { LEVELS, highestLevelForBookLesson } from '../content/levels';
 import { THEMES } from '../content/themes';
-import { loadProgress } from '../services/progress';
+import { loadProgress, saveProgress } from '../services/progress';
 import { speakUI, playMusic } from '../services/audio';
 import { GAME_W, GAME_H, readingText, emojiText, drawRealmBackground, makeButton } from '../ui/kit';
 
@@ -23,6 +23,15 @@ export class MapScene extends Phaser.Scene {
 
   create(): void {
     const progress = loadProgress();
+    // the island opens in step with the book marker (and never locks back) —
+    // this is what makes unlocking predictable: move the marker forward, more
+    // of the map opens. A manual bump in the parent corner can go further.
+    const open = highestLevelForBookLesson(progress.bookLesson);
+    if (progress.currentLevel < open) {
+      progress.currentLevel = open;
+      saveProgress(progress);
+    }
+
     drawRealmBackground(this, 0x14213d, 0x081c15, ['🌊', '🌲', '✨']);
     this.cameras.main.fadeIn(300);
     playMusic('map');

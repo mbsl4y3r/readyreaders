@@ -12,7 +12,7 @@
  * game is complete without them and upgrades itself when they appear.
  * See docs/music-and-sfx.md for the Gemini prompts and Kenney shopping list.
  */
-import { speak } from './tts';
+import { speak, stopSpeaking } from './tts';
 
 type ClipKind = 'words' | 'phrases' | 'sentences' | 'graphemes' | 'ui' | 'music' | 'sfx';
 
@@ -94,15 +94,52 @@ function playBuffer(buffer: AudioBuffer, gain = 1): Promise<void> {
   });
 }
 
+// ---- one voice at a time ----
+// The whole point of speech here is to be understood, so voice lines never
+// overlap: starting a new one stops whatever recording is still playing and
+// cancels any in-flight TTS. (Music and sfx are separate and may overlap.)
+let currentVoice: AudioBufferSourceNode | null = null;
+
+function stopVoice(): void {
+  if (currentVoice) {
+    try {
+      currentVoice.onended = null;
+      currentVoice.stop();
+    } catch {
+      // already stopped
+    }
+    currentVoice = null;
+  }
+  stopSpeaking(); // cancel any TTS utterance mid-sentence
+}
+
+function playVoiceBuffer(buffer: AudioBuffer): Promise<void> {
+  return new Promise((resolve) => {
+    if (!ctx) return resolve();
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const g = ctx.createGain();
+    g.gain.value = VOICE_GAIN;
+    source.connect(g).connect(voiceComp ?? ctx.destination);
+    source.onended = () => {
+      if (currentVoice === source) currentVoice = null;
+      resolve();
+    };
+    currentVoice = source;
+    source.start(0);
+  });
+}
+
 async function playClipOr(
   kind: ClipKind,
   id: string,
   fallback: (() => Promise<void>) | null,
 ): Promise<void> {
   duckMusic(); // words come first — music dips under every voice line
+  stopVoice(); // never talk over the previous line
   try {
     const buffer = await loadClip(kind, id);
-    if (buffer) return await playBuffer(buffer, VOICE_GAIN);
+    if (buffer) return await playVoiceBuffer(buffer);
     if (fallback) return await fallback();
   } finally {
     unduckMusic();
@@ -132,8 +169,9 @@ export async function speakGrapheme(g: string): Promise<boolean> {
   const buffer = await loadClip('graphemes', id);
   if (!buffer) return false;
   duckMusic();
+  stopVoice(); // one voice at a time
   try {
-    await playBuffer(buffer, VOICE_GAIN);
+    await playVoiceBuffer(buffer);
   } finally {
     unduckMusic();
   }

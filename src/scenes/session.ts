@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 import { LEVELS } from '../content/levels';
 import { THEMES } from '../content/themes';
-import { planSession, planReview, levelMastered, phraseStatKey } from '../engine/session-planner';
+import { planSession, planReview, phraseStatKey } from '../engine/session-planner';
 import type { RoundSpec, RoundResult } from '../engine/rounds';
 import { updateStat } from '../engine/adaptive';
 import { newlyEarned } from '../engine/achievements';
@@ -96,7 +96,8 @@ export class SessionScene extends Phaser.Scene {
         .setStrokeStyle(2, 0xffffff, 0.5),
     );
 
-    void speakUI('lets-read', "Let's read!");
+    // no spoken intro here — the first round greets her itself, so a
+    // "Let's read!" line would only step on it
 
     for (let i = 0; i < rounds.length; i++) {
       const spec = rounds[i]!;
@@ -149,16 +150,8 @@ export class SessionScene extends Phaser.Scene {
       : theme.collectibles.find((e) => !owned.has(e)) ?? theme.collectibles[0]!;
     if (!this.review && !owned.has(prize)) progress.collections[theme.collectionKey].push(prize);
 
-    // open the next level once this one is read well enough (gentle threshold).
-    // review never unlocks — it reinforces — but its mastery gains count next win.
-    if (
-      !this.review &&
-      progress.currentLevel === levelId &&
-      levelId < 9 &&
-      levelMastered(levelId, progress)
-    ) {
-      progress.currentLevel = levelId + 1;
-    }
+    // levels open in step with the parent's book marker (handled on the map),
+    // never from a single session — so nothing here bumps currentLevel.
     progress.sessions.push({
       date: new Date().toISOString().slice(0, 10),
       rounds: 8,
