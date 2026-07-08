@@ -38,15 +38,23 @@ import {
   type Button,
 } from '../ui/kit';
 
-type TabId = 'hair' | 'color' | 'outfit' | 'sparkle' | 'inky';
+type TabId = 'hair' | 'color' | 'outfit' | 'face' | 'sparkle' | 'inky';
 
 const TAB_DEFS: { id: TabId; name: string; emoji: string }[] = [
   { id: 'hair', name: 'Hair', emoji: '💇‍♀️' },
   { id: 'color', name: 'Color', emoji: '🎨' },
   { id: 'outfit', name: 'Outfit', emoji: '👗' },
+  { id: 'face', name: 'Face', emoji: '😊' },
   { id: 'sparkle', name: 'Sparkle', emoji: '✨' },
   { id: 'inky', name: 'Inky', emoji: '🐙' },
 ];
+
+// Six tabs share the panel width (x 516→1008). Stepping 82 from 558 with a
+// 76px button keeps a 6px gap, the first tab's left edge at 520 and the last
+// tab's right edge at 1006 — inside the panel, touch targets still ≥64px.
+const TAB_X0 = 558;
+const TAB_STEP = 82;
+const TAB_W = 76;
 
 /** Skin tones: identity swatches, never priced. Order matches SkinId. */
 const SKINS: { id: SkinId; color: number }[] = [
@@ -274,10 +282,10 @@ export class WardrobeScene extends Phaser.Scene {
 
   private buildTabs(): void {
     TAB_DEFS.forEach((def, i) => {
-      const tab = makeButton(this, 560 + i * 104, 138, def.emoji, () => this.switchTab(def.id), {
+      const tab = makeButton(this, TAB_X0 + i * TAB_STEP, 138, def.emoji, () => this.switchTab(def.id), {
         emoji: true,
         fontSize: 28,
-        width: 96,
+        width: TAB_W,
         height: 76,
       });
       tab.label.setY(-12);
@@ -436,6 +444,25 @@ export class WardrobeScene extends Phaser.Scene {
           addChip(item, 'outfit');
         }
         flushRow();
+        addHeader('Fairy dresses');
+        for (const item of COSMETICS.filter((c) => c.id.startsWith('fairy-'))) {
+          addChip(item, 'outfit');
+        }
+        flushRow();
+        addHeader('Everyday');
+        for (const item of COSMETICS.filter((c) => c.id.startsWith('play-'))) {
+          addChip(item, 'outfit');
+        }
+        flushRow();
+        break;
+      case 'face':
+        // all three are optional slots, so addCategory appends a free "None ✖"
+        addHeader('Freckles & blush');
+        addCategory('face');
+        addHeader('Glasses');
+        addCategory('glasses');
+        addHeader('Earrings');
+        addCategory('earrings');
         break;
       case 'sparkle':
         addHeader('Headwear');

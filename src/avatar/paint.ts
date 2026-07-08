@@ -11,6 +11,9 @@
 import type Phaser from 'phaser';
 import type {
   AvatarConfig,
+  EarringId,
+  FaceId,
+  GlassesId,
   HairColorId,
   HairStyleId,
   HeadwearId,
@@ -44,6 +47,10 @@ const HAIRS: Record<HairColorId, { base: string; sheen: string }> = {
   ember: { base: '#b34a2e', sheen: '#d4663f' },
   rose: { base: '#e07a9e', sheen: '#f0a2bd' },
   lilac: { base: '#9a7fd1', sheen: '#b8a2e6' },
+  aqua: { base: '#2fbfae', sheen: '#5fd8c8' },
+  silver: { base: '#c6ccd6', sheen: '#e6ebf2' },
+  auburn: { base: '#8a3b24', sheen: '#a8543a' },
+  honey: { base: '#d99a4e', sheen: '#eec27a' },
 };
 
 /** Mermaid tail colorways, top → bottom gradient stops. */
@@ -54,6 +61,8 @@ const TAILS: Record<string, string[]> = {
   midnight: ['#3a4a8a', '#1c2554'],
   gold: ['#ffd76a', '#d99a1e'],
   rainbow: ['#ff8ec4', '#a98cff', '#5ac8ff'],
+  sunset: ['#ff9a6b', '#ff6f9d'],
+  pearl: ['#eef2f6', '#c9d6e6'],
 };
 
 /** Princess gown colorways, top → bottom gradient stops. */
@@ -64,6 +73,37 @@ const GOWN_STOPS: Record<string, [string, string]> = {
   berry: ['#b06bd6', '#7a3fa0'],
   violet: ['#8a7fe0', '#5a4fb0'],
   gold: ['#ffd76a', '#e0a52e'],
+  winter: ['#dbeeff', '#9cc4e8'],
+  starlight: ['#3a4a8a', '#151a3a'],
+};
+
+/**
+ * Fairy dress + butterfly-wing colorways, light → deep. The dress gradient and
+ * the translucent wings share the same two stops so the outfit reads as one.
+ */
+const FAIRY_STOPS: Record<string, [string, string]> = {
+  rose: ['#ff9ec4', '#ff6f9d'],
+  violet: ['#b18cff', '#7d5ad6'],
+  mint: ['#8fe0c0', '#4bbf95'],
+};
+
+/**
+ * Everyday play-clothes colorways. Each has the main garment color plus the
+ * tee it's worn over, a trim accent, and the little shoe fill — enough for the
+ * three distinct looks (sunny playsuit, berry pinafore, denim & tee).
+ */
+interface PlayLook {
+  garment: string; // skirt / pinafore / denim
+  tee: string; // top under the garment (and short sleeves)
+  trim: string; // white piping / stripe accent
+  shoe: string; // shoe body
+  shoeKind: 'plain' | 'maryjane' | 'sneaker';
+  striped?: boolean; // draw 2 tee stripes
+}
+const PLAY_LOOKS: Record<string, PlayLook> = {
+  sunny: { garment: '#ffd36a', tee: '#ffd36a', trim: '#ffffff', shoe: '#ffffff', shoeKind: 'plain' },
+  berry: { garment: '#e2567f', tee: '#fff3e0', trim: '#ffe4ef', shoe: '#e2567f', shoeKind: 'maryjane' },
+  denim: { garment: '#5a86c4', tee: '#eef2f6', trim: '#7fb0e0', shoe: '#ffffff', shoeKind: 'sneaker', striped: true },
 };
 
 const GOLD = '#f6d06a';
@@ -76,6 +116,9 @@ const PETS: Record<PetColorId, { base: string; deep: string }> = {
   violet: { base: '#b06bff', deep: '#7d3fd6' },
   rose: { base: '#ff8ab5', deep: '#d65a8a' },
   sea: { base: '#5fd0c0', deep: '#2f9a8a' },
+  coral: { base: '#ff8f6b', deep: '#e3564f' },
+  gold: { base: '#ffcf6a', deep: '#e0a52e' },
+  midnight: { base: '#5b6bb0', deep: '#2a2f5c' },
 };
 
 // ---------------------------------------------------------------- color math
@@ -187,7 +230,8 @@ const HEAD_R = 42;
 export function drawEvieInto(ctx: Ctx, config: AvatarConfig): void {
   const skin = SKINS[config.skin];
   const hair = HAIRS[config.hairColor];
-  const mermaid = config.outfit.startsWith('tail-');
+  // Outfits render by prefix family; the colorway is whatever follows it.
+  const family = config.outfit.slice(0, config.outfit.indexOf('-')); // tail|gown|fairy|play
   const colorway = config.outfit.slice(config.outfit.indexOf('-') + 1);
 
   ctx.save();
@@ -197,25 +241,47 @@ export function drawEvieInto(ctx: Ctx, config: AvatarConfig): void {
   // 1. back hair silhouette
   drawBackHair(ctx, config.hairStyle, hair);
 
-  // 2. outfit bottom
-  if (mermaid) drawTail(ctx, colorway);
-  else drawGownSkirt(ctx, colorway);
+  // 1b. fairy wings sit behind the body but over the back hair so they always
+  // read; every other layer paints on top of them.
+  if (family === 'fairy') drawWings(ctx, colorway);
+
+  // 2. outfit bottom — legs peek out first so the short skirt overlaps them.
+  if (family === 'tail') {
+    drawTail(ctx, colorway);
+  } else if (family === 'gown') {
+    drawGownSkirt(ctx, colorway);
+  } else if (family === 'fairy') {
+    drawLegs(ctx, skin, slipperFill(colorway), 'plain');
+    drawFairySkirt(ctx, colorway);
+  } else {
+    const look = PLAY_LOOKS[colorway] ?? PLAY_LOOKS['sunny']!;
+    drawLegs(ctx, skin, look.shoe, look.shoeKind);
+    drawPlaySkirt(ctx, look);
+  }
 
   // 3. torso, top garment, arms
   drawTorso(ctx, skin);
-  if (mermaid) drawBandeau(ctx, colorway);
-  else drawBodice(ctx, colorway);
-  drawArms(ctx, skin, !mermaid, colorway);
+  if (family === 'tail') drawBandeau(ctx, colorway);
+  else if (family === 'gown') drawBodice(ctx, colorway);
+  else if (family === 'fairy') drawFairyBodice(ctx, colorway);
+  else drawPlayTop(ctx, colorway);
+  drawArms(ctx, skin, family, colorway);
 
   // 4. necklace (head chin overlaps its top edge)
   if (config.necklace) drawNecklace(ctx, config.necklace);
 
   // 6. head + 7. face
   drawHead(ctx, skin);
-  drawFace(ctx, skin, hair);
+  drawFace(ctx, skin, hair, config.face);
 
   // 8. front hair
   drawFrontHair(ctx, config.hairStyle, hair);
+
+  // 8b. earrings ride the hairline so they read even when the ear is covered.
+  if (config.earrings) drawEarrings(ctx, config.earrings, config.hairStyle);
+
+  // 8c. glasses sit on the nose bridge, in front of the face and fringe.
+  if (config.glasses) drawGlasses(ctx, config.glasses);
 
   // held item in her right hand (viewer left) — in front of the long hair
   // so wand/star stay visible with every hairstyle.
@@ -225,6 +291,12 @@ export function drawEvieInto(ctx: Ctx, config: AvatarConfig): void {
   if (config.headwear) drawHeadwear(ctx, config.headwear, config.hairStyle);
 
   ctx.restore();
+}
+
+/** A soft matching slipper color for a fairy's little feet. */
+function slipperFill(colorway: string): string {
+  const stops = FAIRY_STOPS[colorway] ?? FAIRY_STOPS['rose']!;
+  return lighten(stops[0], 0.3);
 }
 
 // ---------------------------------------------------------------- hair (back)
@@ -267,8 +339,65 @@ function drawBackHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen:
     ctx.bezierCurveTo(154, 62, 140, 30, 100, 30);
     ctx.closePath();
     fillOutlined(ctx, base, 0.8, 1.8);
+  } else if (style === 'curls') {
+    // Rounded cloud of curl lobes framing the whole head — a bumpy halo of
+    // overlapping circles a little wider than the skull.
+    const lobes: ReadonlyArray<readonly [number, number, number]> = [
+      [100, 30, 20],
+      [70, 40, 17],
+      [130, 40, 17],
+      [54, 66, 16],
+      [146, 66, 16],
+      [52, 92, 15],
+      [148, 92, 15],
+      [62, 116, 14],
+      [138, 116, 14],
+      [82, 128, 13],
+      [118, 128, 13],
+    ];
+    for (const [x, y, r] of lobes) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      fillOutlined(ctx, base, 0.8, 1.6);
+    }
+  } else if (style === 'pixie') {
+    // Short crop: a snug cap that tapers to a little point at the nape.
+    ctx.beginPath();
+    ctx.moveTo(100, 32);
+    ctx.bezierCurveTo(66, 32, 52, 58, 54, 88);
+    ctx.bezierCurveTo(55, 102, 62, 112, 74, 116); // left nape taper
+    ctx.quadraticCurveTo(100, 122, 126, 116); // rounded nape
+    ctx.bezierCurveTo(138, 112, 145, 102, 146, 88);
+    ctx.bezierCurveTo(148, 58, 134, 32, 100, 32);
+    ctx.closePath();
+    fillOutlined(ctx, base, 0.8, 1.8);
+  } else if (style === 'longstraight') {
+    // Very long straight curtain falling well past the shoulders, gentle taper.
+    ctx.beginPath();
+    ctx.moveTo(100, 30);
+    ctx.bezierCurveTo(58, 30, 46, 60, 48, 96);
+    ctx.lineTo(44, 150);
+    ctx.bezierCurveTo(43, 178, 46, 200, 50, 214); // left edge down
+    ctx.quadraticCurveTo(62, 220, 74, 214); // hem lobes
+    ctx.quadraticCurveTo(100, 222, 126, 214);
+    ctx.quadraticCurveTo(138, 220, 150, 214);
+    ctx.bezierCurveTo(154, 200, 157, 178, 156, 150); // right edge up
+    ctx.lineTo(152, 96);
+    ctx.bezierCurveTo(154, 60, 142, 30, 100, 30);
+    ctx.closePath();
+    fillOutlined(ctx, base, 0.8, 1.8);
+    // soft vertical sheen band down the centre-back
+    ctx.strokeStyle = hair.sheen;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(90, 60);
+    ctx.quadraticCurveTo(86, 140, 90, 206);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   } else {
-    // pony / bun / braids: neat cap slightly larger than the skull.
+    // pony / bun / braids / spacebuns / sidebraid: neat cap slightly larger
+    // than the skull; the distinctive pieces are painted in the front pass.
     ctx.beginPath();
     ctx.arc(HEAD_CX, HEAD_CY - 2, HEAD_R + 4, 0, Math.PI * 2);
     fillOutlined(ctx, base, 0.8, 1.8);
@@ -494,7 +623,7 @@ function drawBodice(ctx: Ctx, colorway: string): void {
 function drawArms(
   ctx: Ctx,
   skin: { base: string; shadow: string },
-  gown: boolean,
+  family: string,
   colorway: string,
 ): void {
   // Tapered arms resting at her sides, mitten hands.
@@ -513,13 +642,499 @@ function drawArms(
     ctx.arc(handX, 163, 6, 0, Math.PI * 2);
     fillOutlined(ctx, skin.base, 0.86, 1.3);
   }
-  if (gown) {
+  if (family === 'gown') {
     // tiny puff sleeves over the shoulders
     const [top, bottom] = GOWN_STOPS[colorway] ?? GOWN_STOPS['rose']!;
     for (const s of [-1, 1]) {
       ellipsePath(ctx, 100 + s * 18, 126, 8.5, 7.5, s * 0.3);
       fillGradientOutlined(ctx, [lighten(top, 0.12), mix(top, bottom, 0.5)], 118, 134, 0.8, 1.4);
     }
+  } else if (family === 'fairy') {
+    // little petal cap sleeves in the dress colorway
+    const [lite, deep] = FAIRY_STOPS[colorway] ?? FAIRY_STOPS['rose']!;
+    for (const s of [-1, 1]) {
+      ellipsePath(ctx, 100 + s * 18, 127, 8, 7, s * 0.35);
+      fillGradientOutlined(ctx, [lighten(lite, 0.1), mix(lite, deep, 0.5)], 119, 135, 0.8, 1.3);
+    }
+  } else if (family === 'play') {
+    // short-sleeve tee caps
+    const look = PLAY_LOOKS[colorway] ?? PLAY_LOOKS['sunny']!;
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(100 + s * 9, 123);
+      ctx.bezierCurveTo(100 + s * 20, 123, 100 + s * 25, 130, 100 + s * 24, 138);
+      ctx.quadraticCurveTo(100 + s * 16, 141, 100 + s * 9, 137);
+      ctx.closePath();
+      fillOutlined(ctx, look.tee, 0.82, 1.3);
+      // a hint of trim at the cuff
+      ctx.strokeStyle = look.trim;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(100 + s * 12, 138);
+      ctx.quadraticCurveTo(100 + s * 18, 141, 100 + s * 23, 138);
+      ctx.stroke();
+    }
+  }
+}
+
+// ---------------------------------------------------------------- fairy wings
+
+/** Fill a wing shape translucently, then trace a brighter thin rim. */
+function paintWing(
+  ctx: Ctx,
+  build: () => void,
+  lite: string,
+  deep: string,
+  rim: string,
+  y0: number,
+  y1: number,
+): void {
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  build();
+  const g = ctx.createLinearGradient(0, y0, 0, y1);
+  g.addColorStop(0, lite);
+  g.addColorStop(1, deep);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = 0.8;
+  build();
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * Two translucent butterfly wings behind the body — an upper forewing and a
+ * smaller hindwing per side, with soft veins. They reach well past where the
+ * arms rest so they always peek out.
+ */
+function drawWings(ctx: Ctx, colorway: string): void {
+  const [lite, deep] = FAIRY_STOPS[colorway] ?? FAIRY_STOPS['rose']!;
+  const rim = lighten(lite, 0.4);
+  for (const s of [-1, 1]) {
+    const upper = (): void => {
+      ctx.beginPath();
+      ctx.moveTo(100, 136);
+      ctx.bezierCurveTo(100 + s * 26, 108, 100 + s * 64, 106, 100 + s * 72, 130);
+      ctx.bezierCurveTo(100 + s * 77, 146, 100 + s * 58, 156, 100 + s * 32, 152);
+      ctx.bezierCurveTo(100 + s * 16, 150, 100 + s * 6, 146, 100, 136);
+      ctx.closePath();
+    };
+    paintWing(ctx, upper, lite, deep, rim, 106, 156);
+    const lower = (): void => {
+      ctx.beginPath();
+      ctx.moveTo(100, 150);
+      ctx.bezierCurveTo(100 + s * 20, 156, 100 + s * 52, 166, 100 + s * 56, 184);
+      ctx.bezierCurveTo(100 + s * 57, 196, 100 + s * 40, 198, 100 + s * 24, 189);
+      ctx.bezierCurveTo(100 + s * 13, 182, 100 + s * 6, 168, 100, 150);
+      ctx.closePath();
+    };
+    paintWing(ctx, lower, lite, deep, rim, 150, 198);
+    // faint veins fanning out from the body root
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = deep;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(100 + s * 8, 134);
+    ctx.quadraticCurveTo(100 + s * 40, 126, 100 + s * 62, 130);
+    ctx.moveTo(100 + s * 8, 140);
+    ctx.quadraticCurveTo(100 + s * 34, 144, 100 + s * 52, 150);
+    ctx.moveTo(100 + s * 10, 158);
+    ctx.quadraticCurveTo(100 + s * 30, 170, 100 + s * 46, 184);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ---------------------------------------------------------------- fairy dress
+
+function drawFairySkirt(ctx: Ctx, colorway: string): void {
+  const [lite, deep] = FAIRY_STOPS[colorway] ?? FAIRY_STOPS['rose']!;
+  // short flared skirt with a petal (pointed-scallop) hem
+  ctx.beginPath();
+  ctx.moveTo(85, 150);
+  ctx.bezierCurveTo(76, 162, 70, 172, 66, 176); // left flare
+  ctx.quadraticCurveTo(70, 188, 78, 178); // petal points along the hem
+  ctx.quadraticCurveTo(86, 190, 94, 178);
+  ctx.quadraticCurveTo(100, 190, 106, 178);
+  ctx.quadraticCurveTo(114, 190, 122, 178);
+  ctx.quadraticCurveTo(130, 188, 134, 176); // right
+  ctx.bezierCurveTo(130, 172, 124, 162, 115, 150);
+  ctx.closePath();
+  fillGradientOutlined(ctx, [lite, deep], 150, 186, 0.8, 1.5);
+  // soft fold lines
+  ctx.strokeStyle = shade(deep, 0.9);
+  ctx.globalAlpha = 0.55;
+  ctx.lineWidth = 1.3;
+  for (const dx of [-14, 0, 14]) {
+    ctx.beginPath();
+    ctx.moveTo(100 + dx * 0.4, 158);
+    ctx.quadraticCurveTo(100 + dx * 0.8, 170, 100 + dx, 180);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // a little fairy shimmer
+  sparkle(ctx, 80, 166, 1.8, 0.6);
+  sparkle(ctx, 120, 164, 1.6, 0.55);
+  sparkle(ctx, 100, 175, 1.7, 0.6);
+}
+
+function drawFairyBodice(ctx: Ctx, colorway: string): void {
+  const [lite, deep] = FAIRY_STOPS[colorway] ?? FAIRY_STOPS['rose']!;
+  ctx.beginPath();
+  ctx.moveTo(85, 120);
+  ctx.quadraticCurveTo(100, 126, 115, 120); // soft neckline
+  ctx.bezierCurveTo(119, 132, 118, 144, 116, 152);
+  ctx.lineTo(84, 152);
+  ctx.bezierCurveTo(82, 142, 81, 132, 85, 120);
+  ctx.closePath();
+  fillGradientOutlined(ctx, [lighten(lite, 0.08), mix(lite, deep, 0.5)], 118, 152, 0.8, 1.5);
+  // a sparkle at the neckline
+  sparkle(ctx, 100, 128, 2, 0.7);
+}
+
+// ---------------------------------------------------------------- legs + shoes
+
+type ShoeKind = 'plain' | 'maryjane' | 'sneaker';
+
+/** Skin-tone chibi legs from the hem down to little rounded shoes. */
+function drawLegs(
+  ctx: Ctx,
+  skin: { base: string; shadow: string },
+  shoeFill: string,
+  shoeKind: ShoeKind,
+): void {
+  for (const s of [-1, 1]) {
+    const lx = 100 + s * 11;
+    ctx.beginPath();
+    ctx.moveTo(lx - 7, 166);
+    ctx.bezierCurveTo(lx - 8, 182, lx - 6, 196, lx - 5, 204);
+    ctx.quadraticCurveTo(lx, 207, lx + 5, 204);
+    ctx.bezierCurveTo(lx + 6, 196, lx + 8, 182, lx + 7, 166);
+    ctx.closePath();
+    fillOutlined(ctx, skin.base, 0.86, 1.3);
+    drawShoe(ctx, lx, 202, s, shoeFill, shoeKind);
+  }
+}
+
+/** A small rounded shoe with the toe pointing outward (`s` = side). */
+function drawShoe(ctx: Ctx, cx: number, topY: number, s: number, fill: string, kind: ShoeKind): void {
+  ctx.save();
+  ctx.translate(cx, topY);
+  ctx.scale(s, 1); // mirror so the toe points away from center
+  ctx.beginPath();
+  ctx.moveTo(-6, 0);
+  ctx.bezierCurveTo(-8, 3, -8, 10, -3, 12); // heel
+  ctx.lineTo(6, 12);
+  ctx.bezierCurveTo(12, 12, 13, 6, 10, 2); // toe
+  ctx.bezierCurveTo(7, -1, 2, -1, -6, 0);
+  ctx.closePath();
+  fillOutlined(ctx, fill, 0.78, 1.3);
+  // sole
+  ctx.strokeStyle = shade(fill, 0.66);
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(-4, 11.4);
+  ctx.lineTo(9, 11.4);
+  ctx.stroke();
+  if (kind === 'maryjane') {
+    ctx.strokeStyle = shade(fill, 0.72);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-1, 1.5);
+    ctx.quadraticCurveTo(3, 4, 6, 1.5);
+    ctx.stroke();
+    ctx.fillStyle = '#fff3e0';
+    ctx.beginPath();
+    ctx.arc(-1, 1.5, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (kind === 'sneaker') {
+    // blue laces + a little side stripe
+    ctx.strokeStyle = '#5a86c4';
+    ctx.lineWidth = 1;
+    for (const lx of [1, 4]) {
+      ctx.beginPath();
+      ctx.moveTo(lx, 1.5);
+      ctx.lineTo(lx + 2.4, 4.5);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.moveTo(-3, 8);
+    ctx.quadraticCurveTo(3, 9.5, 9, 7);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- play clothes
+
+function drawPlaySkirt(ctx: Ctx, look: PlayLook): void {
+  // short flared skirt
+  ctx.beginPath();
+  ctx.moveTo(84, 150);
+  ctx.bezierCurveTo(74, 160, 66, 170, 62, 180); // left flare
+  ctx.quadraticCurveTo(80, 188, 100, 184); // hem
+  ctx.quadraticCurveTo(120, 188, 138, 180);
+  ctx.bezierCurveTo(134, 170, 126, 160, 116, 150);
+  ctx.closePath();
+  fillOutlined(ctx, look.garment, 0.8, 1.5);
+  // trim line along the hem
+  ctx.strokeStyle = look.trim;
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(64, 178);
+  ctx.quadraticCurveTo(81, 185, 100, 181);
+  ctx.quadraticCurveTo(119, 185, 136, 178);
+  ctx.stroke();
+  // soft pleat lines
+  ctx.strokeStyle = shade(look.garment, 0.85);
+  ctx.globalAlpha = 0.55;
+  ctx.lineWidth = 1.3;
+  for (const dx of [-12, 0, 12]) {
+    ctx.beginPath();
+    ctx.moveTo(100 + dx * 0.4, 158);
+    ctx.quadraticCurveTo(100 + dx * 0.8, 171, 100 + dx, 182);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawPlayTop(ctx: Ctx, colorway: string): void {
+  const look = PLAY_LOOKS[colorway] ?? PLAY_LOOKS['sunny']!;
+  // tee / top base over the torso
+  ctx.beginPath();
+  ctx.moveTo(84, 120);
+  ctx.quadraticCurveTo(100, 127, 116, 120);
+  ctx.bezierCurveTo(119, 132, 118, 145, 116, 153);
+  ctx.lineTo(84, 153);
+  ctx.bezierCurveTo(82, 145, 81, 132, 84, 120);
+  ctx.closePath();
+  const teeFill = colorway === 'sunny' ? look.garment : look.tee;
+  fillOutlined(ctx, teeFill, 0.84, 1.5);
+
+  if (colorway === 'sunny') {
+    // white collar trim
+    ctx.strokeStyle = look.trim;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(88, 123);
+    ctx.quadraticCurveTo(100, 130, 112, 123);
+    ctx.stroke();
+  } else if (colorway === 'berry') {
+    // pink pinafore bib + straps over the cream tee
+    ctx.beginPath();
+    ctx.moveTo(90, 131);
+    ctx.lineTo(110, 131);
+    ctx.lineTo(111, 153);
+    ctx.lineTo(89, 153);
+    ctx.closePath();
+    fillOutlined(ctx, look.garment, 0.8, 1.4);
+    ctx.strokeStyle = look.garment;
+    ctx.lineWidth = 4;
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(100 + s * 10, 132);
+      ctx.lineTo(100 + s * 8, 121);
+      ctx.stroke();
+    }
+    ctx.fillStyle = look.trim;
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(100 + s * 6, 137, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else {
+    // denim: striped tee with denim suspender straps (reads as overalls)
+    if (look.striped) {
+      ctx.strokeStyle = look.trim;
+      ctx.lineWidth = 3;
+      for (const y of [131, 141]) {
+        ctx.beginPath();
+        ctx.moveTo(84, y);
+        ctx.quadraticCurveTo(100, y + 3, 116, y);
+        ctx.stroke();
+      }
+    }
+    ctx.strokeStyle = look.garment;
+    ctx.lineWidth = 4.5;
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(100 + s * 11, 153);
+      ctx.lineTo(100 + s * 8, 121);
+      ctx.stroke();
+    }
+    ctx.fillStyle = GOLD;
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(100 + s * 9, 150, 1.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// ---------------------------------------------------------------- hearts (shared)
+
+/** Trace a rounded heart of half-width `halfW` centred at (cx, cy). */
+function heartPath(ctx: Ctx, cx: number, cy: number, halfW: number): void {
+  const k = halfW / 9;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(k, k);
+  ctx.beginPath();
+  ctx.moveTo(0, 8);
+  ctx.bezierCurveTo(-9, 0, -7.5, -7.5, -3.5, -7.5);
+  ctx.bezierCurveTo(-1.2, -7.5, 0, -5.6, 0, -4.4);
+  ctx.bezierCurveTo(0, -5.6, 1.2, -7.5, 3.5, -7.5);
+  ctx.bezierCurveTo(7.5, -7.5, 9, 0, 0, 8);
+  ctx.closePath();
+  ctx.restore();
+}
+
+function drawTinyHeart(
+  ctx: Ctx,
+  cx: number,
+  cy: number,
+  halfW: number,
+  fill: string,
+  alpha = 1,
+): void {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  heartPath(ctx, cx, cy, halfW);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- earrings
+
+function drawEarrings(ctx: Ctx, kind: EarringId, _hairStyle: HairStyleId): void {
+  // Ear lobes sit near (60, 92) / (140, 92); riding the hairline keeps the
+  // earring readable even when the ear itself is under the hair.
+  for (const s of [-1, 1]) {
+    const ex = 100 + s * 40;
+    const ey = 96;
+    if (kind === 'studs') {
+      ctx.beginPath();
+      ctx.arc(ex, ey, 2.2, 0, Math.PI * 2);
+      fillOutlined(ctx, GOLD, 0.7, 0.9);
+      ctx.fillStyle = '#fff6d0';
+      ctx.beginPath();
+      ctx.arc(ex - 0.7, ey - 0.7, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'pearl') {
+      ctx.strokeStyle = GOLD_EDGE;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey - 3.5);
+      ctx.lineTo(ex, ey - 0.5);
+      ctx.stroke();
+      ellipsePath(ctx, ex, ey + 2.5, 2.4, 3, 0);
+      fillOutlined(ctx, PEARL, 0.9, 0.8);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ex - 0.8, ey + 1.6, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'stars') {
+      starPath(ctx, ex, ey + 1, 3.4, 1.5, 5, -Math.PI / 2);
+      fillOutlined(ctx, GOLD, 0.7, 0.9);
+    } else {
+      drawTinyHeart(ctx, ex, ey + 1, 2.4, '#ff6f9d', 1);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- glasses
+
+function drawGlasses(ctx: Ctx, kind: GlassesId): void {
+  const lx = 86;
+  const rx = 114;
+  const cy = 83; // eye centres
+  if (kind === 'round') {
+    for (const cx of [lx, rx]) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8.5, 0, Math.PI * 2);
+      ctx.strokeStyle = GOLD;
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+      ctx.strokeStyle = GOLD_EDGE;
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+      // faint lens glare
+      ctx.save();
+      ctx.globalAlpha = 0.14;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.strokeStyle = GOLD;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lx + 8, cy - 1);
+    ctx.quadraticCurveTo(100, cy - 4, rx - 8, cy - 1); // bridge
+    ctx.moveTo(lx - 8.5, cy - 0.5);
+    ctx.lineTo(60, 88); // arms to the ears
+    ctx.moveTo(rx + 8.5, cy - 0.5);
+    ctx.lineTo(140, 88);
+    ctx.stroke();
+  } else if (kind === 'star') {
+    const tint = '#7fd0ff';
+    const edge = '#3aa0e0';
+    for (const cx of [lx, rx]) {
+      ctx.save();
+      ctx.globalAlpha = 0.42;
+      starPath(ctx, cx, cy, 9.5, 4.6, 5, -Math.PI / 2);
+      ctx.fillStyle = tint;
+      ctx.fill();
+      ctx.restore();
+      starPath(ctx, cx, cy, 9.5, 4.6, 5, -Math.PI / 2);
+      ctx.strokeStyle = edge;
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(lx + 6, cy);
+    ctx.lineTo(rx - 6, cy);
+    ctx.moveTo(lx - 9, cy);
+    ctx.lineTo(60, 88);
+    ctx.moveTo(rx + 9, cy);
+    ctx.lineTo(140, 88);
+    ctx.stroke();
+  } else {
+    // heart-shaped pink sunnies
+    const tint = '#ff8fbf';
+    const edge = '#e0568f';
+    for (const cx of [lx, rx]) {
+      ctx.save();
+      ctx.globalAlpha = 0.42;
+      heartPath(ctx, cx, cy - 2, 8.5);
+      ctx.fillStyle = tint;
+      ctx.fill();
+      ctx.restore();
+      heartPath(ctx, cx, cy - 2, 8.5);
+      ctx.strokeStyle = edge;
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(lx + 7, cy - 1);
+    ctx.lineTo(rx - 7, cy - 1);
+    ctx.moveTo(lx - 8, cy - 2);
+    ctx.lineTo(60, 87);
+    ctx.moveTo(rx + 8, cy - 2);
+    ctx.lineTo(140, 87);
+    ctx.stroke();
   }
 }
 
@@ -691,16 +1306,22 @@ function drawFace(
   ctx: Ctx,
   skin: { base: string; shadow: string },
   hair: { base: string; sheen: string },
+  face: FaceId | null = null,
 ): void {
-  // blush
-  ctx.save();
-  ctx.globalAlpha = 0.5;
-  ctx.fillStyle = '#ff8fa3';
-  ellipsePath(ctx, 78, 96, 6.5, 4, 0);
-  ctx.fill();
-  ellipsePath(ctx, 122, 96, 6.5, 4, 0);
-  ctx.fill();
-  ctx.restore();
+  if (face === 'blushhearts') {
+    // Heart-shaped cheeks stand in for the usual round blush.
+    for (const s of [-1, 1]) drawTinyHeart(ctx, 100 + s * 22, 96, 3.6, '#ff7fa8', 0.9);
+  } else {
+    // blush
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#ff8fa3';
+    ellipsePath(ctx, 78, 96, 6.5, 4, 0);
+    ctx.fill();
+    ellipsePath(ctx, 122, 96, 6.5, 4, 0);
+    ctx.fill();
+    ctx.restore();
+  }
 
   // eyes — big warm ovals with double highlights
   for (const s of [-1, 1]) {
@@ -763,6 +1384,34 @@ function drawFace(
   ctx.arc(100, 99.5, 4.5, Math.PI * 0.25, Math.PI * 0.75);
   ctx.stroke();
   ctx.restore();
+
+  // freckles (drawn last so they sit over cheeks and nose bridge)
+  if (face === 'freckles' || face === 'sunfreckles') {
+    const sun = face === 'sunfreckles';
+    // a shade darker than the skin; sun-freckles lean warmer + denser
+    const dot = sun ? mix(shade(skin.base, 0.78), '#c9683a', 0.4) : shade(skin.base, 0.8);
+    // cheek + nose-bridge scatter, mirrored across the face
+    const spots: ReadonlyArray<readonly [number, number, number]> = sun
+      ? [
+          [74, 92, 1.3], [79, 95, 1.4], [84, 91, 1.2], [77, 99, 1.2], [82, 96, 1.1], [72, 96, 1.1],
+          [116, 91, 1.2], [121, 95, 1.4], [126, 92, 1.3], [118, 99, 1.2], [123, 96, 1.1], [128, 96, 1.1],
+          [96, 90, 1.0], [100, 92, 1.1], [104, 90, 1.0],
+        ]
+      : [
+          [76, 93, 1.3], [82, 96, 1.3], [78, 98, 1.1],
+          [118, 93, 1.3], [124, 96, 1.3], [122, 98, 1.1],
+          [98, 91, 1.0], [102, 91, 1.0],
+        ];
+    ctx.save();
+    ctx.globalAlpha = sun ? 0.85 : 0.75;
+    ctx.fillStyle = dot;
+    for (const [x, y, r] of spots) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 }
 
 // ---------------------------------------------------------------- hair (front)
@@ -906,6 +1555,174 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.quadraticCurveTo(100 + dx * 0.4, 44, 100 + dx * 0.15, 40);
       ctx.stroke();
     }
+    sheenArc();
+  } else if (style === 'curls') {
+    // Bouncy fringe of curl lobes across the forehead with a couple framing
+    // the temples, plus a few spiral hints so the curls read as curls.
+    const fringe: ReadonlyArray<readonly [number, number, number]> = [
+      [78, 60, 11],
+      [92, 56, 12],
+      [108, 57, 12],
+      [122, 61, 11],
+      [66, 74, 9],
+      [134, 74, 9],
+    ];
+    for (const [x, y, r] of fringe) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      fillOutlined(ctx, base, 0.8, 1.5);
+    }
+    // little inward spirals catch the light like ringlets
+    ctx.strokeStyle = shade(base, 0.82);
+    ctx.lineWidth = 1.3;
+    for (const [x, y] of [
+      [92, 56],
+      [108, 57],
+      [66, 74],
+      [134, 74],
+    ] as const) {
+      ctx.beginPath();
+      ctx.arc(x, y, 4.6, Math.PI * 0.2, Math.PI * 1.8);
+      ctx.stroke();
+    }
+    sheenArc(HEAD_R + 2);
+  } else if (style === 'pixie') {
+    // Short crop: a side-swept fringe across the brow with a wispy tip and a
+    // little sideburn flick; no length anywhere.
+    ctx.beginPath();
+    ctx.moveTo(56, 94);
+    ctx.bezierCurveTo(52, 54, 72, 33, 100, 33);
+    ctx.bezierCurveTo(128, 33, 148, 54, 144, 92);
+    ctx.bezierCurveTo(142, 70, 133, 58, 123, 55);
+    ctx.bezierCurveTo(103, 69, 80, 71, 64, 60); // sweep across the brow
+    ctx.bezierCurveTo(59, 70, 57, 82, 56, 94);
+    ctx.closePath();
+    fillOutlined(ctx, base, 0.8, 1.7);
+    // wispy fringe tip trailing toward the right brow
+    ctx.beginPath();
+    ctx.moveTo(122, 56);
+    ctx.quadraticCurveTo(112, 66, 99, 71);
+    ctx.quadraticCurveTo(110, 65, 117, 59);
+    ctx.closePath();
+    ctx.fillStyle = shade(base, 0.9);
+    ctx.fill();
+    // little sideburn flicks in front of each ear
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(100 + s * 44, 66);
+      ctx.quadraticCurveTo(100 + s * 47, 78, 100 + s * 39, 88);
+      ctx.quadraticCurveTo(100 + s * 44, 76, 100 + s * 42, 66);
+      ctx.closePath();
+      fillOutlined(ctx, base, 0.8, 1.3);
+    }
+    sheenArc();
+  } else if (style === 'longstraight') {
+    // Centre-part crown + two long sleek panels framing the face and falling
+    // past the shoulders (the back curtain supplies the bulk of the length).
+    crownCap(100, 48);
+    for (const s of [-1, 1]) {
+      const x0 = 100 + s * 44;
+      ctx.beginPath();
+      ctx.moveTo(x0 - s * 6, 62);
+      ctx.bezierCurveTo(x0 + s * 2, 96, x0 + s * 1, 150, x0 - s * 1, 196);
+      ctx.quadraticCurveTo(x0 - s * 2, 204, x0 - s * 9, 202); // rounded tip
+      ctx.bezierCurveTo(x0 - s * 8, 150, x0 - s * 10, 100, x0 - s * 12, 70);
+      ctx.closePath();
+      fillOutlined(ctx, base, 0.8, 1.5);
+      ctx.strokeStyle = sheen;
+      ctx.globalAlpha = 0.6;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(x0 - s * 4, 80);
+      ctx.quadraticCurveTo(x0 - s * 3, 140, x0 - s * 4, 190);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    sheenArc();
+  } else if (style === 'spacebuns') {
+    // Centre part + two round buns riding high on each side, each wrapped with
+    // a band and finished with a short tail.
+    crownCap(100, 46);
+    for (const s of [-1, 1]) {
+      const bx = 100 + s * 34;
+      const by = 40;
+      // short tail wisp poking out under the bun
+      ctx.beginPath();
+      ctx.moveTo(bx - 5, by + 6);
+      ctx.quadraticCurveTo(bx + s * 3, by + 22, bx + s * 11, by + 19);
+      ctx.quadraticCurveTo(bx + s * 3, by + 13, bx + 5, by + 6);
+      ctx.closePath();
+      fillOutlined(ctx, base, 0.8, 1.3);
+      // the bun
+      ctx.beginPath();
+      ctx.arc(bx, by, 13, 0, Math.PI * 2);
+      fillOutlined(ctx, base, 0.8, 1.6);
+      // wrapped band across the bun
+      ctx.strokeStyle = shade(base, 0.72);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(bx - 12, by + 1);
+      ctx.quadraticCurveTo(bx, by + 4, bx + 12, by + 1);
+      ctx.stroke();
+      // curl sheen
+      ctx.strokeStyle = sheen;
+      ctx.globalAlpha = 0.85;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(bx - 2, by - 2, 7, Math.PI * 0.9, Math.PI * 1.9);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    sheenArc();
+  } else if (style === 'sidebraid') {
+    // Swept fringe + one thick plait draped over her left shoulder.
+    ctx.beginPath();
+    ctx.moveTo(56, 94);
+    ctx.bezierCurveTo(52, 54, 72, 33, 100, 33);
+    ctx.bezierCurveTo(128, 33, 148, 54, 144, 92);
+    ctx.bezierCurveTo(142, 70, 133, 58, 123, 55);
+    ctx.bezierCurveTo(103, 69, 78, 71, 62, 60); // sweep to the left
+    ctx.bezierCurveTo(58, 70, 57, 82, 56, 94);
+    ctx.closePath();
+    fillOutlined(ctx, base, 0.8, 1.7);
+    // the plait — bean segments drifting down over the left shoulder
+    const seg: ReadonlyArray<readonly [number, number]> = [
+      [67, 100],
+      [63, 116],
+      [61, 132],
+      [60, 148],
+      [60, 164],
+      [61, 179],
+    ];
+    let r = 9;
+    seg.forEach(([bx, by], i) => {
+      const tilt = (i % 2 === 0 ? 1 : -1) * 0.4;
+      ellipsePath(ctx, bx + (i % 2 === 0 ? 1.6 : -1.6), by, r, r * 0.78 + 3, tilt);
+      fillOutlined(ctx, base, 0.8, 1.4);
+      r -= 0.5;
+    });
+    // plait groove hints
+    ctx.strokeStyle = shade(base, 0.8);
+    ctx.lineWidth = 1.1;
+    for (let i = 0; i < seg.length - 1; i++) {
+      const [bx, by] = seg[i]!;
+      ctx.beginPath();
+      ctx.moveTo(bx - 5, by + 6);
+      ctx.quadraticCurveTo(bx, by + 10, bx + 5, by + 6);
+      ctx.stroke();
+    }
+    // tie + tip wisp
+    const tieX = 61;
+    const tieY = 188;
+    ctx.beginPath();
+    ctx.arc(tieX, tieY, 3.2, 0, Math.PI * 2);
+    fillOutlined(ctx, '#ff8ab5', 0.78, 1.1);
+    ctx.beginPath();
+    ctx.moveTo(tieX - 3.5, tieY + 2);
+    ctx.quadraticCurveTo(tieX, tieY + 12, tieX + 3.5, tieY + 2);
+    ctx.closePath();
+    ctx.fillStyle = shade(base, 0.9);
+    ctx.fill();
     sheenArc();
   } else {
     // braids: center part + two plaits framing the face
