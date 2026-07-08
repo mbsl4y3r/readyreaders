@@ -16,7 +16,10 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   const wall = 30;
   const leftX = wall;
   const rightX = width - wall;
-  const restY = height - 60;
+  // Launch point sits well above the bottom edge so there is room to drag
+  // BACKWARD (downward) for a big backswing without running off the screen.
+  // Clamp so it always stays comfortably below the outer ring.
+  const restY = Math.max(top + 350, height - 300);
   const centerX = width / 2;
   const centerY = top + 150;
   const rOuter = 150; // 10 pts
@@ -78,7 +81,7 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   let vy = 0;
   let restMs = 0;
   const pointer = new Phaser.Math.Vector2(centerX, restY);
-  const MAX_PULL = 240;
+  const MAX_PULL = 300;
 
   const drawRolls = () => {
     rollsText.setText('🐚'.repeat(Math.max(0, rolls)));
@@ -134,7 +137,7 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
       phase = 'ready'; // tiny tap — not a real shot
       return;
     }
-    const power = 320 + (pull / MAX_PULL) * 1180; // px/sec
+    const power = 360 + (pull / MAX_PULL) * 1440; // px/sec — generous, full backswing reaches the rings
     vx = (dx / pull) * power;
     vy = (dy / pull) * power;
     phase = 'roll';

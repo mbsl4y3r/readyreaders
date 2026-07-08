@@ -14,9 +14,13 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
 
   const pearlR = 18;
   const holeR = 40; // generous
-  const maxDrag = 200;
-  const maxSpeed = 850;
-  const stopSpeed = 12;
+  const maxDrag = 180;
+  // Punchy launch: a full drag now sends the pearl clear across the green.
+  const maxSpeed = 1600;
+  const stopSpeed = 18;
+  // Gentle rolling friction; heavy drag inside a sand patch.
+  const baseFriction = 0.28;
+  const sandFriction = 0.06;
 
   // --- Soft playfield backdrop (its own place) ------------------------------
   const bg = scene.add.rectangle(width / 2, (hudBottom + height) / 2, width, height - hudBottom, theme.bgBottom);
@@ -52,8 +56,12 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   ctx.layer.add(strokesLabel);
 
   // --- Game state -----------------------------------------------------------
-  interface Wall { x: number; y: number; w: number; h: number; }
+  interface Mover { axis: 'x' | 'y'; min: number; max: number; speed: number; dir: number; }
+  interface Wall { x: number; y: number; w: number; h: number; move?: Mover; }
+  interface Rect { x: number; y: number; w: number; h: number; }
   let walls: Wall[] = [];
+  let sand: Rect | null = null;
+  let hasMoving = false;
   let px = 0, py = 0, vx = 0, vy = 0;
   let holeX = 0, holeY = 0;
   let strokes = 12;
@@ -65,49 +73,131 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
 
   const rnd = (a: number, b: number) => a + Math.random() * (b - a);
   const dist = (ax: number, ay: number, bx: number, by: number) => Math.hypot(ax - bx, ay - by);
-
-  function overlapsWall(x: number, y: number, pad: number): boolean {
-    return walls.some(
-      (w) =>
-        x > w.x - w.w / 2 - pad && x < w.x + w.w / 2 + pad &&
-        y > w.y - w.h / 2 - pad && y < w.y + w.h / 2 + pad,
-    );
-  }
+  const inRect = (x: number, y: number, r: Rect) =>
+    x > r.x - r.w / 2 && x < r.x + r.w / 2 && y > r.y - r.h / 2 && y < r.y + r.h / 2;
+  const clearOfBallAndHole = (cx: number, cy: number, pad: number) =>
+    dist(cx, cy, px, py) > pad && dist(cx, cy, holeX, holeY) > pad;
 
   function drawWalls(): void {
     wallGfx.clear();
+    if (sand) {
+      // Soft sand patch — the pearl crawls through it.
+      wallGfx.fillStyle(0xe6cf92, 0.9);
+      wallGfx.fillRoundedRect(sand.x - sand.w / 2, sand.y - sand.h / 2, sand.w, sand.h, 16);
+      wallGfx.fillStyle(0xcbb06a, 0.9);
+      const dots: ReadonlyArray<readonly [number, number]> = [
+        [-0.26, -0.2], [0.22, -0.26], [0.02, 0.08], [-0.16, 0.28], [0.28, 0.22],
+      ];
+      for (const [dx, dy] of dots) wallGfx.fillCircle(sand.x + dx * sand.w, sand.y + dy * sand.h, 4);
+    }
     for (const w of walls) {
-      wallGfx.fillStyle(theme.accent, 0.85);
+      if (w.move) wallGfx.fillStyle(0xff9d5c, 0.95); // moving walls stand out
+      else wallGfx.fillStyle(theme.accent, 0.85);
       wallGfx.fillRoundedRect(w.x - w.w / 2, w.y - w.h / 2, w.w, w.h, 8);
     }
   }
 
+  // --- Layout builders ------------------------------------------------------
+  function addRandomWalls(count: number): void {
+    const target = walls.length + count;
+    let guard = 0;
+    while (walls.length < target && guard++ < 60) {
+      const vertical = Math.random() < 0.5;
+      const w: Wall = {
+        x: rnd(left + 160, right - 160),
+        y: rnd(top + 90, bottom - 90),
+        w: vertical ? 26 : rnd(140, 240),
+        h: vertical ? rnd(140, 240) : 26,
+      };
+      if (clearOfBallAndHole(w.x, w.y, 130)) walls.push(w);
+    }
+  }
+
+  // A near-full-height barrier with a friendly gap to thread through.
+  function addGapWall(gap: number): void {
+    const cx = (left + right) / 2;
+    const bx = rnd(cx - 70, cx + 70);
+    const gapY = rnd(top + 150, bottom - 150);
+    const thick = 26;
+    const topStart = top + 6;
+    const topEnd = gapY - gap / 2;
+    if (topEnd - topStart > 40) walls.push({ x: bx, y: (topStart + topEnd) / 2, w: thick, h: topEnd - topStart });
+    const botStart = gapY + gap / 2;
+    const botEnd = bottom - 6;
+    if (botEnd - botStart > 40) walls.push({ x: bx, y: (botStart + botEnd) / 2, w: thick, h: botEnd - botStart });
+  }
+
+  function addSand(): void {
+    const cx = (left + right) / 2;
+    let guard = 0;
+    do {
+      sand = {
+        x: rnd(cx - 120, cx + 120),
+        y: rnd(top + 110, bottom - 110),
+        w: rnd(150, 230),
+        h: rnd(120, 180),
+      };
+    } while (
+      guard++ < 30 &&
+      (inRect(px, py, sand) || inRect(holeX, holeY, sand) || dist(sand.x, sand.y, holeX, holeY) < 130)
+    );
+  }
+
+  function addMovingWall(): void {
+    const cx = (left + right) / 2;
+    const horizontal = Math.random() < 0.5;
+    const speed = rnd(70, 110);
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    if (horizontal) {
+      walls.push({
+        x: cx, y: rnd(top + 130, bottom - 130), w: 150, h: 26,
+        move: { axis: 'x', min: left + 110, max: right - 110, speed, dir },
+      });
+    } else {
+      walls.push({
+        x: rnd(cx - 120, cx + 120), y: (top + bottom) / 2, w: 26, h: 150,
+        move: { axis: 'y', min: top + 110, max: bottom - 110, speed, dir },
+      });
+    }
+    hasMoving = true;
+  }
+
   function newLayout(): void {
-    // Pearl start on one side, hole far away on the other.
+    // Difficulty ramps with holes already sunk: open at first, then busy.
+    const level = holes;
     const leftSide = Math.random() < 0.5;
-    px = leftSide ? rnd(left + 70, left + 220) : rnd(right - 220, right - 70);
+    px = leftSide ? rnd(left + 70, left + 150) : rnd(right - 150, right - 70);
     py = rnd(top + 70, bottom - 70);
     do {
-      holeX = leftSide ? rnd(right - 240, right - 80) : rnd(left + 80, left + 240);
+      holeX = leftSide ? rnd(right - 200, right - 80) : rnd(left + 80, left + 200);
       holeY = rnd(top + 70, bottom - 70);
     } while (dist(px, py, holeX, holeY) < 320);
 
-    // One or two blocker walls in the middle, clear of pearl and hole.
     walls = [];
-    const count = 1 + (Math.random() < 0.6 ? 1 : 0);
-    let guard = 0;
-    while (walls.length < count && guard++ < 40) {
-      const vertical = Math.random() < 0.5;
-      const w: Wall = {
-        x: rnd(left + 260, right - 260),
-        y: rnd(top + 90, bottom - 90),
-        w: vertical ? 26 : rnd(140, 230),
-        h: vertical ? rnd(140, 230) : 26,
-      };
-      const clearPearl = dist(w.x, w.y, px, py) > 130;
-      const clearHole = dist(w.x, w.y, holeX, holeY) > 130;
-      if (clearPearl && clearHole) walls.push(w);
+    sand = null;
+    hasMoving = false;
+
+    if (level <= 0) {
+      // Wide open — just roll it in.
+    } else if (level === 1) {
+      addRandomWalls(1);
+    } else if (level <= 3) {
+      addRandomWalls(2);
+    } else if (level <= 5) {
+      addGapWall(150);
+      addRandomWalls(1);
+      if (level === 5) addSand();
+    } else if (level <= 7) {
+      addGapWall(140);
+      addSand();
+      addRandomWalls(1);
+    } else {
+      addGapWall(140);
+      addSand();
+      addMovingWall();
+      addRandomWalls(1);
     }
+
     vx = 0; vy = 0;
     drawWalls();
     syncSprites();
@@ -142,8 +232,8 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   function drawAim(): void {
     aim.clear();
     // Putt goes opposite the drag (slingshot feel).
-    let dx = px - dragX;
-    let dy = py - dragY;
+    const dx = px - dragX;
+    const dy = py - dragY;
     const d = Math.hypot(dx, dy);
     if (d < 6) return;
     const power = Math.min(d, maxDrag);
@@ -184,6 +274,20 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   syncSprites();
   ctx.onScore(0);
 
+  function stepMovers(dt: number): void {
+    if (!hasMoving) return;
+    for (const w of walls) {
+      if (!w.move) continue;
+      const m = w.move;
+      const half = m.axis === 'x' ? w.w / 2 : w.h / 2;
+      let pos = (m.axis === 'x' ? w.x : w.y) + m.dir * m.speed * dt;
+      if (pos < m.min + half) { pos = m.min + half; m.dir = 1; }
+      if (pos > m.max - half) { pos = m.max - half; m.dir = -1; }
+      if (m.axis === 'x') w.x = pos; else w.y = pos;
+    }
+    drawWalls();
+  }
+
   function bounceWalls(): void {
     for (const w of walls) {
       const hw = w.w / 2 + pearlR;
@@ -208,6 +312,7 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
     update(_time: number, delta: number): void {
       if (over || destroyed) return;
       const dt = Math.min(delta, 40) / 1000;
+      stepMovers(dt);
 
       if (!atRest()) {
         px += vx * dt;
@@ -221,8 +326,9 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
 
         bounceWalls();
 
-        // Friction (gentle exponential decay).
-        const f = Math.pow(0.26, dt);
+        // Friction (gentle exponential decay; sand grabs hard).
+        const inSand = sand !== null && inRect(px, py, sand);
+        const f = Math.pow(inSand ? sandFriction : baseFriction, dt);
         vx *= f;
         vy *= f;
 
@@ -242,6 +348,10 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
           vx = 0; vy = 0;
           if (strokes <= 0) { finish(); return; }
         }
+        syncSprites();
+      } else if (hasMoving) {
+        // Gently keep a resting pearl out of a sweeping wall's way.
+        bounceWalls();
         syncSprites();
       }
     },

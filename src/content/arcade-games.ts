@@ -84,7 +84,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     reskins: 'Frogger',
     realm: 'woods',
     unlockLevel: 3,
-    scoreLabel: 'crossings',
+    scoreLabel: 'flowers',
   },
   {
     id: 'blaster',

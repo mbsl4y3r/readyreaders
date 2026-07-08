@@ -105,6 +105,7 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
   const keys = scene.input.keyboard?.createCursorKeys();
 
   const player = emojiText(scene, PLAYER_X, feetY - 34, '🦔', 68);
+  player.setFlipX(true); // face right, the direction of travel
   ctx.layer.add(player);
 
   function groundUnderPlayer(): boolean {

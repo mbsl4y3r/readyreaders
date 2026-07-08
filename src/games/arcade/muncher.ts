@@ -120,6 +120,42 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
   }
   spawnJellies();
 
+  // ---- Bonus fish (Pac-Man "fruit") ------------------------------------
+  // Appears at a random open cell for a limited time, then hides and comes
+  // back later. Eating it is worth +5. Bigger emoji so it never looks like a
+  // pearl.
+  const fish = emojiText(scene, cx(1), cy(1), '🐟', Math.floor(cell * 0.72));
+  fish.setVisible(false);
+  ctx.layer.add(fish);
+  let fishCol = 1, fishRow = 1;
+  let fishVisible = false;
+  let fishPulse = 0;
+  const FISH_SHOWN_MS = 6000;  // stays a nice long while for little hands
+  const FISH_HIDDEN_MS = 5000; // gap before it swims back
+  let fishTimer = 3000;        // first fish appears after a short delay
+
+  function spawnFish(): void {
+    const open: [number, number][] = [];
+    for (let r = 1; r < ROWS - 1; r++)
+      for (let c = 1; c < COLS - 1; c++)
+        if (!isWall(c, r) && !(c === player.col && r === player.row)) open.push([c, r]);
+    if (open.length === 0) { fishTimer = FISH_HIDDEN_MS; return; }
+    const [c, r] = open[Math.floor(Math.random() * open.length)]!;
+    fishCol = c; fishRow = r;
+    fish.setPosition(cx(c), cy(r));
+    fish.setScale(1);
+    fish.setVisible(true);
+    ctx.layer.bringToTop(fish);
+    fishVisible = true;
+    fishTimer = FISH_SHOWN_MS;
+  }
+
+  function hideFish(nextMs: number): void {
+    fishVisible = false;
+    fish.setVisible(false);
+    fishTimer = nextMs;
+  }
+
   // ---- Input: swipe + on-screen d-pad ----------------------------------
   let downX = 0, downY = 0, downTime = 0;
   const onDown = (p: Phaser.Input.Pointer): void => { downX = p.x; downY = p.y; downTime = p.downTime; };
@@ -224,6 +260,7 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
         player.t.setPosition(player.px, player.py);
         eatAt(1, 1);
         spawnJellies();
+        hideFish(FISH_HIDDEN_MS); // fresh maze -> let a new fish come back
         chime('fanfare');
       }
     }
@@ -257,6 +294,24 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
       }
       stepMover(player, playerSpeed, dt);
       if (atCenter(player)) eatPearl();
+
+      // bonus fish: swims in for a while, then hides; munch it for +5
+      fishTimer -= dt;
+      if (fishVisible) {
+        fishPulse += dt;
+        fish.setScale(1 + Math.sin(fishPulse / 220) * 0.1); // gentle wiggle
+        const fd = Math.hypot(player.px - cx(fishCol), player.py - cy(fishRow));
+        if (fd < cell * 0.7) {
+          score += 5;
+          ctx.onScore(score);
+          chime('fanfare');
+          hideFish(FISH_HIDDEN_MS);
+        } else if (fishTimer <= 0) {
+          hideFish(FISH_HIDDEN_MS);
+        }
+      } else if (fishTimer <= 0) {
+        spawnFish();
+      }
 
       // jellies wander
       for (const j of jellies) {

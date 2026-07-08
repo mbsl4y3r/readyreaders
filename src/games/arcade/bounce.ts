@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { RunArcadeGame, ArcadeGame, ArcadeCtx } from './types';
+import { emojiText } from '../../ui/kit';
 
 export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   const { width, height, hudBottom, theme } = ctx;
@@ -20,18 +21,37 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   const paddleY = height - 46;
   const pearlR = 22;
 
-  // --- Paddle (a shell/bar) -------------------------------------------------
-  const paddle = scene.add.rectangle(width / 2, paddleY, paddleW, paddleH, theme.accent);
-  paddle.setStrokeStyle(4, 0xffffff, 0.85);
+  // --- Paddle: a clearly visible rounded bar with the shell riding on top ----
+  // Drawn centered at the graphics' local origin, then moved via its transform,
+  // so paddle.x is always the bar's center. The visible bar spans exactly
+  // paddleW — the same width used for the collision check below — so what she
+  // sees is exactly what she can hit.
+  const paddle = scene.add.graphics();
+  const drawPaddle = () => {
+    const hw = paddleW / 2;
+    const hh = paddleH / 2;
+    const r = hh; // fully rounded, pill-shaped ends
+    paddle.clear();
+    paddle.fillStyle(0x000000, 0.22); // soft drop shadow for depth
+    paddle.fillRoundedRect(-hw + 2, -hh + 4, paddleW, paddleH, r);
+    paddle.fillStyle(theme.accent, 1); // the hittable bar itself
+    paddle.fillRoundedRect(-hw, -hh, paddleW, paddleH, r);
+    paddle.fillStyle(0xffffff, 0.25); // slim top highlight
+    paddle.fillRoundedRect(-hw + 8, -hh + 5, paddleW - 16, 8, 4);
+    paddle.lineStyle(4, 0xffffff, 0.95); // crisp white outline
+    paddle.strokeRoundedRect(-hw, -hh, paddleW, paddleH, r);
+  };
+  drawPaddle();
+  paddle.setPosition(width / 2, paddleY);
   ctx.layer.add(paddle);
-  const shell = scene.add.text(width / 2, paddleY, '🐚', { fontSize: '38px' }).setOrigin(0.5);
+  const shell = emojiText(scene, width / 2, paddleY, '🐚', 34);
   ctx.layer.add(shell);
 
   // --- Pearl ----------------------------------------------------------------
   const pearl = scene.add.circle(width / 2, top + 120, pearlR, 0xffffff);
   pearl.setStrokeStyle(3, theme.accent, 0.9);
   ctx.layer.add(pearl);
-  const sparkle = scene.add.text(pearl.x, pearl.y, '✨', { fontSize: '20px' }).setOrigin(0.5);
+  const sparkle = emojiText(scene, pearl.x, pearl.y, '✨', 20);
   ctx.layer.add(sparkle);
 
   // --- State ----------------------------------------------------------------
@@ -80,8 +100,9 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   // Keyboard bonus (never the only control).
   const cursors = scene.input.keyboard?.createCursorKeys();
 
+  // Squash both the bar and the shell together on a good hit.
   const bumpTween = scene.tweens.add({
-    targets: paddle,
+    targets: [paddle, shell],
     scaleY: 1.25,
     duration: 90,
     yoyo: true,

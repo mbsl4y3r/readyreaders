@@ -1,18 +1,19 @@
 import Phaser from 'phaser';
 import type { RunArcadeGame, ArcadeGame, ArcadeCtx } from './types';
-import { emojiText } from '../../ui/kit';
+import { emojiText, readingText } from '../../ui/kit';
 import { chime } from '../../services/audio';
 
 type Dir = { x: number; y: number };
 type Lane = { row: number; dir: number; speed: number; emoji: string };
 type Hazard = { t: Phaser.GameObjects.Text; x: number };
+type Flower = { t: Phaser.GameObjects.Text; col: number; row: number };
 
 export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
   const { width, height, hudBottom, theme } = ctx;
 
   // ---- Grid geometry ----------------------------------------------------
   const COLS = 9;
-  const ROWS = 7; // row 0 = goal (safe), row 6 = start (safe)
+  const ROWS = 7; // rows 0/3/6 are safe (green); rows 1/2/4/5 are hazard lanes
   const areaTop = hudBottom;
   const areaH = height - areaTop;
   const cell = Math.floor(Math.min(width / COLS, areaH / ROWS));
@@ -32,20 +33,13 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
     const stripe = scene.add.rectangle(offX + gridW / 2, cy(r), gridW, cell, safe ? 0x8fd694 : theme.bgTop, safe ? 0.85 : 0.55);
     ctx.layer.add(stripe);
   }
-  // goal ribbon at the very top row
-  const goal = scene.add.rectangle(offX + gridW / 2, cy(0), gridW, cell, theme.accent, 0.35);
-  ctx.layer.add(goal);
-  for (let c = 1; c < COLS; c += 2) {
-    const pad = emojiText(scene, cx(c), cy(0), '🌸', Math.floor(cell * 0.55));
-    ctx.layer.add(pad);
-  }
 
-  // ---- Hazard lanes -----------------------------------------------------
+  // ---- Hazard lanes (slow & forgiving) ----------------------------------
   const lanes: Lane[] = [
-    { row: 1, dir: -1, speed: 68, emoji: '🐟' },
-    { row: 2, dir: 1, speed: 52, emoji: '🚤' },
-    { row: 4, dir: -1, speed: 58, emoji: '🦆' },
-    { row: 5, dir: 1, speed: 46, emoji: '🐠' },
+    { row: 1, dir: -1, speed: 48, emoji: '🐟' },
+    { row: 2, dir: 1, speed: 40, emoji: '🚤' },
+    { row: 4, dir: -1, speed: 44, emoji: '🦆' },
+    { row: 5, dir: 1, speed: 34, emoji: '🐠' },
   ];
   const perLane = 3;
   const spacing = gridW / perLane;
@@ -73,6 +67,95 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
   let over = false;
   let destroyed = false;
   let hopTween: Phaser.Tweens.Tween | undefined;
+  const tweens: Phaser.Tweens.Tween[] = [];
+
+  // ---- Flowers to collect -----------------------------------------------
+  let flowers: Flower[] = [];
+  const spawnFlowers = () => {
+    // Candidate cells: rows 0..4 (upper field, clear of the bottom D-pad),
+    // never on the hopper's current cell. Pick 4 on distinct rows so the
+    // flowers spread out and each hunt takes her across the field.
+    const cells: { col: number; row: number }[] = [];
+    for (let r = 0; r <= 4; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (c === col && r === row) continue;
+        cells.push({ col: c, row: r });
+      }
+    }
+    for (let i = cells.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = cells[i]!;
+      cells[i] = cells[j]!;
+      cells[j] = tmp;
+    }
+    const usedRows = new Set<number>();
+    const fSize = Math.floor(cell * 0.6);
+    for (const pos of cells) {
+      if (flowers.length >= 4) break;
+      if (usedRows.has(pos.row)) continue;
+      usedRows.add(pos.row);
+      const t = emojiText(scene, cx(pos.col), cy(pos.row), '🌸', fSize);
+      ctx.layer.add(t);
+      flowers.push({ t, col: pos.col, row: pos.row });
+      tweens.push(scene.tweens.add({ targets: t, scale: { from: 0, to: 1 }, duration: 300, ease: 'Back.easeOut' }));
+    }
+  };
+
+  // ---- Fading hint line (short, no reading required to play) -------------
+  let hintText: Phaser.GameObjects.Text | undefined;
+  let hintTween: Phaser.Tweens.Tween | undefined;
+  const showHint = (msg: string) => {
+    hintTween?.stop();
+    hintText?.destroy();
+    hintText = readingText(scene, width / 2, areaTop + 26, msg, Math.max(24, Math.floor(cell * 0.4)));
+    hintText.setStroke('#2b3a2f', 6);
+    hintText.setAlpha(0);
+    ctx.layer.add(hintText);
+    hintTween = scene.tweens.add({
+      targets: hintText,
+      alpha: 1,
+      duration: 320,
+      hold: 2600,
+      yoyo: true,
+      onComplete: () => {
+        hintText?.destroy();
+        hintText = undefined;
+      },
+    });
+    tweens.push(hintTween);
+  };
+
+  const nextLevel = () => {
+    speedMul = Math.min(1.5, speedMul + 0.12); // nudge hazards a touch faster
+    chime('fanfare');
+    spawnFlowers();
+    showHint('More flowers! 🌸');
+  };
+
+  const collectFlower = (f: Flower) => {
+    flowers = flowers.filter((x) => x !== f);
+    score += 1;
+    ctx.onScore(score);
+    chime('good');
+    const t = f.t;
+    tweens.push(
+      scene.tweens.add({
+        targets: t,
+        scaleX: t.scaleX * 1.7,
+        scaleY: t.scaleY * 1.7,
+        alpha: 0,
+        duration: 320,
+        ease: 'Quad.easeOut',
+        onComplete: () => t.destroy(),
+      }),
+    );
+    if (flowers.length === 0) nextLevel();
+  };
+
+  const collectHere = () => {
+    const f = flowers.find((fl) => fl.col === col && fl.row === row);
+    if (f) collectFlower(f);
+  };
 
   const endGame = () => {
     if (over) return;
@@ -89,16 +172,6 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
     hopTween = scene.tweens.add({ targets: frog, scale: { from: 1.3, to: 1 }, duration: 150, ease: 'Quad.out' });
   };
 
-  const crossing = () => {
-    score += 1;
-    ctx.onScore(score);
-    chime('good');
-    speedMul = Math.min(2, speedMul + 0.1);
-    col = Math.floor(COLS / 2);
-    row = ROWS - 1;
-    placeFrog();
-  };
-
   const hop = (d: Dir) => {
     if (over) return;
     const nc = Phaser.Math.Clamp(col + d.x, 0, COLS - 1);
@@ -106,20 +179,22 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
     if (nc === col && nr === row) return;
     col = nc;
     row = nr;
-    if (row === 0) {
-      crossing();
-      return;
-    }
     placeFrog();
+    collectHere();
   };
 
-  // ---- On-screen arrow buttons ------------------------------------------
+  // Kick off the first hunt.
+  spawnFlowers();
+  showHint('Get all the flowers! 🌸');
+
+  // ---- On-screen arrow D-pad (four ways, ≥64px) -------------------------
   const pad = scene.add.graphics();
   ctx.layer.add(pad);
   const baseX = 116;
   const baseY = height - 132;
   const btns = [
     { x: baseX, y: baseY - 84, dir: { x: 0, y: -1 } }, // up
+    { x: baseX, y: baseY + 84, dir: { x: 0, y: 1 } }, //  down
     { x: baseX - 92, y: baseY, dir: { x: -1, y: 0 } }, // left
     { x: baseX + 92, y: baseY, dir: { x: 1, y: 0 } }, //  right
   ];
@@ -193,7 +268,7 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
       }
 
       const frogX = col * cell + cell / 2; // grid-relative
-      const deadly = cell * 0.45;
+      const deadly = cell * 0.42;
       for (const { lane, items } of hazards) {
         const move = lane.dir * lane.speed * speedMul * (delta / 1000);
         for (const h of items) {
@@ -209,6 +284,8 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
       if (destroyed) return;
       destroyed = true;
       hopTween?.stop();
+      hintTween?.stop();
+      for (const tw of tweens) tw.stop();
       scene.input.off('pointerdown', onDown, scene);
       scene.input.off('pointerup', onUp, scene);
     },

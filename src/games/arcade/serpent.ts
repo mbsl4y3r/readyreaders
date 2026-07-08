@@ -70,19 +70,25 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
     { x: 7, y: 6 },
     { x: 6, y: 6 },
   ];
+  // prevSnake mirrors `snake` one step earlier; rendering glides between them.
+  let prevSnake: Cell[] = snake.map((s) => ({ ...s }));
   let dir: Dir = { x: 1, y: 0 };
   let nextDir: Dir = { x: 1, y: 0 };
   let food: Cell = { x: 14, y: 6 };
   let score = 0;
   let acc = 0;
-  const STEP_MS = 185;
+  // ~3.5 cells/second — gentle and slow for a 6-year-old.
+  const STEP_MS = 285;
   let over = false;
   let destroyed = false;
 
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
   const placeFood = () => {
+    // Never spawn on the outermost ring — inset one cell from every wall.
     const free: Cell[] = [];
-    for (let c = 0; c < COLS; c++)
-      for (let r = 0; r < ROWS; r++)
+    for (let c = 1; c < COLS - 1; c++)
+      for (let r = 1; r < ROWS - 1; r++)
         if (!snake.some((s) => s.x === c && s.y === r)) free.push({ x: c, y: r });
     const pick = free[Math.floor(Math.random() * free.length)];
     if (!pick) return;
@@ -97,13 +103,15 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
     nextDir = d;
   };
 
-  const draw = () => {
+  const draw = (t: number) => {
     gfx.clear();
     for (let i = snake.length - 1; i >= 0; i--) {
       const seg = snake[i];
       if (!seg) continue;
-      const px = cx(seg.x);
-      const py = cy(seg.y);
+      // Glide each segment from where it was last step toward its grid cell.
+      const from = prevSnake[i] ?? seg;
+      const px = lerp(cx(from.x), cx(seg.x), t);
+      const py = lerp(cy(from.y), cy(seg.y), t);
       const size = cell - 6;
       gfx.fillStyle(theme.accent, i === 0 ? 1 : 0.85);
       gfx.fillRoundedRect(px - size / 2, py - size / 2, size, size, 14);
@@ -127,7 +135,7 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
       }
     }
   };
-  draw();
+  draw(0);
 
   const endGame = () => {
     if (over) return;
@@ -153,6 +161,8 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
       endGame();
       return;
     }
+    // Snapshot pre-step positions so rendering can glide from here to there.
+    const old = snake.map((s) => ({ ...s }));
     snake.unshift(head);
     if (eating) {
       score += 1;
@@ -162,7 +172,7 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
     } else {
       snake.pop();
     }
-    draw();
+    prevSnake = snake.map((s, i) => old[i] ?? s);
   };
 
   // ---- Input ------------------------------------------------------------
@@ -215,6 +225,8 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
         acc -= STEP_MS;
         step();
       }
+      // Smoothly interpolate the drawn snake toward its next grid cell.
+      draw(Math.min(acc / STEP_MS, 1));
     },
     destroy() {
       if (destroyed) return;
