@@ -31,9 +31,9 @@ export interface ArcadeGameDef {
   scoreLabel: string;
 }
 
-/** Ten pearls for a ten-minute pass — the arcade's price of admission. */
+/** Ten pearls for a five-minute pass — the arcade's price of admission. */
 export const PASS_PEARLS = 10;
-export const PASS_MS = 10 * 60 * 1000;
+export const PASS_MS = 5 * 60 * 1000;
 
 export const ARCADE_GAMES: ArcadeGameDef[] = [
   {
@@ -156,6 +156,57 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     unlockLevel: 8,
     scoreLabel: 'berries',
   },
+  // ---- round-2 additions ------------------------------------------------
+  {
+    id: 'whack',
+    title: 'Critter Whack',
+    emoji: '🔨',
+    blurb: 'Bonk the critters as they pop up!',
+    reskins: 'Whack-a-Mole',
+    realm: 'woods',
+    unlockLevel: 1,
+    scoreLabel: 'bonks',
+  },
+  {
+    id: 'bubblepop',
+    title: 'Bubble Pop',
+    emoji: '🫧',
+    blurb: 'Pop the bubbles before they float away!',
+    reskins: 'Bubble popper',
+    realm: 'cove',
+    unlockLevel: 1,
+    scoreLabel: 'pops',
+  },
+  {
+    id: 'memory',
+    title: 'Memory Shells',
+    emoji: '🧩',
+    blurb: 'Flip the shells, find the matching pairs!',
+    reskins: 'Concentration',
+    realm: 'cove',
+    unlockLevel: 2,
+    scoreLabel: 'pairs',
+  },
+  {
+    id: 'catch',
+    title: 'Treasure Catch',
+    emoji: '🧺',
+    blurb: 'Swish the net, catch the treasures!',
+    reskins: 'Catch',
+    realm: 'cove',
+    unlockLevel: 3,
+    scoreLabel: 'treasures',
+  },
+  {
+    id: 'echo',
+    title: 'Star Echo',
+    emoji: '🌟',
+    blurb: 'Watch the twinkles, then tap them back!',
+    reskins: 'Simon',
+    realm: 'castle',
+    unlockLevel: 4,
+    scoreLabel: 'rounds',
+  },
 ];
 
 export const ARCADE_BY_ID = new Map(ARCADE_GAMES.map((g) => [g.id, g]));
@@ -180,6 +231,11 @@ export const ARCADE_ANNOUNCE: Record<string, string> = {
   putt: 'Pearl Putt! Tap it niiice and easy — plonk, right in the hole!',
   ascent: 'Acorn Ascent! Climb, climb, cliiimb — dodge those bonky acorns!',
   hollow: 'Hop Hollow! Boing over the logs and grab those yummy berries!',
+  whack: 'Critter Whack! Bonk-a bonk-a bonk — get those silly critters!',
+  bubblepop: 'Bubble Pop! Pop pop poppity-pop — get em all!',
+  memory: 'Memory Shells! Flip, flip — find the matching pairs!',
+  catch: 'Treasure Catch! Swish that net — catch all the goodies!',
+  echo: 'Star Echo! Watch the twinkly stars, then tap them back — ready?',
 };
 
 /** True if the play pass is currently active. */

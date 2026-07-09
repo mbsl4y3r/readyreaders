@@ -16,6 +16,11 @@ import { run as racer } from './racer';
 import { run as putt } from './putt';
 import { run as ascent } from './ascent';
 import { run as hollow } from './hollow';
+import { run as whack } from './whack';
+import { run as bubblepop } from './bubblepop';
+import { run as memory } from './memory';
+import { run as catchgame } from './catch';
+import { run as echo } from './echo';
 
 export const ARCADE_RUNNERS: Record<string, RunArcadeGame> = {
   serpent,
@@ -30,4 +35,9 @@ export const ARCADE_RUNNERS: Record<string, RunArcadeGame> = {
   putt,
   ascent,
   hollow,
+  whack,
+  bubblepop,
+  memory,
+  catch: catchgame,
+  echo,
 };

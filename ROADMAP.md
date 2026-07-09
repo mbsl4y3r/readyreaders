@@ -13,7 +13,7 @@ This is the "what's done / what's left / what **you** need to do" board. The
    - Fastest way to test all 12: open the parent corner (⚙️, bottom-right) →
      🐞 debug chip → password **`bingo`**. That unlocks every game + gives 9999
      pearls, so every cabinet is lit and you can buy Play Passes freely.
-   - Each game: tap a cabinet → buy a **Play Pass** (10 🦪 = 10 min of any game)
+   - Each game: tap a cabinet → buy a **Play Pass** (10 🦪 = 5 min of any game)
      → play. Higher score is always better; new bests get a 🏆.
    - Tell me which games feel good, too hard, too easy, or janky and I'll tune them.
 2. **Record the wacky arcade announce voices** (your idea 🎙️). 13 short lines,
@@ -46,6 +46,11 @@ This is the "what's done / what's left / what **you** need to do" board. The
 | `arcade-putt` | "Pearl Putt! Tap it niiice and easy — plonk, right in the hole!" |
 | `arcade-ascent` | "Acorn Ascent! Climb, climb, cliiimb — dodge those bonky acorns!" |
 | `arcade-hollow` | "Hop Hollow! Boing over the logs and grab those yummy berries!" |
+| `arcade-whack` | "Critter Whack! Bonk-a bonk-a bonk — get those silly critters!" |
+| `arcade-bubblepop` | "Bubble Pop! Pop pop poppity-pop — get em all!" |
+| `arcade-memory` | "Memory Shells! Flip, flip — find the matching pairs!" |
+| `arcade-catch` | "Treasure Catch! Swish that net — catch all the goodies!" |
+| `arcade-echo` | "Star Echo! Watch the twinkly stars, then tap them back — ready?" |
 
 ---
 
@@ -69,13 +74,18 @@ forgiving for a 6-year-old.
 | Mini Putt | ⛳ Pearl Putt | Level 6 | putt the pearl in the hole |
 | Donkey Kong | 🐿️ Acorn Ascent | Level 7 | climb, dodge acorns |
 | Platformer | 🦔 Hop Hollow | Level 8 | hop logs, grab berries |
+| Whack-a-Mole | 🔨 Critter Whack | Level 1 | bonk critters as they pop |
+| Bubble popper | 🫧 Bubble Pop | Level 1 | tap rising bubbles |
+| Concentration | 🧩 Memory Shells | Level 2 | flip shells, match pairs |
+| Catch | 🧺 Treasure Catch | Level 3 | net falling treasures |
+| Simon | 🌟 Star Echo | Level 4 | repeat the twinkle pattern |
 
 **Two gates, both intentional:**
 
 - **Unlock (reward for reading):** a cabinet is dark until Evie's frontier
   (`currentLevel`) reaches its unlock level — so finishing modules lights up
   new games. (Debug `bingo` unlocks all for testing.)
-- **Play Pass (the pearl sink):** 10 🦪 buys a 10-minute pass to play any
+- **Play Pass (the pearl sink):** 10 🦪 buys a 5-minute pass to play any
   unlocked game. **Reading is still the only way to earn pearls**, so the arcade
   stays a reward and never replaces the reading.
 
@@ -95,8 +105,13 @@ forgiving for a 6-year-old.
   dashboard, single-tap gear, reset gated by "1776", debug `bingo` unlock,
   audio serialization (one voice at a time, music ducking), book-marker-driven
   level unlocking, home-recording voice recorder tool (`npm run recorder`).
-- **Phase 6 (this build)** — the Games Arcade: hub + all 12 mini-games, Play
-  Pass pearl economy, per-game hi-scores, wacky announce voice hooks.
+- **Phase 6** — the Games Arcade: hub + 12 mini-games, Play Pass pearl economy,
+  per-game hi-scores, wacky announce voice hooks.
+- **Phase 7 (latest)** — playtest polish: Reef Racer rebuilt as a real
+  pseudo-3D Pole-Position racer (forgiving joyride), 5 more games (Critter
+  Whack, Bubble Pop, Memory Shells, Treasure Catch, Star Echo → 17 total),
+  Play Pass shortened to 5 minutes, 10 new princess gowns/color dresses,
+  compact 5-column arcade grid.
 
 ---
 

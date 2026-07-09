@@ -8,7 +8,7 @@
  * Two gates, both intentional:
  *  - a cabinet is dark until currentLevel reaches its unlockLevel (reading
  *    progress lights up new games), and
- *  - playing needs an active play pass: ten pearls buys ten minutes, and
+ *  - playing needs an active play pass: ten pearls buys five minutes, and
  *    reading is still the only way to earn pearls.
  */
 import Phaser from 'phaser';
@@ -142,12 +142,12 @@ export class ArcadeScene extends Phaser.Scene {
     layer.add(this.passText);
     this.refreshPassText();
 
-    // cabinet grid: 4 cols × 3 rows
-    const cols = 4;
-    const cellW = 232;
-    const cellH = 176;
+    // cabinet grid: 5 cols (compact) so the growing library fits without scroll
+    const cols = 5;
+    const cellW = 196;
+    const cellH = 128;
     const x0 = GAME_W / 2 - ((cols - 1) / 2) * cellW;
-    const y0 = 190;
+    const y0 = 196;
     ARCADE_GAMES.forEach((def, i) => {
       const cx = x0 + (i % cols) * cellW;
       const cy = y0 + Math.floor(i / cols) * cellH;
@@ -182,31 +182,30 @@ export class ArcadeScene extends Phaser.Scene {
     i: number,
   ): Phaser.GameObjects.Container {
     const theme = THEMES[def.realm];
-    const w = 208;
-    const h = 152;
+    const w = 182;
+    const h = 112;
     const c = this.add.container(x, y);
 
     const bg = this.add.graphics();
     bg.fillStyle(0x000000, 0.28);
-    bg.fillRoundedRect(-w / 2 + 3, -h / 2 + 5, w, h, 18);
+    bg.fillRoundedRect(-w / 2 + 3, -h / 2 + 4, w, h, 16);
     bg.fillStyle(unlocked ? theme.accent : 0x3a4351, unlocked ? 0.9 : 1);
-    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 18);
-    bg.lineStyle(4, 0xffffff, unlocked ? 0.85 : 0.2);
-    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 18);
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 16);
+    bg.lineStyle(3, 0xffffff, unlocked ? 0.85 : 0.2);
+    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 16);
     c.add(bg);
 
-    const glyph = emojiText(this, 0, -30, unlocked ? def.emoji : '🔒', 56);
+    const glyph = emojiText(this, 0, -22, unlocked ? def.emoji : '🔒', 46);
     if (!unlocked) glyph.setAlpha(0.75);
     c.add(glyph);
 
     if (unlocked) {
-      c.add(readingText(this, 0, 34, def.title, 22, '#12202e'));
-      const bestLabel =
-        best > 0 ? `Best: ${best} ${def.scoreLabel}` : 'Tap to play!';
-      c.add(readingText(this, 0, 60, bestLabel, 16, '#12202e').setAlpha(0.85));
+      c.add(readingText(this, 0, 20, def.title, 17, '#12202e'));
+      const bestLabel = best > 0 ? `Best: ${best}` : 'Tap to play!';
+      c.add(readingText(this, 0, 41, bestLabel, 13, '#12202e').setAlpha(0.85));
     } else {
-      c.add(readingText(this, 0, 40, `Level ${def.unlockLevel}`, 20, '#c9d2de'));
-      c.add(readingText(this, 0, 64, 'to unlock', 15, '#9aa6b4'));
+      c.add(readingText(this, 0, 20, `Level ${def.unlockLevel}`, 16, '#c9d2de'));
+      c.add(readingText(this, 0, 41, 'to unlock', 13, '#9aa6b4'));
     }
 
     c.setSize(w, h);
@@ -268,7 +267,7 @@ export class ArcadeScene extends Phaser.Scene {
         this,
         0,
         16,
-        canAfford ? `10 minutes of games for ${PASS_PEARLS} 🦪` : `You need ${PASS_PEARLS} 🦪 to play`,
+        canAfford ? `5 minutes of games for ${PASS_PEARLS} 🦪` : `You need ${PASS_PEARLS} 🦪 to play`,
         26,
         '#ffffff',
       ),

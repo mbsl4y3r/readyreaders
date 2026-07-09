@@ -1,168 +1,133 @@
 import Phaser from 'phaser';
 import type { RunArcadeGame, ArcadeGame, ArcadeCtx } from './types';
-import { emojiText } from '../../ui/kit';
+import { emojiText, readingText } from '../../ui/kit';
 import { chime } from '../../services/audio';
 
-// An obstacle scrolls down the road. `vx` lets rival cars drift sideways.
-type Obstacle = {
-  t: Phaser.GameObjects.Text;
-  x: number;
-  y: number;
-  vx: number; // px/sec horizontal drift (0 for static coral / parked cars)
-  half: number; // collision half-width
-};
+/**
+ * Reef Racer — a gentle, forgiving take on the classic Pole Position: a
+ * pseudo-3D road seen from behind the car, curving toward a swaying vanishing
+ * point, with rival cars that scale up out of the horizon for you to overtake.
+ *
+ * Kid-friendly rules: you never "crash out". Bumping a rival or drifting off
+ * the road just slows you down for a moment; the run is a timed joyride and the
+ * score is how far you get (plus a bonus for every car you pass). Steer by
+ * dragging left/right anywhere on screen.
+ */
+
+type Rival = { t: Phaser.GameObjects.Text; x: number; z: number; scored: boolean };
 
 export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
   const { width, height, hudBottom, theme } = ctx;
 
-  // ---- Playfield geometry ----------------------------------------------
   const areaTop = hudBottom;
   const areaH = height - areaTop;
-  const roadW = Math.min(760, width - 60);
-  const roadX = (width - roadW) / 2;
-  const roadR = roadX + roadW;
-  // keep the car fully inside the road edges
-  const carHalf = 44;
-  const minX = roadX + carHalf;
-  const maxX = roadR - carHalf;
+  const horizonY = areaTop + areaH * 0.3;
+  const roadBottom = height;
+  const ROWS = 60;
+  const roadHalfNear = Math.min(440, width * 0.45);
+  const roadHalfFar = 24;
+  const curveAmp = roadHalfNear * 1.05;
+  const carScreenY = height - 104;
 
-  // ---- Background + road -------------------------------------------------
-  const bg = scene.add.rectangle(width / 2, areaTop + areaH / 2, width, areaH, theme.bgBottom);
-  ctx.layer.add(bg);
-  const road = scene.add.rectangle(width / 2, areaTop + areaH / 2, roadW, areaH, theme.bgTop, 0.85);
-  road.setStrokeStyle(8, theme.accent, 0.6);
+  // ---- Sky + seabed backdrop -------------------------------------------
+  const sky = scene.add.rectangle(width / 2, areaTop + (horizonY - areaTop) / 2, width, horizonY - areaTop, theme.bgTop);
+  ctx.layer.add(sky);
+  const seabed = scene.add.rectangle(width / 2, (horizonY + roadBottom) / 2, width, roadBottom - horizonY, theme.bgBottom);
+  ctx.layer.add(seabed);
+  // a soft sun/glow at the vanishing point
+  const glow = scene.add.circle(width / 2, horizonY, 60, 0xffffff, 0.12);
+  ctx.layer.add(glow);
+
+  // the road is redrawn every frame into one graphics object
+  const road = scene.add.graphics();
   ctx.layer.add(road);
 
-  // Lane geometry is now purely decorative — the dashed centre lines. Obstacles
-  // spawn at CONTINUOUS x positions, so sitting on a line is never safe.
-  const LANES = 3;
-  const laneW = roadW / LANES;
-
-  // ---- Scrolling dashes (sense of speed) --------------------------------
-  const dashes: Phaser.GameObjects.Rectangle[] = [];
-  const dashGap = 90;
-  for (let i = 0; i < LANES - 1; i++) {
-    const lx = roadX + laneW * (i + 1);
-    for (let y = areaTop; y < height + dashGap; y += dashGap) {
-      const d = scene.add.rectangle(lx, y, 8, 44, 0xffffff, 0.35);
-      ctx.layer.add(d);
-      dashes.push(d);
-    }
-  }
-
-  // ---- The car ----------------------------------------------------------
-  const carY = height - 90;
-  let carX = width / 2;
-  const car = emojiText(scene, carX, carY, '🏎️', 76);
+  // ---- Player car -------------------------------------------------------
+  const shadow = scene.add.ellipse(width / 2, carScreenY + 30, 104, 26, 0x000000, 0.3);
+  ctx.layer.add(shadow);
+  const car = emojiText(scene, width / 2, carScreenY, '🏎️', 84);
   ctx.layer.add(car);
-  // faint accent glow under the car so it reads in-theme
-  const glow = scene.add.ellipse(carX, carY + 30, 92, 26, theme.accent, 0.4);
-  ctx.layer.add(glow);
-  glow.setDepth(-1);
 
-  // ---- Obstacles + rival vehicles --------------------------------------
-  const coralEmojis = ['🪸', '🐚', '🦀', '🌿'];
-  const rivalEmojis = ['🚗', '🚙', '🛥️'];
-  const obstacles: Obstacle[] = [];
+  // ---- Rivals to overtake ----------------------------------------------
+  const rivalEmojis = ['🚗', '🚙', '🛥️', '🚤'];
+  const rivals: Rival[] = [];
+  let spawnAcc = 700;
 
-  const spawnY = areaTop - 50; // just above view so waves are telegraphed early
-  const STAGGER_DY = areaH * 0.36; // vertical offset between slalom rows
-  const DRIFT_DY = areaH * 0.3; // vertical offset for a second drifting rival
+  // ---- HUD: countdown joyride ------------------------------------------
+  const timeText = readingText(scene, width - 34, hudBottom + 22, '', 24, '#ffffff').setOrigin(1, 0.5);
+  ctx.layer.add(timeText);
 
-  const pickCoral = (): string => coralEmojis[Math.floor(Math.random() * coralEmojis.length)]!;
-  const pickRival = (): string => rivalEmojis[Math.floor(Math.random() * rivalEmojis.length)]!;
-  const clampRoad = (x: number, half: number): number =>
-    Math.max(roadX + half, Math.min(roadR - half, x));
+  // ---- State ------------------------------------------------------------
+  let playerX = 0; // road-relative, -1..1 is on-road
+  let steer = 0; // target from finger
+  let speed = 0.35; // 0..1
+  let curve = 0;
+  let curveTarget = 0;
+  let curveTimer = 0;
+  let stripe = 0; // scrolls for a sense of speed
+  let meters = 0;
+  let bonkFlash = 0;
+  let timeLeft = 60_000;
+  let nextCheer = 200;
+  let over = false;
+  let destroyed = false;
 
-  function addObstacle(x: number, y: number, emoji: string, size: number, half: number, vx: number): void {
-    const t = emojiText(scene, x, y, emoji, size);
-    ctx.layer.add(t);
-    obstacles.push({ t, x, y, vx, half });
-  }
-
-  // Fill one row across the road, leaving a single clearly-wide gap centred on
-  // `gapCenter`. Occasionally slots a parked rival car into the wall for flavour.
-  function fillRow(y: number, gapCenter: number, gapHalf: number): void {
-    const spacing = 64;
-    for (let x = roadX + 34; x <= roadR - 34; x += spacing) {
-      if (Math.abs(x - gapCenter) <= gapHalf) continue;
-      if (Math.random() < 0.18) addObstacle(x, y, pickRival(), 60, 30, 0);
-      else addObstacle(x, y, pickCoral(), 56, 26, 0);
-    }
-  }
-
-  // Pattern A: a wall filling most of the road with ONE gap to steer into.
-  function spawnWall(): number {
-    const gapHalf = carHalf + 60; // ~104 -> ~208px opening, clearly wide enough
-    const range = Math.max(0, roadW - 2 * gapHalf);
-    const gapCenter = roadX + gapHalf + Math.random() * range;
-    fillRow(spawnY, gapCenter, gapHalf);
-    return 0;
-  }
-
-  // Pattern B: a slalom — two rows with openings on opposite sides, so the
-  // player must weave one way then the other. Both rows are visible at once.
-  function spawnStagger(): number {
-    const gapHalf = carHalf + 66; // extra-wide openings for the weave
-    const firstLeft = Math.random() < 0.5;
-    const nearGap = firstLeft ? roadR - gapHalf : roadX + gapHalf;
-    const farGap = firstLeft ? roadX + gapHalf : roadR - gapHalf;
-    fillRow(spawnY, nearGap, gapHalf);
-    fillRow(spawnY - STAGGER_DY, farGap, gapHalf);
-    return STAGGER_DY;
-  }
-
-  // Pattern C: one or two rival cars drifting gently across the road — the
-  // Pole-Position weave. They cross continuous x, so no fixed line is safe.
-  function spawnDrift(): number {
-    const count = Math.random() < 0.5 ? 1 : 2;
-    for (let i = 0; i < count; i++) {
-      const fromLeft = Math.random() < 0.5;
-      const startX = fromLeft ? roadX + roadW * 0.22 : roadR - roadW * 0.22;
-      const vx = (fromLeft ? 1 : -1) * (36 + Math.random() * 44); // gentle drift
-      addObstacle(startX, spawnY - i * DRIFT_DY, pickRival(), 64, 30, vx);
-    }
-    return (count - 1) * DRIFT_DY;
-  }
-
-  // Choose a wave. Very gentle at the start, more slaloms once warmed up.
-  // Returns how far above `spawnY` the wave's topmost obstacle sits, so we can
-  // keep a fair vertical gap before the next wave.
-  function spawnWave(): number {
-    const r = Math.random();
-    if (meters < 120) return r < 0.6 ? spawnDrift() : spawnWall();
-    if (r < 0.42) return spawnWall();
-    if (r < 0.72) return spawnDrift();
-    return spawnStagger();
-  }
+  // perspective helpers (p: 0 at horizon → 1 at the bottom of the screen)
+  const halfAt = (p: number): number => roadHalfFar + (roadHalfNear - roadHalfFar) * p * p;
+  const centerAt = (p: number): number => width / 2 + curve * (1 - p) * (1 - p) * curveAmp;
 
   // ---- Input: drag to steer --------------------------------------------
+  const setSteer = (px: number): void => {
+    steer = Phaser.Math.Clamp((px - width / 2) / (width * 0.4), -1.15, 1.15);
+  };
   let dragging = false;
-  const clampX = (x: number): number => Math.max(minX, Math.min(maxX, x));
-  const steerTo = (x: number): void => { carX = clampX(x); };
-
-  const onDown = (p: Phaser.Input.Pointer): void => { dragging = true; steerTo(p.x); };
-  const onMove = (p: Phaser.Input.Pointer): void => { if (dragging || p.isDown) steerTo(p.x); };
+  const onDown = (p: Phaser.Input.Pointer): void => { dragging = true; setSteer(p.x); };
+  const onMove = (p: Phaser.Input.Pointer): void => { if (dragging || p.isDown) setSteer(p.x); };
   const onUp = (): void => { dragging = false; };
   scene.input.on('pointerdown', onDown, this);
   scene.input.on('pointermove', onMove, this);
   scene.input.on('pointerup', onUp, this);
-
   const cursors = scene.input.keyboard?.createCursorKeys();
 
-  // ---- Run state --------------------------------------------------------
-  let over = false;
-  let destroyed = false;
-  let meters = 0;
-  let nextChimeAt = 100; // soft cheer every 100m
-  let speed = 240; // px/sec scroll speed, ramps up very gently
-  const maxSpeed = 540;
-  let spawnCountdown = 700; // ms until first wave
+  function spawnRival(): void {
+    const emoji = rivalEmojis[Math.floor(Math.random() * rivalEmojis.length)]!;
+    const t = emojiText(scene, width / 2, horizonY, emoji, 40);
+    ctx.layer.add(t);
+    rivals.push({ t, x: (Math.random() * 2 - 1) * 0.7, z: 1, scored: false });
+  }
+
+  function drawRoad(): void {
+    road.clear();
+    for (let i = 0; i < ROWS; i++) {
+      const p0 = i / ROWS;
+      const p1 = (i + 1) / ROWS;
+      const yTop = horizonY + (roadBottom - horizonY) * p0;
+      const yBot = horizonY + (roadBottom - horizonY) * p1;
+      const cx = centerAt(p1);
+      const half = halfAt(p1);
+      // stripe phase scrolls with speed for a moving-road feel
+      const band = Math.floor(p1 * 22 + stripe) % 2 === 0;
+      // grass / seabed shoulder
+      road.fillStyle(band ? theme.bgBottom : (theme.accent & 0xfefefe) >> 1, band ? 1 : 0.5);
+      road.fillRect(0, yTop, width, yBot - yTop + 1);
+      // rumble edge
+      road.fillStyle(band ? theme.accent : 0xffffff, 0.9);
+      road.fillRect(cx - half - 12, yTop, half * 2 + 24, yBot - yTop + 1);
+      // tarmac
+      road.fillStyle(band ? 0x2b3a4a : 0x33465a, 1);
+      road.fillRect(cx - half, yTop, half * 2, yBot - yTop + 1);
+      // centre dashes
+      if (band) {
+        road.fillStyle(0xffffff, 0.8);
+        road.fillRect(cx - Math.max(1.5, half * 0.03), yTop, Math.max(3, half * 0.06), yBot - yTop + 1);
+      }
+    }
+  }
 
   function endGame(): void {
     if (over) return;
     over = true;
-    chime('gentle');
+    chime('good');
     ctx.onGameOver(Math.floor(meters));
   }
 
@@ -172,57 +137,87 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
       const dt = Math.min(delta, 50);
       const sec = dt / 1000;
 
-      // keyboard bonus steering
-      if (cursors) {
-        if (cursors.left.isDown) steerTo(carX - speed * 1.4 * sec);
-        else if (cursors.right.isDown) steerTo(carX + speed * 1.4 * sec);
+      timeLeft -= dt;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        endGame();
+        return;
       }
+      timeText.setText(`⏱ ${Math.ceil(timeLeft / 1000)}s`);
 
-      // very gentle speed ramp — keeps getting faster with distance
-      speed = Math.min(maxSpeed, speed + 8 * sec);
+      // keyboard nudge
+      if (cursors?.left.isDown) steer = Phaser.Math.Clamp(steer - 2.2 * sec, -1.15, 1.15);
+      else if (cursors?.right.isDown) steer = Phaser.Math.Clamp(steer + 2.2 * sec, -1.15, 1.15);
 
-      // move car visuals
-      car.setPosition(carX, carY);
-      glow.setPosition(carX, carY + 30);
+      // ease the car toward the steer target
+      playerX += (steer - playerX) * Math.min(1, sec * 6);
 
-      // distance travelled -> score (meters), with an encouraging chime
-      meters += speed * sec * 0.1;
+      // off-road slows you; otherwise speed climbs to max
+      const offRoad = Math.abs(playerX) > 1;
+      const targetSpeed = offRoad ? 0.34 : 1;
+      speed += (targetSpeed - speed) * Math.min(1, sec * (offRoad ? 3 : 0.5));
+
+      // wandering curve — the vanishing point sways left/right
+      curveTimer -= dt;
+      if (curveTimer <= 0) {
+        curveTarget = (Math.random() * 2 - 1) * 0.9;
+        curveTimer = 2200 + Math.random() * 2200;
+      }
+      curve += (curveTarget - curve) * Math.min(1, sec * 0.8);
+
+      // scroll + distance
+      stripe = (stripe + speed * sec * 8) % 1000;
+      meters += speed * sec * 70;
       ctx.onScore(Math.floor(meters));
-      if (meters >= nextChimeAt) {
-        chime('good');
-        nextChimeAt += 100;
+      if (meters >= nextCheer) { chime('good'); nextCheer += 200; }
+
+      drawRoad();
+
+      // car visuals: lean into the turn, shudder when off-road/bonked
+      const lean = Phaser.Math.Clamp((steer - playerX) * 12 + curve * 6, -14, 14);
+      bonkFlash = Math.max(0, bonkFlash - dt);
+      const shudder = (offRoad ? Math.sin(stripe * 40) * 4 : 0) + (bonkFlash > 0 ? Math.sin(bonkFlash) * 5 : 0);
+      car.setPosition(width / 2 + shudder, carScreenY);
+      car.setAngle(lean);
+      car.setTint(bonkFlash > 0 ? 0xff8888 : 0xffffff);
+      shadow.setPosition(width / 2 + shudder, carScreenY + 30);
+
+      // spawn rivals
+      spawnAcc -= dt;
+      if (spawnAcc <= 0) {
+        spawnRival();
+        spawnAcc = 900 + Math.random() * 900;
       }
 
-      // scroll dashes downward, wrap to top
-      const move = speed * sec;
-      for (const d of dashes) {
-        d.y += move;
-        if (d.y > height + 22) d.y -= (height - areaTop) + dashGap;
-      }
+      // move + project rivals
+      for (let i = rivals.length - 1; i >= 0; i--) {
+        const r = rivals[i]!;
+        r.z -= (0.22 + speed * 0.5) * sec;
+        const p = 1 - r.z;
+        if (p <= 0) { r.t.setVisible(false); continue; }
+        const cx = centerAt(p);
+        const sx = cx + (r.x - playerX) * roadHalfNear * p * p;
+        const sy = horizonY + (roadBottom - horizonY) * p;
+        const sc = 0.3 + 1.5 * p * p;
+        r.t.setPosition(sx, sy);
+        r.t.setScale(sc);
+        r.t.setVisible(true);
 
-      // spawn waves; rate ramps up gently as distance and speed grow, but a
-      // fair vertical gap below the previous wave's top is always preserved.
-      spawnCountdown -= dt;
-      if (spawnCountdown <= 0) {
-        const extra = spawnWave();
-        const spacingPx = Math.max(areaH * 0.5, areaH * 0.92 - meters * 0.5);
-        spawnCountdown = ((spacingPx + extra) / speed) * 1000 * (0.9 + Math.random() * 0.25);
-      }
-
-      // move + collide obstacles
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        const c = obstacles[i]!;
-        c.y += move;
-        if (c.vx !== 0) c.x = clampRoad(c.x + c.vx * sec, c.half);
-        c.t.setPosition(c.x, c.y);
-        // forgiving hitbox: only near the car's row and overlapping in x
-        if (Math.abs(c.y - carY) < 42 && Math.abs(c.x - carX) < c.half + 26) {
-          endGame();
-          return;
+        // near the player's row: bonk if overlapping, else it's a clean pass
+        if (r.z <= 0.05 && !r.scored) {
+          r.scored = true;
+          if (Math.abs(r.x - playerX) < 0.32) {
+            bonkFlash = Math.PI * 6;
+            speed = 0.3;
+            chime('gentle');
+          } else {
+            meters += 25; // reward for overtaking, Pole-Position style
+            ctx.onScore(Math.floor(meters));
+          }
         }
-        if (c.y > height + 60) {
-          c.t.destroy();
-          obstacles.splice(i, 1);
+        if (r.z <= -0.15) {
+          r.t.destroy();
+          rivals.splice(i, 1);
         }
       }
     },

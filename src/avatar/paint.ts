@@ -75,6 +75,17 @@ const GOWN_STOPS: Record<string, [string, string]> = {
   gold: ['#ffd76a', '#e0a52e'],
   winter: ['#dbeeff', '#9cc4e8'],
   starlight: ['#3a4a8a', '#151a3a'],
+  // round-2 additions — more color dresses & princess gowns
+  sunset: ['#ffb06a', '#ff5f8d'],
+  aqua: ['#6fe6d6', '#2aa7b5'],
+  lavender: ['#cbb4f2', '#8a6fd6'],
+  peach: ['#ffc9a6', '#ff8fa6'],
+  emerald: ['#79e6a6', '#1f9e6b'],
+  ruby: ['#ff8090', '#c62448'],
+  bluebell: ['#9cc0ff', '#4f6fd6'],
+  blossom: ['#ffb6e6', '#e864c4'],
+  buttercup: ['#ffe38a', '#f4b23a'],
+  cocoa: ['#e6b98a', '#a56b3f'],
 };
 
 /**

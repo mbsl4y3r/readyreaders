@@ -193,6 +193,17 @@ export const COSMETICS: CosmeticItem[] = [
   I('gown-winter', 'outfit', 'Winter Gown', 14, '❄️'),
   I('gown-starlight', 'outfit', 'Starlight Gown', 16, '🌟'),
   I('gown-gold', 'outfit', 'Sunbeam Gown', 18, '👑'),
+  // more color dresses & princess gowns (round 2)
+  I('gown-sunset', 'outfit', 'Sunset Gown', 14, '🌅', true),
+  I('gown-peach', 'outfit', 'Peach Gown', 14, '🍑', true),
+  I('gown-aqua', 'outfit', 'Aqua Gown', 14, '🌊'),
+  I('gown-lavender', 'outfit', 'Lavender Gown', 14, '💜'),
+  I('gown-bluebell', 'outfit', 'Bluebell Gown', 14, '🔔'),
+  I('gown-buttercup', 'outfit', 'Buttercup Gown', 14, '🌻'),
+  I('gown-blossom', 'outfit', 'Blossom Gown', 16, '🌸'),
+  I('gown-emerald', 'outfit', 'Emerald Gown', 16, '💚'),
+  I('gown-ruby', 'outfit', 'Ruby Gown', 16, '❤️'),
+  I('gown-cocoa', 'outfit', 'Cocoa Gown', 14, '🤎'),
   // outfits — fairy dresses (with wings)
   I('fairy-rose', 'outfit', 'Rose Fairy', 14, '🧚‍♀️', true),
   I('fairy-violet', 'outfit', 'Dusk Fairy', 14, '🦋'),
