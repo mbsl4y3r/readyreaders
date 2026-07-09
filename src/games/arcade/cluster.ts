@@ -4,19 +4,34 @@ import { chime } from '../../services/audio';
 
 /**
  * Coral Cluster — our own gentle take on the classic Snood / bubble shooter.
- * Aim the launcher upward and fire a colored bubble; land three-or-more of a
- * color touching and the whole cluster pops (and anything left dangling drops
- * too). Clear the board for a fresh, fuller one. A generous timer ends the run
- * and the score is how many bubbles you popped. Forgiving for a six-year-old:
- * big bubbles, slow shots, a dotted aim guide with a wall-bounce preview.
+ * Aim the launcher upward and fire a bubble; land three-or-more of a kind
+ * touching and the whole cluster pops (and anything left dangling drops too).
+ *
+ * Colorblind-friendly by design (like Snood's creature faces): five STANDARD
+ * RAINBOW colors, each carrying its own white symbol — red♥ yellow★ green▲
+ * blue◆ purple● — so no piece is identified by color alone.
+ *
+ * Snood-style specials:
+ *  - 🌈 WILDCARD: a rainbow pinwheel that matches ANY color.
+ *  - 🪨 STONE: can't be matched — pop its neighbors and let it drop.
+ *  - DANGER METER: shots that pop nothing fill the meter; when it fills, a
+ *    fresh row pushes the whole board down one step. Pops calm it back down.
  */
 
-type Cell = { color: number; obj: Phaser.GameObjects.Container };
+type Kind = number; // 0..4 = rainbow colors, WILD, or STONE
+const WILD: Kind = -1;
+const STONE: Kind = -2;
+
+interface Cell {
+  kind: Kind;
+  obj: Phaser.GameObjects.Container;
+}
+
+const RAINBOW = [0xe53935, 0xfdd835, 0x43a047, 0x1e88e5, 0x8e24aa]; // R Y G B P
 
 export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
   const { width, height, hudBottom, theme } = ctx;
 
-  const PALETTE = [0xff6b6b, 0x4fc3f7, 0x9ccc65, 0xffd166, 0xba68c8];
   const R = 34;
   const D = R * 2;
   const rowH = D * 0.87;
@@ -30,6 +45,7 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
   const dangerY = launchY - 150;
   const SHOT_SPEED = 880;
   const ROWS_INIT = 5;
+  const MISS_LIMIT = 6; // misses before the board pushes down a row
 
   // ---- backdrop ---------------------------------------------------------
   const bg = scene.add.rectangle(width / 2, (hudBottom + height) / 2, width, height - hudBottom, theme.bgBottom);
@@ -45,27 +61,106 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
     .setOrigin(1, 0.5);
   ctx.layer.add(timeText);
 
+  // the danger meter: dots that fill as shots miss (bottom-left)
+  const meter = scene.add.graphics();
+  ctx.layer.add(meter);
+  function drawMeter(misses: number): void {
+    meter.clear();
+    for (let i = 0; i < MISS_LIMIT; i++) {
+      meter.fillStyle(i < misses ? 0xff7043 : 0xffffff, i < misses ? 0.95 : 0.25);
+      meter.fillCircle(wallL + 18 + i * 26, launchY + 8, 8);
+    }
+  }
+  drawMeter(0);
+
   // ---- helpers ----------------------------------------------------------
   const cellX = (r: number, c: number): number => wallL + R + c * D + (r % 2) * R;
   const cellY = (r: number): number => y0 + r * rowH;
   const key = (r: number, c: number): string => `${r}:${c}`;
   const grid = new Map<string, Cell>();
 
-  function makeBubble(color: number): Phaser.GameObjects.Container {
+  /** A distinct white symbol per color, so color is never the only signal. */
+  function drawSymbol(g: Phaser.GameObjects.Graphics, colorIndex: number): void {
+    g.fillStyle(0xffffff, 0.92);
+    g.lineStyle(4, 0xffffff, 0.92);
+    const s = 13;
+    if (colorIndex === 0) {
+      // red — heart
+      g.fillCircle(-s * 0.42, -s * 0.3, s * 0.48);
+      g.fillCircle(s * 0.42, -s * 0.3, s * 0.48);
+      g.fillTriangle(-s * 0.85, -s * 0.12, s * 0.85, -s * 0.12, 0, s * 0.95);
+    } else if (colorIndex === 1) {
+      // yellow — star
+      const pts: Phaser.Types.Math.Vector2Like[] = [];
+      for (let i = 0; i < 10; i++) {
+        const ang = -Math.PI / 2 + (i * Math.PI) / 5;
+        const rad = i % 2 === 0 ? s : s * 0.45;
+        pts.push({ x: Math.cos(ang) * rad, y: Math.sin(ang) * rad });
+      }
+      g.fillPoints(pts, true);
+    } else if (colorIndex === 2) {
+      // green — triangle
+      g.fillTriangle(0, -s, -s, s * 0.8, s, s * 0.8);
+    } else if (colorIndex === 3) {
+      // blue — diamond
+      g.fillPoints(
+        [
+          { x: 0, y: -s },
+          { x: s * 0.8, y: 0 },
+          { x: 0, y: s },
+          { x: -s * 0.8, y: 0 },
+        ],
+        true,
+      );
+    } else {
+      // purple — ring
+      g.strokeCircle(0, 0, s * 0.62);
+    }
+  }
+
+  function makeBubble(kind: Kind): Phaser.GameObjects.Container {
     const c = scene.add.container(0, 0);
-    const body = scene.add.circle(0, 0, R - 3, color, 1);
-    body.setStrokeStyle(3, 0xffffff, 0.35);
-    const shine = scene.add.circle(-R * 0.32, -R * 0.32, R * 0.24, 0xffffff, 0.5);
-    c.add(body);
-    c.add(shine);
+    if (kind === STONE) {
+      const body = scene.add.circle(0, 0, R - 3, 0x8a8f98, 1);
+      body.setStrokeStyle(3, 0x565b63, 1);
+      c.add(body);
+      const cracks = scene.add.graphics();
+      cracks.lineStyle(3, 0x565b63, 0.9);
+      cracks.lineBetween(-12, -6, 2, 2);
+      cracks.lineBetween(2, 2, -4, 14);
+      cracks.lineBetween(6, -14, 12, -2);
+      c.add(cracks);
+    } else if (kind === WILD) {
+      // rainbow pinwheel — matches everything
+      const pin = scene.add.graphics();
+      for (let i = 0; i < RAINBOW.length; i++) {
+        pin.fillStyle(RAINBOW[i]!, 1);
+        pin.slice(0, 0, R - 3, (i * Math.PI * 2) / RAINBOW.length, ((i + 1) * Math.PI * 2) / RAINBOW.length, false);
+        pin.fillPath();
+      }
+      pin.lineStyle(3, 0xffffff, 0.85);
+      pin.strokeCircle(0, 0, R - 3);
+      c.add(pin);
+      const dot = scene.add.circle(0, 0, 9, 0xffffff, 1);
+      c.add(dot);
+    } else {
+      const body = scene.add.circle(0, 0, R - 3, RAINBOW[kind]!, 1);
+      body.setStrokeStyle(3, 0xffffff, 0.4);
+      c.add(body);
+      const sym = scene.add.graphics();
+      drawSymbol(sym, kind);
+      c.add(sym);
+      const shine = scene.add.circle(-R * 0.4, -R * 0.4, R * 0.16, 0xffffff, 0.55);
+      c.add(shine);
+    }
     ctx.layer.add(c);
     return c;
   }
 
-  function place(r: number, c: number, color: number): void {
-    const obj = makeBubble(color);
+  function place(r: number, c: number, kind: Kind): void {
+    const obj = makeBubble(kind);
     obj.setPosition(cellX(r, c), cellY(r));
-    grid.set(key(r, c), { color, obj });
+    grid.set(key(r, c), { kind, obj });
   }
 
   // offset-right hex adjacency (depends on row parity)
@@ -83,20 +178,35 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
     return out;
   };
 
+  function rollKind(random: () => number): Kind {
+    const roll = random();
+    if (roll < 0.05) return WILD; // the occasional rainbow treat
+    if (roll < 0.1) return STONE; // and the occasional boulder
+    return Math.floor(random() * RAINBOW.length);
+  }
+
   function fillBoard(): void {
     for (const cell of grid.values()) cell.obj.destroy();
     grid.clear();
+    let stones = 0;
     for (let r = 0; r < ROWS_INIT; r++) {
       for (let c = 0; c < COLS; c++) {
-        place(r, c, PALETTE[Math.floor(Math.random() * PALETTE.length)]!);
+        let kind = rollKind(Math.random);
+        if (kind === STONE && stones >= 5) kind = Math.floor(Math.random() * RAINBOW.length);
+        if (kind === STONE) stones++;
+        place(r, c, kind);
       }
     }
   }
 
-  const pickColor = (): number => {
+  const matchableOnBoard = (): number[] => {
     const s = new Set<number>();
-    for (const cell of grid.values()) s.add(cell.color);
-    const pool = s.size ? [...s] : PALETTE;
+    for (const cell of grid.values()) if (cell.kind >= 0) s.add(cell.kind);
+    return s.size ? [...s] : [0, 1, 2, 3, 4];
+  };
+  const pickShotKind = (): Kind => {
+    if (Math.random() < 0.08) return WILD; // a wildcard in the barrel now and then
+    const pool = matchableOnBoard();
     return pool[Math.floor(Math.random() * pool.length)]!;
   };
 
@@ -118,7 +228,9 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
     return [r0, c];
   }
 
+  /** Flood a cluster of `color` from (r,c); wildcards belong to every color. */
   function sameCluster(r: number, c: number, color: number): string[] {
+    const matches = (k: Kind): boolean => k === color || k === WILD;
     const seen = new Set<string>([key(r, c)]);
     const stack: [number, number][] = [[r, c]];
     const out = [key(r, c)];
@@ -127,7 +239,7 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
       for (const [nr, nc] of neighbors(cr, cc)) {
         const k = key(nr, nc);
         const cell = grid.get(k);
-        if (cell && cell.color === color && !seen.has(k)) {
+        if (cell && matches(cell.kind) && !seen.has(k)) {
           seen.add(k);
           out.push(k);
           stack.push([nr, nc]);
@@ -135,6 +247,22 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
       }
     }
     return out;
+  }
+
+  /** The cluster a landed bubble pops — a wildcard joins its biggest option. */
+  function clusterFor(r: number, c: number, kind: Kind): string[] {
+    if (kind !== WILD) return sameCluster(r, c, kind);
+    const colors = new Set<number>();
+    for (const [nr, nc] of neighbors(r, c)) {
+      const cell = grid.get(key(nr, nc));
+      if (cell && cell.kind >= 0) colors.add(cell.kind);
+    }
+    let best: string[] = [key(r, c)];
+    for (const color of colors) {
+      const cl = sameCluster(r, c, color);
+      if (cl.length > best.length) best = cl;
+    }
+    return best;
   }
 
   const popKeys = (keys: string[]): void => {
@@ -162,22 +290,43 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
     return floating.length;
   }
 
+  /** Snood pressure: push everything down one row and deal a fresh top row. */
+  function shiftDown(): boolean {
+    const entries = [...grid.entries()].map(([k, cell]) => {
+      const [r, c] = k.split(':').map(Number) as [number, number];
+      return { r: r + 1, c, cell };
+    });
+    grid.clear();
+    let breached = false;
+    for (const e of entries) {
+      grid.set(key(e.r, e.c), e.cell);
+      e.cell.obj.setPosition(cellX(e.r, e.c), cellY(e.r));
+      if (cellY(e.r) >= dangerY) breached = true;
+    }
+    for (let c = 0; c < COLS; c++) {
+      let kind = rollKind(Math.random);
+      if (kind === STONE) kind = Math.floor(Math.random() * RAINBOW.length); // pressure rows stay poppable
+      place(0, c, kind);
+    }
+    return breached;
+  }
+
   // ---- launcher queue ---------------------------------------------------
   fillBoard();
-  let curColor = pickColor();
-  let nextColor = pickColor();
-  let loaded = makeBubble(curColor);
+  let curKind = pickShotKind();
+  let nextKind = pickShotKind();
+  let loaded = makeBubble(curKind);
   loaded.setPosition(launchX, launchY);
-  let preview = makeBubble(nextColor);
+  let preview = makeBubble(nextKind);
   preview.setPosition(launchX + 84, launchY + 6).setScale(0.6);
 
   function advanceQueue(): void {
-    curColor = nextColor;
-    nextColor = pickColor();
-    loaded = makeBubble(curColor);
+    curKind = nextKind;
+    nextKind = pickShotKind();
+    loaded = makeBubble(curKind);
     loaded.setPosition(launchX, launchY);
     preview.destroy();
-    preview = makeBubble(nextColor);
+    preview = makeBubble(nextKind);
     preview.setPosition(launchX + 84, launchY + 6).setScale(0.6);
   }
 
@@ -185,17 +334,18 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
   let phase: 'aim' | 'fly' | 'over' = 'aim';
   let angle = -Math.PI / 2;
   let shot: Phaser.GameObjects.Container | null = null;
-  let shotColor = curColor;
+  let shotKind: Kind = curKind;
   let sx = launchX;
   let sy = launchY;
   let vx = 0;
   let vy = 0;
   let score = 0;
+  let misses = 0;
   let timeLeft = 95_000;
   let destroyed = false;
 
   const setAim = (px: number, py: number): void => {
-    let a = Math.atan2(py - launchY, px - launchX);
+    const a = Math.atan2(py - launchY, px - launchX);
     const min = -Math.PI + 0.28;
     const max = -0.28;
     angle = a > max ? max : a < min ? min : a;
@@ -229,22 +379,32 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
 
   function settleShot(): void {
     const [r, c] = nearestEmpty(sx, sy);
-    place(r, c, shotColor);
+    place(r, c, shotKind);
     shot?.destroy();
     shot = null;
-    const cluster = sameCluster(r, c, shotColor);
+    advanceQueue();
+
+    const cluster = clusterFor(r, c, shotKind);
     if (cluster.length >= 3) {
       popKeys(cluster);
       const dropped = dropFloating();
       score += cluster.length + dropped;
       ctx.onScore(score);
       chime('good');
-      if (grid.size === 0) fillBoard();
-    } else if (cellY(r) >= dangerY) {
-      endGame();
-      return;
+      misses = Math.max(0, misses - 1); // a pop calms the danger meter
+      drawMeter(misses);
+      // when nothing matchable is left (maybe a stray anchored stone), refill
+      if (![...grid.values()].some((cell) => cell.kind >= 0)) fillBoard();
     } else {
       chime('gentle');
+      if (cellY(r) >= dangerY) { endGame(); return; }
+      misses++;
+      drawMeter(misses);
+      if (misses >= MISS_LIMIT) {
+        misses = 0;
+        drawMeter(0);
+        if (shiftDown()) { endGame(); return; }
+      }
     }
     if (phase !== 'over') phase = 'aim';
   }
@@ -255,13 +415,12 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
   const onUp = (p: Phaser.Input.Pointer): void => {
     if (phase !== 'aim') return;
     setAim(p.x, p.y);
-    shotColor = curColor;
+    shotKind = curKind;
     sx = launchX;
     sy = launchY;
     vx = Math.cos(angle) * SHOT_SPEED;
     vy = Math.sin(angle) * SHOT_SPEED;
     shot = loaded;
-    advanceQueue();
     phase = 'fly';
     aim.clear();
   };
