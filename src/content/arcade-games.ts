@@ -207,6 +207,16 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     unlockLevel: 4,
     scoreLabel: 'rounds',
   },
+  {
+    id: 'cluster',
+    title: 'Coral Cluster',
+    emoji: '💠',
+    blurb: 'Aim up and match 3 to pop the cluster!',
+    reskins: 'Snood / bubble shooter',
+    realm: 'cove',
+    unlockLevel: 3,
+    scoreLabel: 'pops',
+  },
 ];
 
 export const ARCADE_BY_ID = new Map(ARCADE_GAMES.map((g) => [g.id, g]));
@@ -236,6 +246,7 @@ export const ARCADE_ANNOUNCE: Record<string, string> = {
   memory: 'Memory Shells! Flip, flip — find the matching pairs!',
   catch: 'Treasure Catch! Swish that net — catch all the goodies!',
   echo: 'Star Echo! Watch the twinkly stars, then tap them back — ready?',
+  cluster: 'Coral Cluster! Aim it up and POP three-in-a-row — ka-bloosh!',
 };
 
 /** True if the play pass is currently active. */

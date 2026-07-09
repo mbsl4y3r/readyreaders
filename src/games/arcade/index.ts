@@ -21,6 +21,7 @@ import { run as bubblepop } from './bubblepop';
 import { run as memory } from './memory';
 import { run as catchgame } from './catch';
 import { run as echo } from './echo';
+import { run as cluster } from './cluster';
 
 export const ARCADE_RUNNERS: Record<string, RunArcadeGame> = {
   serpent,
@@ -40,4 +41,5 @@ export const ARCADE_RUNNERS: Record<string, RunArcadeGame> = {
   memory,
   catch: catchgame,
   echo,
+  cluster,
 };

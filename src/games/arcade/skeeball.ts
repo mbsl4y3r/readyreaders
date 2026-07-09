@@ -16,15 +16,15 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   const wall = 30;
   const leftX = wall;
   const rightX = width - wall;
-  // Launch point sits well above the bottom edge so there is room to drag
-  // BACKWARD (downward) for a big backswing without running off the screen.
-  // Clamp so it always stays comfortably below the outer ring.
-  const restY = Math.max(top + 350, height - 300);
+  // Rings ride at the very top and the shell sits low, so there's a long
+  // skee-ball LANE between them — but the shell still leaves ~175px below it
+  // for a decent backswing drag.
   const centerX = width / 2;
-  const centerY = top + 150;
-  const rOuter = 150; // 10 pts
-  const rMid = 95; //   25 pts
-  const rBull = 50; //  50 pts
+  const rOuter = 120; // 10 pts
+  const rMid = 76; //   25 pts
+  const rBull = 40; //  50 pts
+  const centerY = top + rOuter + 8;
+  const restY = height - 175;
 
   // Ramp side rails so it reads as a lane.
   const railL = scene.add.rectangle(leftX, (top + height) / 2, 10, height - top, theme.accent, 0.5);
@@ -81,7 +81,7 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   let vy = 0;
   let restMs = 0;
   const pointer = new Phaser.Math.Vector2(centerX, restY);
-  const MAX_PULL = 300;
+  const MAX_PULL = 220;
 
   const drawRolls = () => {
     rollsText.setText('🐚'.repeat(Math.max(0, rolls)));
@@ -137,7 +137,7 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
       phase = 'ready'; // tiny tap — not a real shot
       return;
     }
-    const power = 360 + (pull / MAX_PULL) * 1440; // px/sec — generous, full backswing reaches the rings
+    const power = 340 + (pull / MAX_PULL) * 1350; // px/sec — a short pull is soft, a full backswing sails up the lane
     vx = (dx / pull) * power;
     vy = (dy / pull) * power;
     phase = 'roll';

@@ -51,6 +51,7 @@ This is the "what's done / what's left / what **you** need to do" board. The
 | `arcade-memory` | "Memory Shells! Flip, flip — find the matching pairs!" |
 | `arcade-catch` | "Treasure Catch! Swish that net — catch all the goodies!" |
 | `arcade-echo` | "Star Echo! Watch the twinkly stars, then tap them back — ready?" |
+| `arcade-cluster` | "Coral Cluster! Aim it up and POP three-in-a-row — ka-bloosh!" |
 
 ---
 
@@ -79,6 +80,7 @@ forgiving for a 6-year-old.
 | Concentration | 🧩 Memory Shells | Level 2 | flip shells, match pairs |
 | Catch | 🧺 Treasure Catch | Level 3 | net falling treasures |
 | Simon | 🌟 Star Echo | Level 4 | repeat the twinkle pattern |
+| Snood / bubble shooter | 💠 Coral Cluster | Level 3 | aim up, match 3 to pop |
 
 **Two gates, both intentional:**
 
