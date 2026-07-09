@@ -50,9 +50,13 @@ const EVIE_KEY = 'photobooth-evie';
 const INKY_KEY = 'photobooth-inky';
 
 // ---- right-hand control column ----------------------------------------------
+// Two rows of five for both choosers, so the bigger catalog still fits beside
+// the frame: labels, two swatch rows, two stamp rows, then Snap + Start over.
 const RX = 800;
-const SWATCH_Y = 218;
-const STAMP_Y = 368;
+const SWATCH_Y = 186;
+const SWATCH_Y2 = 262;
+const STAMP_Y = 380;
+const STAMP_Y2 = 456;
 const CHOOSER_STEP = 88;
 
 // ---- gallery strip ----------------------------------------------------------
@@ -75,9 +79,14 @@ const BACKDROPS: Backdrop[] = [
   { id: 'sparkle', swatch: '✨', top: '#f7dcff', bottom: '#8a5ad0', accent: '⭐' },
   { id: 'rainbow', swatch: '🌈', top: '#ffd6ec', bottom: '#7ec8ff', accent: '🌈' },
   { id: 'castle', swatch: '🏰', top: '#ffe7b3', bottom: '#e0893a', accent: '👑' },
+  { id: 'candy', swatch: '🍭', top: '#ffd9f0', bottom: '#ff8fc8', accent: '🍬' },
+  { id: 'space', swatch: '🚀', top: '#3a3f7d', bottom: '#12102e', accent: '🪐' },
+  { id: 'snow', swatch: '❄️', top: '#eaf6ff', bottom: '#9cc4e8', accent: '⛄' },
+  { id: 'sunset', swatch: '🌅', top: '#ffd2a1', bottom: '#e0608a', accent: '🌴' },
+  { id: 'meadow', swatch: '🌼', top: '#d8f7c1', bottom: '#7cc46a', accent: '🦋' },
 ];
 
-const STAMPS: string[] = ['⭐', '🌈', '💖', '🐚', '🎀'];
+const STAMPS: string[] = ['⭐', '🌈', '💖', '🐚', '🎀', '🦋', '👑', '🫧', '🌸', '🎈'];
 
 /** Default drop spots for stamps — all comfortably inside the capture rect. */
 const STAMP_SPOTS: ReadonlyArray<readonly [number, number]> = [
@@ -103,6 +112,10 @@ export class PhotoBoothScene extends Phaser.Scene {
   private stamps: Phaser.GameObjects.Text[] = [];
   private stampSeq = 0;
 
+  /** Backdrop chooser buttons + label — rebuilt in place on selection. */
+  private chooserBtns: Phaser.GameObjects.Container[] = [];
+  private chooserLabel: Phaser.GameObjects.Text | null = null;
+
   /** Gallery thumbnails (+ their private texture keys) for teardown/rebuild. */
   private thumbs: { obj: Phaser.GameObjects.GameObject; key: string }[] = [];
   private thumbSeq = 0;
@@ -118,6 +131,8 @@ export class PhotoBoothScene extends Phaser.Scene {
     this.backdropImg = null;
     this.stamps = [];
     this.stampSeq = 0;
+    this.chooserBtns = [];
+    this.chooserLabel = null;
     this.thumbs = [];
     this.thumbSeq = 0;
     this.emptyHint = null;
@@ -271,17 +286,24 @@ export class PhotoBoothScene extends Phaser.Scene {
   // -------------------------------------------------------- background chooser
 
   private buildBackgroundChooser(): void {
-    readingText(this, RX, 150, 'Backdrops', 26, '#ffe9a8').setDepth(30);
+    if (!this.chooserLabel) {
+      this.chooserLabel = readingText(this, RX, 132, 'Backdrops', 26, '#ffe9a8').setDepth(30);
+    }
+    this.chooserBtns.forEach((b) => b.destroy());
+    this.chooserBtns = [];
     BACKDROPS.forEach((bg, i) => {
-      const x = RX + (i - (BACKDROPS.length - 1) / 2) * CHOOSER_STEP;
-      const btn = makeButton(this, x, SWATCH_Y, bg.swatch, () => this.chooseBackdrop(i), {
+      const col = i % 5;
+      const x = RX + (col - 2) * CHOOSER_STEP;
+      const y = i < 5 ? SWATCH_Y : SWATCH_Y2;
+      const btn = makeButton(this, x, y, bg.swatch, () => this.chooseBackdrop(i), {
         emoji: true,
-        fontSize: 32,
+        fontSize: 30,
         width: 78,
-        height: 78,
+        height: 68,
       });
       btn.setDepth(30);
       if (i === this.bgIndex) btn.setScale(1.08);
+      this.chooserBtns.push(btn);
     });
   }
 
@@ -297,18 +319,19 @@ export class PhotoBoothScene extends Phaser.Scene {
   // ------------------------------------------------------------------ stamps
 
   private buildStampBar(): void {
-    readingText(this, RX, 300, 'Stamps', 26, '#ffe9a8').setDepth(30);
+    readingText(this, RX, 326, 'Stamps', 26, '#ffe9a8').setDepth(30);
     STAMPS.forEach((emoji, i) => {
-      const x = RX + (i - (STAMPS.length - 1) / 2) * CHOOSER_STEP;
-      const btn = makeButton(this, x, STAMP_Y, emoji, () => this.addStamp(emoji), {
+      const col = i % 5;
+      const x = RX + (col - 2) * CHOOSER_STEP;
+      const y = i < 5 ? STAMP_Y : STAMP_Y2;
+      const btn = makeButton(this, x, y, emoji, () => this.addStamp(emoji), {
         emoji: true,
-        fontSize: 32,
+        fontSize: 30,
         width: 78,
-        height: 78,
+        height: 68,
       });
       btn.setDepth(30);
     });
-    readingText(this, RX, 424, 'Tap a stamp to add it!', 18, '#d9c9f5').setDepth(30);
   }
 
   /** Drop a stamp at the next default spot INSIDE the frame, with a little pop. */
@@ -317,8 +340,8 @@ export class PhotoBoothScene extends Phaser.Scene {
     this.stampSeq++;
     const t = emojiText(this, spot[0], spot[1], emoji, 50).setDepth(5);
     this.stamps.push(t);
-    // keep the frame from getting crowded — retire the oldest past eight
-    if (this.stamps.length > 8) {
+    // keep the frame from getting crowded — retire the oldest past twelve
+    if (this.stamps.length > 12) {
       const old = this.stamps.shift();
       old?.destroy();
     }
@@ -326,16 +349,35 @@ export class PhotoBoothScene extends Phaser.Scene {
     chime('gentle');
   }
 
+  /** Start over: sweep every stamp off the photo (backdrop + pose stay). */
+  private clearStamps(): void {
+    if (this.stamps.length === 0) return;
+    this.stamps.forEach((s) => s.destroy());
+    this.stamps = [];
+    this.stampSeq = 0;
+    chime('gentle');
+  }
+
   // -------------------------------------------------------------------- snap
 
   private buildSnapButton(): void {
-    const snap = makeButton(this, RX, 500, '📸 Snap!', () => this.snap(), {
-      width: 260,
-      height: 88,
-      fontSize: 34,
+    const snap = makeButton(this, RX - 56, 560, '📸 Snap!', () => this.snap(), {
+      width: 230,
+      height: 84,
+      fontSize: 32,
       fill: 0xffd166,
     });
     snap.setDepth(30);
+    // start over — sweeps the stamps so she can decorate fresh
+    const reset = makeButton(this, RX + 118, 560, '🧹', () => this.clearStamps(), {
+      emoji: true,
+      fontSize: 32,
+      width: 96,
+      height: 84,
+      fill: 0xffffff,
+    });
+    reset.setDepth(30);
+    reset.setAlpha(0.92);
   }
 
   /**
