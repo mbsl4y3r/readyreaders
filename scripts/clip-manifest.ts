@@ -100,6 +100,12 @@ export function buildManifest(): Clip[] {
     ['creator-step-outfit', 'Dress up!'],
     ['creator-step-face', 'Add a face'],
     ['creator-step-petColor', 'Your pet Inky'],
+    // level progression — the big "you opened a new island" cheer
+    ['level-up', 'You passed the level! A brand new island just opened!'],
+    // reward hubs (sticker book, photo booth, ticket shop)
+    ['sticker-book', 'Your sticker book! Look at all your shiny stickers!'],
+    ['photo-booth', "Photo booth! Let's take a picture of you!"],
+    ['ticket-shop', 'The ticket shop! Spend your game tickets on treasures!'],
     // Games Arcade — a grown-up records these in a wacky announcer voice
     ['arcade-hub', ARCADE_ANNOUNCE.hub!],
     ...ARCADE_GAMES.map(

@@ -13,6 +13,14 @@ export const LEVELS: Level[] = [
   { id: 9, lessonRange: [116, 120], realm: 'castle', title: 'Star Throne' },
 ];
 
+/**
+ * Reading trips (finished sessions) it takes to PASS a level and open the next
+ * island. Progression is driven by Evie's own reading — finish the frontier
+ * level this many times and the next stop unlocks. Kept small so wins come
+ * often; the celebrate screen always shows how many trips are left.
+ */
+export const SESSIONS_TO_PASS = 3;
+
 export function levelForLesson(lesson: number): Level {
   const level = LEVELS.find(
     (l) => lesson >= l.lessonRange[0] && lesson <= l.lessonRange[1],

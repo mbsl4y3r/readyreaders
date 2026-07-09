@@ -13,6 +13,7 @@ import { newlyEarned } from '../engine/achievements';
 import { loadProgress, saveProgress, statFor } from '../services/progress';
 import {
   recordReadingDay,
+  recordLevelTrip,
   addInkyXp,
   inkyTitle,
   newlyEarnedStickers,
@@ -157,14 +158,23 @@ export class SessionScene extends Phaser.Scene {
       : theme.collectibles.find((e) => !owned.has(e)) ?? theme.collectibles[0]!;
     if (!this.review && !owned.has(prize)) progress.collections[theme.collectionKey].push(prize);
 
-    // levels open in step with the parent's book marker (handled on the map),
-    // never from a single session — so nothing here bumps currentLevel.
     progress.sessions.push({
       date: new Date().toISOString().slice(0, 10),
       rounds: 8,
       minutes: Math.max(1, Math.round((Date.now() - this.startedAt) / 60_000)),
     });
     progress.pearls += PEARLS_PER_SESSION; // reading is the only pearl faucet
+
+    // ---- level progression: finishing the frontier level SESSIONS_TO_PASS
+    // times opens the next island. Reviews and replays of earlier levels don't
+    // count, so the meter always reflects real progress on her current stop.
+    let unlockedLevel = 0; // the level id just opened (0 = none)
+    let tripsLeft = 0; // reading trips remaining to pass the frontier
+    if (!this.review) {
+      const trip = recordLevelTrip(progress, levelId);
+      unlockedLevel = trip.unlockedLevel;
+      tripsLeft = trip.tripsLeft;
+    }
     // juice: advance the daily streak (pays a pearl bonus at milestones) and
     // feed pet Inky some XP — both are earned only by reading, like pearls
     const streak = this.review ? null : recordReadingDay(progress);
@@ -179,16 +189,33 @@ export class SessionScene extends Phaser.Scene {
       this,
       GAME_W / 2,
       GAME_H / 2 + 60,
-      this.review ? 'Great reviewing!' : 'You did it!',
-      52,
+      unlockedLevel ? `Level ${unlockedLevel} unlocked!` : this.review ? 'Great reviewing!' : 'You did it!',
+      unlockedLevel ? 46 : 52,
       '#ffe9a8',
     );
     popIn(this, label, 200);
     confettiBurst(this, GAME_W / 2, GAME_H / 2 - 100, theme.accent);
-    void speakUI(
-      this.review ? 'review-done' : 'celebrate',
-      this.review ? 'Great reviewing! Your reading is getting stronger!' : 'You did it! A new treasure for your collection!',
-    );
+    if (unlockedLevel) {
+      void speakUI('level-up', 'You passed the level! A brand new island just opened!');
+    } else {
+      void speakUI(
+        this.review ? 'review-done' : 'celebrate',
+        this.review ? 'Great reviewing! Your reading is getting stronger!' : 'You did it! A new treasure for your collection!',
+      );
+    }
+
+    // tell her plainly where she stands on the road to the next island
+    const progressMsg = unlockedLevel
+      ? 'A brand new island opened! 🎉'
+      : tripsLeft > 0
+        ? `⭐ ${tripsLeft} more reading ${tripsLeft === 1 ? 'trip' : 'trips'} opens the next island!`
+        : '';
+    if (progressMsg) {
+      const sub = readingText(this, GAME_W / 2, GAME_H / 2 - 182, progressMsg, 30, unlockedLevel ? '#ffe9a8' : '#bfe9ff');
+      sub.setWordWrapWidth(GAME_W - 160);
+      sub.setAlign('center');
+      popIn(this, sub, 320);
+    }
 
     // pearls earned by this reading — the wardrobe currency
     const pearl = this.add.circle(GAME_W / 2 - 52, GAME_H / 2 + 128, 13, 0xffffff, 1);

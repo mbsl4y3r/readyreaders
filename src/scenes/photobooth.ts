@@ -14,7 +14,7 @@
 import Phaser from 'phaser';
 import { paintEvie, paintInky } from '../avatar/paint';
 import { loadProgress, saveProgress, type ProgressData } from '../services/progress';
-import { chime } from '../services/audio';
+import { chime, speakUI } from '../services/audio';
 import {
   GAME_W,
   GAME_H,
@@ -128,6 +128,7 @@ export class PhotoBoothScene extends Phaser.Scene {
     // cheerful photo-studio backdrop: rosy → violet with drifting sparkles
     drawRealmBackground(this, 0x5b6bd0, 0x2a1f52, ['📸', '✨', '💖'], 'stars');
     this.cameras.main.fadeIn(300);
+    void speakUI('photo-booth', "Photo booth! Let's take a picture of you!");
 
     readingText(this, GAME_W / 2, 56, 'Photo Booth 📸', 40, '#ffe9a8');
 

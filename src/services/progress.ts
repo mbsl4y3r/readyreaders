@@ -24,6 +24,8 @@ export interface ProgressData {
   version: 1;
   /** Highest unlocked game level (1..9). */
   currentLevel: number;
+  /** Finished reading trips per level id — passing the frontier opens the next. */
+  levelPlays: Record<number, number>;
   /** Parent-set marker: which book lesson Evie is on. */
   bookLesson: number;
   /** True once the placement voyage has confirmed the starting frontier. */
@@ -80,6 +82,7 @@ export function freshProgress(): ProgressData {
   return {
     version: 1,
     currentLevel: 1,
+    levelPlays: {},
     bookLesson: 17,
     placed: false,
     created: false,
@@ -122,6 +125,7 @@ export function loadProgress(): ProgressData {
     if (!raw) return freshProgress();
     const data = JSON.parse(raw) as ProgressData;
     if (data.version !== 1) return freshProgress();
+    data.levelPlays ??= {};
     // saves from before the placement voyage existed were already mid-journey
     data.placed ??= data.sessions.length > 0;
     data.speedBest ??= 0;
@@ -181,6 +185,7 @@ export function importCode(code: string): ProgressData | null {
   try {
     const data = JSON.parse(decodeURIComponent(escape(atob(code.trim())))) as ProgressData;
     if (data.version !== 1 || typeof data.words !== 'object') return null;
+    data.levelPlays ??= {};
     data.placed ??= data.sessions.length > 0;
     data.speedBest ??= 0;
     data.storiesRead ??= [];

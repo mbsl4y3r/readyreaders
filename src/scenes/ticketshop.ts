@@ -13,7 +13,7 @@ import Phaser from 'phaser';
 import { COSMETICS_BY_ID } from '../avatar/catalog';
 import { TICKET_SHOP } from '../services/juice';
 import { loadProgress, saveProgress, type ProgressData } from '../services/progress';
-import { chime } from '../services/audio';
+import { chime, speakUI } from '../services/audio';
 import {
   GAME_W,
   GAME_H,
@@ -52,6 +52,7 @@ export class TicketShopScene extends Phaser.Scene {
     // deep arcade-night purple, star twinkles
     drawRealmBackground(this, 0x1a1030, 0x0a0618, ['🎟️', '🎮', '⭐'], 'stars');
     this.cameras.main.fadeIn(300);
+    void speakUI('ticket-shop', 'The ticket shop! Spend your game tickets on treasures!');
 
     readingText(this, GAME_W / 2, 56, 'Ticket Shop 🎟️', 40, '#ffe9a8');
 

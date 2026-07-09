@@ -5,9 +5,9 @@
  * the gear.
  */
 import Phaser from 'phaser';
-import { LEVELS, highestLevelForBookLesson } from '../content/levels';
+import { LEVELS, SESSIONS_TO_PASS } from '../content/levels';
 import { THEMES } from '../content/themes';
-import { loadProgress, saveProgress } from '../services/progress';
+import { loadProgress } from '../services/progress';
 import { seasonFor, SEASON_THEMES } from '../services/juice';
 import { speakUI, playMusic } from '../services/audio';
 import { GAME_W, GAME_H, readingText, emojiText, drawRealmBackground, makeButton } from '../ui/kit';
@@ -24,14 +24,9 @@ export class MapScene extends Phaser.Scene {
 
   create(): void {
     const progress = loadProgress();
-    // the island opens in step with the book marker (and never locks back) —
-    // this is what makes unlocking predictable: move the marker forward, more
-    // of the map opens. A manual bump in the parent corner can go further.
-    const open = highestLevelForBookLesson(progress.bookLesson);
-    if (progress.currentLevel < open) {
-      progress.currentLevel = open;
-      saveProgress(progress);
-    }
+    // Islands open by READING: finishing the frontier level SESSIONS_TO_PASS
+    // times unlocks the next one (handled in the session celebration). The map
+    // just reflects currentLevel and shows how close she is on her current stop.
 
     // a gentle seasonal touch: the season's emoji drift in the background and
     // a small badge names it — date-driven, no settings to fuss with
@@ -54,6 +49,18 @@ export class MapScene extends Phaser.Scene {
     // seasonal badge, tucked bottom-center below the path
     emojiText(this, GAME_W / 2 - 44, GAME_H - 26, st.emoji[0]!, 24).setAlpha(0.8);
     readingText(this, GAME_W / 2 + 6, GAME_H - 26, st.name, 20, '#ffe9a8').setAlpha(0.8);
+
+    // plain-language rule so nobody (kid OR grown-up) has to guess how to progress
+    if (progress.currentLevel < 9) {
+      readingText(
+        this,
+        GAME_W / 2,
+        142,
+        `Read your glowing island ${SESSIONS_TO_PASS} times to open the next one! ⭐`,
+        20,
+        '#ffe9a8',
+      ).setAlpha(0.9);
+    }
 
     // path
     const path = this.add.graphics();
@@ -227,6 +234,16 @@ export class MapScene extends Phaser.Scene {
         }
       }
       readingText(this, x, y + 72, `${level.id}`, 26, unlocked ? '#ffffff' : '#8a94a0');
+
+      // star meter ABOVE the CURRENT island (below-screen for low stops if under
+      // it): how many reading trips are done toward opening the next island
+      if (level.id === progress.currentLevel && level.id < 9) {
+        const plays = Math.min(SESSIONS_TO_PASS, progress.levelPlays[level.id] ?? 0);
+        for (let s = 0; s < SESSIONS_TO_PASS; s++) {
+          const star = emojiText(this, x - (SESSIONS_TO_PASS - 1) * 15 + s * 30, y - 76, '⭐', 24);
+          if (s >= plays) star.setAlpha(0.22);
+        }
+      }
     });
 
     // parent gear — a plain tap opens the parent corner (a big hit target,

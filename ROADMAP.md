@@ -54,6 +54,25 @@ This is the "what's done / what's left / what **you** need to do" board. The
 | `arcade-cluster` | "Coral Cluster! Aim it up and POP three-in-a-row — ka-bloosh!" |
 | `arcade-versus` | "Shell Duel! Two players — bonk that pearl right past your buddy!" |
 
+### Other new voice lines to record (normal warm voice)
+
+| Clip id | Line |
+| --- | --- |
+| `level-up` | "You passed the level! A brand new island just opened!" |
+| `sticker-book` | "Your sticker book! Look at all your shiny stickers!" |
+| `photo-booth` | "Photo booth! Let's take a picture of you!" |
+| `ticket-shop` | "The ticket shop! Spend your game tickets on treasures!" |
+
+### 🆕 How levels work now (so nobody has to guess)
+
+Evie starts on **Level 1**. Finishing a level **3 times** (3 reading trips) opens
+the next island — driven entirely by her reading, no parent setting required.
+After every trip the celebrate screen tells her exactly how many trips are left
+("⭐ 2 more reading trips opens the next island!"), the map shows a star meter on
+her current island, and passing pops a big **"Level 2 unlocked!"** with the
+`level-up` voice line. The parent-corner "Levels open" stepper still works as a
+manual override if you ever want to jump ahead.
+
 ---
 
 ## 🎮 The Games Arcade (new!)

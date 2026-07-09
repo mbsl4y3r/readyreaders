@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { freshProgress } from '../src/services/progress';
 import {
   recordReadingDay,
+  recordLevelTrip,
   addInkyXp,
   inkyLevelForXp,
   INKY_XP_PER_LEVEL,
@@ -9,6 +10,7 @@ import {
   newlyEarnedStickers,
   speedFactor,
 } from '../src/services/juice';
+import { SESSIONS_TO_PASS } from '../src/content/levels';
 
 describe('reading streak', () => {
   it('advances once per day, ignores repeat reads, resets after a gap', () => {
@@ -28,6 +30,44 @@ describe('reading streak', () => {
     expect(r.days).toBe(3);
     expect(r.milestone).toBe(3);
     expect(p.pearls).toBe(before + 5);
+  });
+});
+
+describe('level progression (read to open the next island)', () => {
+  it('opens the next level after passing the frontier the required number of times', () => {
+    const p = freshProgress();
+    expect(p.currentLevel).toBe(1);
+    for (let i = 1; i < SESSIONS_TO_PASS; i++) {
+      const r = recordLevelTrip(p, 1);
+      expect(r.unlockedLevel).toBe(0);
+      expect(r.tripsLeft).toBe(SESSIONS_TO_PASS - i);
+      expect(p.currentLevel).toBe(1);
+    }
+    const last = recordLevelTrip(p, 1);
+    expect(last.unlockedLevel).toBe(2);
+    expect(p.currentLevel).toBe(2);
+  });
+
+  it('bumps the content marker so the new island has words, and ignores replays of old levels', () => {
+    const p = freshProgress();
+    p.currentLevel = 2;
+    p.levelPlays = { 2: SESSIONS_TO_PASS - 1 };
+    const r = recordLevelTrip(p, 2);
+    expect(r.unlockedLevel).toBe(3);
+    expect(p.bookLesson).toBe(30); // end of level 3's lesson range
+
+    // replaying level 1 now (not the frontier) never unlocks anything
+    const replay = recordLevelTrip(p, 1);
+    expect(replay.unlockedLevel).toBe(0);
+    expect(p.currentLevel).toBe(3);
+  });
+
+  it('never unlocks past level 9', () => {
+    const p = freshProgress();
+    p.currentLevel = 9;
+    p.levelPlays = { 9: SESSIONS_TO_PASS };
+    expect(recordLevelTrip(p, 9).unlockedLevel).toBe(0);
+    expect(p.currentLevel).toBe(9);
   });
 });
 

@@ -5,6 +5,38 @@
  * they're easy to test; scenes call them and render the results.
  */
 import type { ProgressData } from './progress';
+import { LEVELS, SESSIONS_TO_PASS } from '../content/levels';
+
+// ---- level progression (read to open the next island) -------------------
+
+export interface LevelTripResult {
+  /** The level id just unlocked (0 = none this trip). */
+  unlockedLevel: number;
+  /** Reading trips still needed to pass the current frontier (0 if none/maxed). */
+  tripsLeft: number;
+}
+
+/**
+ * Count one finished reading trip on a level. Finishing the FRONTIER level
+ * SESSIONS_TO_PASS times opens the next island (and nudges the content marker
+ * so the new island's words are available). Replaying earlier levels just
+ * tallies plays without unlocking. Mutates progress.levelPlays / currentLevel /
+ * bookLesson; returns what to celebrate.
+ */
+export function recordLevelTrip(progress: ProgressData, levelId: number): LevelTripResult {
+  const plays = (progress.levelPlays[levelId] ?? 0) + 1;
+  progress.levelPlays[levelId] = plays;
+  if (levelId !== progress.currentLevel || progress.currentLevel >= 9) {
+    return { unlockedLevel: 0, tripsLeft: 0 };
+  }
+  if (plays >= SESSIONS_TO_PASS) {
+    progress.currentLevel = levelId + 1;
+    const newRangeEnd = LEVELS[levelId]!.lessonRange[1]; // LEVELS is 0-indexed → new level
+    if (progress.bookLesson < newRangeEnd) progress.bookLesson = newRangeEnd;
+    return { unlockedLevel: progress.currentLevel, tripsLeft: 0 };
+  }
+  return { unlockedLevel: 0, tripsLeft: SESSIONS_TO_PASS - plays };
+}
 
 // ---- daily reading streak (the 🔥) --------------------------------------
 

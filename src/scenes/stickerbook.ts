@@ -6,6 +6,7 @@
 import Phaser from 'phaser';
 import { STICKERS, newlyEarnedStickers } from '../services/juice';
 import { loadProgress, saveProgress } from '../services/progress';
+import { speakUI } from '../services/audio';
 import {
   GAME_W,
   readingText,
@@ -27,6 +28,7 @@ export class StickerBookScene extends Phaser.Scene {
     this.bobs = [];
     drawRealmBackground(this, 0x2a1f4a, 0x120a24, ['🌟', '📸', '✨'], 'stars');
     this.cameras.main.fadeIn(300);
+    void speakUI('sticker-book', 'Your sticker book! Look at all your shiny stickers!');
 
     const progress = loadProgress();
     // catch up any stickers she's earned but hasn't recorded yet, so the
