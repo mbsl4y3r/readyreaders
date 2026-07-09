@@ -10,6 +10,7 @@ import { STORIES } from '../src/content/stories';
 import { THEMES } from '../src/content/themes';
 import { LEVELS } from '../src/content/levels';
 import { ARCADE_GAMES, ARCADE_ANNOUNCE } from '../src/content/arcade-games';
+import { REGIONS } from '../src/content/regions';
 
 export interface Clip {
   kind: 'graphemes' | 'ui' | 'words' | 'phrases' | 'sentences';
@@ -102,6 +103,19 @@ export function buildManifest(): Clip[] {
     ['creator-step-petColor', 'Your pet Inky'],
     // level progression — the big "you opened a new island" cheer
     ['level-up', 'You passed the level! A brand new island just opened!'],
+    // the Reading Road — daily lesson gate + journey milestones
+    ['checkout-time', 'Check-out time! Show what you know!'],
+    ['checkout-almost', "Almost! Let's practice those tricky words and try again!"],
+    ['checkout-pass', 'You passed your lesson! What amazing reading!'],
+    ['checkout-keep-going', "Great practicing! We'll get those words next time!"],
+    ['road-tomorrow', 'Great reading today! A brand new lesson opens tomorrow!'],
+    ['road-done', 'You read the whole book! You are a REAL reader now!'],
+    ...REGIONS.map(
+      (r): [string, string] => [
+        `region-${r.id}`,
+        `You finished the whole region! Welcome to ${r.name}!`,
+      ],
+    ),
     // reward hubs (sticker book, photo booth, ticket shop)
     ['sticker-book', 'Your sticker book! Look at all your shiny stickers!'],
     ['photo-booth', "Photo booth! Let's take a picture of you!"],

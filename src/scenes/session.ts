@@ -6,14 +6,22 @@
 import Phaser from 'phaser';
 import { LEVELS } from '../content/levels';
 import { THEMES } from '../content/themes';
-import { planSession, planReview, phraseStatKey } from '../engine/session-planner';
+import { regionForLesson, baseRealmFor, themeForRegion } from '../content/regions';
+import {
+  planSession,
+  planReview,
+  planLesson,
+  planCheckoutRetry,
+  phraseStatKey,
+} from '../engine/session-planner';
+import { evaluateCheckout, passLesson, FREE_PASS_THROUGH } from '../services/road';
 import type { RoundSpec, RoundResult } from '../engine/rounds';
 import { updateStat } from '../engine/adaptive';
 import { newlyEarned } from '../engine/achievements';
 import { loadProgress, saveProgress, statFor } from '../services/progress';
+import { WORDS_BY_ID } from '../content/words';
 import {
   recordReadingDay,
-  recordLevelTrip,
   addInkyXp,
   inkyTitle,
   newlyEarnedStickers,
@@ -53,6 +61,8 @@ const RUNNERS: Record<RoundSpec['mechanic'], RunRound> = {
 
 export class SessionScene extends Phaser.Scene {
   private levelId = 1;
+  /** The Reading Road lesson this session teaches (0 = legacy/review mode). */
+  private lesson = 0;
   /** Review mode: reinforce already-seen words, no new material, no unlock. */
   private review = false;
   /** False once the scene shuts down (home button) — stops the round loop. */
@@ -64,8 +74,9 @@ export class SessionScene extends Phaser.Scene {
     super('session');
   }
 
-  init(data: { levelId?: number; review?: boolean }): void {
+  init(data: { lesson?: number; levelId?: number; review?: boolean }): void {
     this.review = data.review ?? false;
+    this.lesson = this.review ? 0 : data.lesson ?? 0;
     // a review spans everything she's learned; anchor its look to the frontier
     this.levelId = data.levelId ?? (this.review ? loadProgress().currentLevel : 1);
   }
@@ -74,11 +85,13 @@ export class SessionScene extends Phaser.Scene {
     this.alive = true;
     this.startedAt = Date.now();
     this.events.once('shutdown', () => (this.alive = false));
-    const level = LEVELS.find((l) => l.id === this.levelId)!;
-    const theme = THEMES[level.realm];
+    const theme = this.lesson
+      ? themeForRegion(regionForLesson(this.lesson))
+      : THEMES[LEVELS.find((l) => l.id === this.levelId)!.realm];
     drawRealmBackground(this, theme.bgTop, theme.bgBottom, theme.ambient);
     this.cameras.main.fadeIn(300);
-    playMusic(level.realm); // each realm has its own track (drop-in, optional)
+    // each base realm has its own track (drop-in, optional)
+    playMusic(this.lesson ? baseRealmFor(regionForLesson(this.lesson)) : theme.id);
 
     // home button — she can always leave, mid-session exits are fine
     const home = makeButton(this, 62, 52, '🏠', () => this.scene.start('map'), {
@@ -90,33 +103,93 @@ export class SessionScene extends Phaser.Scene {
     });
     home.setAlpha(0.85);
 
-    void this.runChunk(level.id, theme);
+    if (this.lesson) {
+      readingText(this, GAME_W / 2, 96, `Lesson ${this.lesson}`, 22, '#ffffff').setAlpha(0.7);
+    }
+
+    void this.runChunk(theme);
   }
 
-  private async runChunk(levelId: number, theme: (typeof THEMES)['cove']): Promise<void> {
+  private async runChunk(theme: (typeof THEMES)['cove']): Promise<void> {
     const progress = loadProgress();
-    const rounds = this.review ? planReview(progress) : planSession(levelId, progress);
+    const rounds = this.lesson
+      ? planLesson(this.lesson, progress)
+      : this.review
+        ? planReview(progress)
+        : planSession(this.levelId, progress);
 
-    // progress pips
-    const pips = rounds.map((_, i) =>
+    // progress pips (the retry extension redraws its own smaller row)
+    let pips = rounds.map((_, i) =>
       this.add
         .circle(GAME_W / 2 + (i - (rounds.length - 1) / 2) * 34, 52, 10, 0xffffff, 0.25)
         .setStrokeStyle(2, 0xffffff, 0.5),
     );
 
-    // no spoken intro here — the first round greets her itself, so a
-    // "Let's read!" line would only step on it
+    const checkoutResults: { wordId: string; firstTry: boolean }[] = [];
+    let bannered = false;
+    let retried = false;
 
     for (let i = 0; i < rounds.length; i++) {
       const spec = rounds[i]!;
       if (!this.alive) return; // she tapped home
+      if (spec.checkout && !bannered) {
+        bannered = true;
+        await this.checkoutBanner();
+        if (!this.alive) return;
+      }
       const result = await RUNNERS[spec.mechanic](this, spec, { theme });
       if (!this.alive) return;
       pips[i]?.setFillStyle(0xffe9a8, 1);
       this.recordResult(spec, result);
+      if (spec.checkout && spec.wordId) {
+        checkoutResults.push({ wordId: spec.wordId, firstTry: result.firstTry });
+      }
+
+      // end of the queue: in lesson mode, a missed check-out earns ONE gentle
+      // same-session retry — re-drill the misses, then face a fresh gate
+      if (i === rounds.length - 1 && this.lesson && !retried) {
+        const verdict = evaluateCheckout(checkoutResults);
+        if (!verdict.passed && verdict.missedIds.length > 0) {
+          retried = true;
+          checkoutResults.length = 0;
+          bannered = false; // the retry gate announces itself again
+          await this.retryBanner();
+          if (!this.alive) return;
+          const extra = planCheckoutRetry(this.lesson, verdict.missedIds, loadProgress());
+          rounds.push(...extra);
+          pips.forEach((p) => p.destroy());
+          pips = rounds.map((_, j) =>
+            this.add
+              .circle(GAME_W / 2 + (j - (rounds.length - 1) / 2) * 26, 52, 8, 0xffffff, j <= i ? 1 : 0.25)
+              .setStrokeStyle(2, 0xffffff, 0.5),
+          );
+        }
+      }
     }
 
-    this.celebrate(levelId, theme);
+    this.celebrate(theme, this.lesson ? evaluateCheckout(checkoutResults) : null);
+  }
+
+  /** "Show what you know!" — a beat before the first check-out round. */
+  private async checkoutBanner(): Promise<void> {
+    chime('good');
+    const note = readingText(this, GAME_W / 2, GAME_H / 2, 'Show what you know! ⭐', 44, '#ffe9a8');
+    popIn(this, note);
+    void speakUI('checkout-time', 'Check-out time! Show what you know!');
+    await new Promise((r) => this.time.delayedCall(1600, r));
+    note.destroy();
+  }
+
+  /** "Almost!" — a kind beat before the re-drill + fresh gate. */
+  private async retryBanner(): Promise<void> {
+    chime('gentle');
+    const note = readingText(this, GAME_W / 2, GAME_H / 2, "Almost! Let's practice and try again!", 38, '#bfe9ff');
+    note.setWordWrapWidth(GAME_W - 160);
+    note.setAlign('center');
+    popIn(this, note);
+    void speakUI('checkout-almost', "Almost! Let's practice those tricky words and try again!");
+    await new Promise((r) => this.time.delayedCall(1800, r));
+    note.destroy();
   }
 
   private recordResult(spec: RoundSpec, result: RoundResult): void {
@@ -147,16 +220,21 @@ export class SessionScene extends Phaser.Scene {
     saveProgress(progress);
   }
 
-  private celebrate(levelId: number, theme: (typeof THEMES)['cove']): void {
+  private celebrate(
+    theme: (typeof THEMES)['cove'],
+    checkout: ReturnType<typeof evaluateCheckout> | null,
+  ): void {
     const progress = loadProgress();
+    const passed = checkout?.passed ?? false;
 
-    // review = a not-yet-collected collectible only on a fresh level win;
-    // reviews shower a star instead so treasures stay tied to progress
+    // a collectible marks a PASSED lesson (or a legacy session win); reviews
+    // and not-yet passes shower a star so treasures stay tied to real progress
     const owned = new Set(progress.collections[theme.collectionKey]);
-    const prize = this.review
-      ? '⭐'
-      : theme.collectibles.find((e) => !owned.has(e)) ?? theme.collectibles[0]!;
-    if (!this.review && !owned.has(prize)) progress.collections[theme.collectionKey].push(prize);
+    const winsPrize = this.lesson ? passed : !this.review;
+    const prize = winsPrize
+      ? theme.collectibles.find((e) => !owned.has(e)) ?? theme.collectibles[0]!
+      : '⭐';
+    if (winsPrize && !owned.has(prize)) progress.collections[theme.collectionKey].push(prize);
 
     progress.sessions.push({
       date: new Date().toISOString().slice(0, 10),
@@ -165,15 +243,15 @@ export class SessionScene extends Phaser.Scene {
     });
     progress.pearls += PEARLS_PER_SESSION; // reading is the only pearl faucet
 
-    // ---- level progression: finishing the frontier level SESSIONS_TO_PASS
-    // times opens the next island. Reviews and replays of earlier levels don't
-    // count, so the meter always reflects real progress on her current stop.
-    let unlockedLevel = 0; // the level id just opened (0 = none)
-    let tripsLeft = 0; // reading trips remaining to pass the frontier
-    if (!this.review) {
-      const trip = recordLevelTrip(progress, levelId);
-      unlockedLevel = trip.unlockedLevel;
-      tripsLeft = trip.tripsLeft;
+    // ---- the Reading Road: a passed check-out moves the marker; a miss
+    // stores the words to re-drill so next session starts with them
+    let pass: ReturnType<typeof passLesson> | null = null;
+    if (this.lesson && checkout) {
+      if (passed && this.lesson === progress.lesson) {
+        pass = passLesson(progress);
+      } else if (!passed) {
+        progress.checkoutMisses = checkout.missedIds;
+      }
     }
     // juice: advance the daily streak (pays a pearl bonus at milestones) and
     // feed pet Inky some XP — both are earned only by reading, like pearls
@@ -183,20 +261,39 @@ export class SessionScene extends Phaser.Scene {
 
     chime('fanfare');
     const dim = this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.45);
-    const big = emojiText(this, GAME_W / 2, GAME_H / 2 - 70, prize, 150);
-    popIn(this, big);
-    const label = readingText(
+    const big = emojiText(
       this,
       GAME_W / 2,
-      GAME_H / 2 + 60,
-      unlockedLevel ? `Level ${unlockedLevel} unlocked!` : this.review ? 'Great reviewing!' : 'You did it!',
-      unlockedLevel ? 46 : 52,
-      '#ffe9a8',
+      GAME_H / 2 - 70,
+      pass?.crossedInto ? pass.crossedInto.emoji : prize,
+      150,
     );
+    popIn(this, big);
+
+    // headline + spoken line by outcome
+    let headline = 'You did it!';
+    if (this.review) headline = 'Great reviewing!';
+    else if (pass?.finishedRoad) headline = 'You read the WHOLE book!';
+    else if (pass?.crossedInto) headline = `Welcome to ${pass.crossedInto.name}!`;
+    else if (pass) headline = `Lesson ${pass.passedLesson} — passed!`;
+    else if (this.lesson && !passed) headline = 'Great practicing!';
+    const label = readingText(this, GAME_W / 2, GAME_H / 2 + 60, headline, 44, '#ffe9a8');
+    label.setWordWrapWidth(GAME_W - 120);
+    label.setAlign('center');
     popIn(this, label, 200);
     confettiBurst(this, GAME_W / 2, GAME_H / 2 - 100, theme.accent);
-    if (unlockedLevel) {
-      void speakUI('level-up', 'You passed the level! A brand new island just opened!');
+
+    if (pass?.finishedRoad) {
+      void speakUI('road-done', 'You read the whole book! You are a REAL reader now!');
+    } else if (pass?.crossedInto) {
+      void speakUI(
+        `region-${pass.crossedInto.id}`,
+        `You finished the whole region! Welcome to ${pass.crossedInto.name}!`,
+      );
+    } else if (pass) {
+      void speakUI('checkout-pass', 'You passed your lesson! What amazing reading!');
+    } else if (this.lesson && !passed) {
+      void speakUI('checkout-keep-going', "Great practicing! We'll get those words next time!");
     } else {
       void speakUI(
         this.review ? 'review-done' : 'celebrate',
@@ -204,14 +301,24 @@ export class SessionScene extends Phaser.Scene {
       );
     }
 
-    // tell her plainly where she stands on the road to the next island
-    const progressMsg = unlockedLevel
-      ? 'A brand new island opened! 🎉'
-      : tripsLeft > 0
-        ? `⭐ ${tripsLeft} more reading ${tripsLeft === 1 ? 'trip' : 'trips'} opens the next island!`
-        : '';
+    // tell her plainly what comes next on the road
+    let progressMsg = '';
+    if (pass?.finishedRoad) progressMsg = '🎉 All 120 lessons — incredible!';
+    else if (pass?.crossedInto) progressMsg = `A whole new land opens! ${pass.crossedInto.emoji}`;
+    else if (pass) {
+      progressMsg =
+        pass.passedLesson < FREE_PASS_THROUGH
+          ? `Lesson ${pass.passedLesson + 1} is ready right now! ⭐`
+          : 'A new lesson opens tomorrow! 🌙';
+    } else if (this.lesson && !passed && checkout) {
+      const names = checkout.missedIds
+        .map((id) => WORDS_BY_ID.get(id)?.text ?? id)
+        .slice(0, 3)
+        .join(', ');
+      progressMsg = names ? `Next time we'll practice: ${names}` : 'So close — try again soon!';
+    }
     if (progressMsg) {
-      const sub = readingText(this, GAME_W / 2, GAME_H / 2 - 182, progressMsg, 30, unlockedLevel ? '#ffe9a8' : '#bfe9ff');
+      const sub = readingText(this, GAME_W / 2, GAME_H / 2 - 182, progressMsg, 30, pass ? '#ffe9a8' : '#bfe9ff');
       sub.setWordWrapWidth(GAME_W - 160);
       sub.setAlign('center');
       popIn(this, sub, 320);

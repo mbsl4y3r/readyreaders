@@ -23,6 +23,8 @@ export interface RoundSpec {
   speedWordIds?: string[];
   /** Family-sort rounds: two rime families and the word cards to sort. */
   family?: { families: [string, string]; wordIds: string[] };
+  /** Check-out rounds gate a Reading Road lesson: only first-tap answers count. */
+  checkout?: boolean;
   realm: RealmId;
 }
 

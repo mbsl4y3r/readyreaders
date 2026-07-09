@@ -9,6 +9,7 @@
  */
 import Phaser from 'phaser';
 import { LESSONS } from '../content/lessons';
+import { highestLevelForBookLesson } from '../content/levels';
 import { WORDS } from '../content/words';
 import { wordsForLevel } from '../engine/session-planner';
 import {
@@ -115,11 +116,15 @@ export class ParentScene extends Phaser.Scene {
     focus.setText(this.lessonFocus(progress.bookLesson));
 
     this.panel(RX, 128, COL_W, 122);
-    this.eyebrow(RX + 22, 152, 'LEVELS OPEN');
-    readingText(this, RC, 232, 'unlock map stops', 16, MUTED);
-    this.stepper(RC, 192, () => `1–${loadProgress().currentLevel} of 9`, (d) => {
+    this.eyebrow(RX + 22, 152, 'ROAD LESSON');
+    readingText(this, RC, 232, 'her spot on the Reading Road', 16, MUTED);
+    this.stepper(RC, 192, () => `${loadProgress().lesson} of 120`, (d) => {
       const p = loadProgress();
-      p.currentLevel = Math.min(9, Math.max(1, p.currentLevel + d));
+      p.lesson = Math.min(120, Math.max(1, p.lesson + d));
+      // keep the legacy markers in step so stories/phrases open with the road
+      if (p.bookLesson < p.lesson - 1) p.bookLesson = Math.max(1, p.lesson - 1);
+      const lvl = highestLevelForBookLesson(p.lesson);
+      if (p.currentLevel < lvl) p.currentLevel = lvl;
       saveProgress(p);
     });
 
@@ -276,8 +281,9 @@ export class ParentScene extends Phaser.Scene {
     const p = loadProgress();
     p.created = true;
     p.placed = true;
-    p.currentLevel = 9; // every map stop open
+    p.currentLevel = 9; // every legacy gate open
     p.bookLesson = 120; // all content decodable/available
+    p.lesson = 120; // the whole Reading Road open (games, regions, stories)
     p.pearls = 9999;
     p.cosmetics = allCosmeticIds(); // own everything in the wardrobe
     saveProgress(p);

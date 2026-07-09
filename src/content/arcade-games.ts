@@ -4,9 +4,9 @@
  * never copyrighted characters or assets.
  *
  * Two systems gate the arcade, both by design:
- *  - UNLOCK (progression reward): a cabinet stays dark until Evie's frontier
- *    (currentLevel) reaches its `unlockLevel` — so finishing modules literally
- *    lights up new games.
+ *  - UNLOCK (progression reward): a cabinet stays dark until Evie's Reading
+ *    Road marker reaches its `unlockLesson` — so new games light up all the
+ *    way along the 120-lesson journey.
  *  - PLAY PASS (the pearl sink): reading earns pearls; ten pearls buys a
  *    ten-minute pass to play any unlocked game freely. Reading is still the
  *    only pearl faucet, so the arcade can never become the game.
@@ -24,9 +24,9 @@ export interface ArcadeGameDef {
   blurb: string;
   /** Which classic it reskins (dev-facing note, never shown to Evie). */
   reskins: string;
-  /** Realm palette + which module unlocks it (currentLevel ≥ unlockLevel). */
+  /** Realm palette + the Reading Road lesson that lights the cabinet up. */
   realm: RealmId;
-  unlockLevel: number;
+  unlockLesson: number;
   /** HUD label for the score number (all games are higher-is-better). */
   scoreLabel: string;
 }
@@ -43,7 +43,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Grow the sea snake — gobble the bubbles!',
     reskins: 'Snake',
     realm: 'cove',
-    unlockLevel: 1,
+    unlockLesson: 1,
     scoreLabel: 'bubbles',
   },
   {
@@ -53,7 +53,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Bat the pearl back and forth!',
     reskins: 'Pong',
     realm: 'cove',
-    unlockLevel: 1,
+    unlockLesson: 1,
     scoreLabel: 'rallies',
   },
   {
@@ -63,7 +63,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Tap to swim through the gaps!',
     reskins: 'Flappy Bird',
     realm: 'cove',
-    unlockLevel: 2,
+    unlockLesson: 12,
     scoreLabel: 'gaps',
   },
   {
@@ -73,7 +73,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Bounce the gem, knock the bricks!',
     reskins: 'Breakout',
     realm: 'castle',
-    unlockLevel: 2,
+    unlockLesson: 20,
     scoreLabel: 'bricks',
   },
   {
@@ -83,7 +83,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Hop across the logs and lily pads!',
     reskins: 'Frogger',
     realm: 'woods',
-    unlockLevel: 3,
+    unlockLesson: 35,
     scoreLabel: 'flowers',
   },
   {
@@ -93,7 +93,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Zap the drifting star-rocks!',
     reskins: 'Asteroids',
     realm: 'castle',
-    unlockLevel: 3,
+    unlockLesson: 40,
     scoreLabel: 'stars',
   },
   {
@@ -103,7 +103,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Munch every pearl in the reef maze!',
     reskins: 'Pac-Man',
     realm: 'cove',
-    unlockLevel: 4,
+    unlockLesson: 82,
     scoreLabel: 'pearls',
   },
   {
@@ -113,7 +113,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Roll the shell into the rings!',
     reskins: 'Skee-Ball',
     realm: 'cove',
-    unlockLevel: 5,
+    unlockLesson: 52,
     scoreLabel: 'points',
   },
   {
@@ -123,7 +123,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Swerve around the coral — go go go!',
     reskins: 'Pole Position',
     realm: 'cove',
-    unlockLevel: 6,
+    unlockLesson: 66,
     scoreLabel: 'meters',
   },
   {
@@ -133,7 +133,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Putt the pearl into the hole!',
     reskins: 'Mini Putt',
     realm: 'woods',
-    unlockLevel: 6,
+    unlockLesson: 74,
     scoreLabel: 'holes',
   },
   {
@@ -143,7 +143,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Climb the tree, dodge the acorns!',
     reskins: 'Donkey Kong',
     realm: 'woods',
-    unlockLevel: 7,
+    unlockLesson: 96,
     scoreLabel: 'floors',
   },
   {
@@ -153,7 +153,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Hop the logs, collect the berries!',
     reskins: 'Platformer',
     realm: 'woods',
-    unlockLevel: 8,
+    unlockLesson: 110,
     scoreLabel: 'berries',
   },
   // ---- round-2 additions ------------------------------------------------
@@ -164,7 +164,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Bonk the critters as they pop up!',
     reskins: 'Whack-a-Mole',
     realm: 'woods',
-    unlockLevel: 1,
+    unlockLesson: 4,
     scoreLabel: 'bonks',
   },
   {
@@ -174,7 +174,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Pop the bubbles before they float away!',
     reskins: 'Bubble popper',
     realm: 'cove',
-    unlockLevel: 1,
+    unlockLesson: 8,
     scoreLabel: 'pops',
   },
   {
@@ -184,7 +184,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Flip the shells, find the matching pairs!',
     reskins: 'Concentration',
     realm: 'cove',
-    unlockLevel: 2,
+    unlockLesson: 16,
     scoreLabel: 'pairs',
   },
   {
@@ -194,7 +194,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Swish the net, catch the treasures!',
     reskins: 'Catch',
     realm: 'cove',
-    unlockLevel: 3,
+    unlockLesson: 25,
     scoreLabel: 'treasures',
   },
   {
@@ -204,7 +204,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Watch the twinkles, then tap them back!',
     reskins: 'Simon',
     realm: 'castle',
-    unlockLevel: 4,
+    unlockLesson: 58,
     scoreLabel: 'rounds',
   },
   {
@@ -214,7 +214,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Aim up and match 3 to pop the cluster!',
     reskins: 'Snood / bubble shooter',
     realm: 'cove',
-    unlockLevel: 3,
+    unlockLesson: 46,
     scoreLabel: 'pops',
   },
   {
@@ -224,7 +224,7 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     blurb: 'Two players! Bat the pearl past each other!',
     reskins: 'Two-player Pong',
     realm: 'cove',
-    unlockLevel: 1,
+    unlockLesson: 30,
     scoreLabel: 'rallies',
   },
 ];

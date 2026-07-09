@@ -39,9 +39,11 @@ describe('placement voyage flag', () => {
     return data;
   };
 
-  it('fresh saves start unplaced so boot routes to the voyage', () => {
-    expect(freshProgress().placed).toBe(false);
-    expect(loadProgress().placed).toBe(false); // empty storage → fresh
+  it('fresh saves start placed on the Reading Road (lesson 1, voyage is a parent tool)', () => {
+    expect(freshProgress().placed).toBe(true);
+    expect(freshProgress().lesson).toBe(1);
+    expect(freshProgress().bookLesson).toBe(1);
+    expect(loadProgress().placed).toBe(true); // empty storage → fresh
   });
 
   it('a pre-voyage save that has been played counts as already placed', () => {

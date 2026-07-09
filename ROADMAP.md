@@ -63,15 +63,28 @@ This is the "what's done / what's left / what **you** need to do" board. The
 | `photo-booth` | "Photo booth! Let's take a picture of you!" |
 | `ticket-shop` | "The ticket shop! Spend your game tickets on treasures!" |
 
-### 🆕 How levels work now (so nobody has to guess)
+### 🆕 THE READING ROAD (how progression works now)
 
-Evie starts on **Level 1**. Finishing a level **3 times** (3 reading trips) opens
-the next island — driven entirely by her reading, no parent setting required.
-After every trip the celebrate screen tells her exactly how many trips are left
-("⭐ 2 more reading trips opens the next island!"), the map shows a star meter on
-her current island, and passing pops a big **"Level 2 unlocked!"** with the
-`level-up` voice line. The parent-corner "Levels open" stepper still works as a
-manual override if you ever want to jump ahead.
+The whole game follows the book: **120 lessons over 12 themed regions** (10
+lessons each — Coral Cove, Whisker Woods, Starlight Castle, **Candy Cliffs**,
+Rainbow Meadow, Star Sky, Snowy Summit, Fairy Garden, Dino Valley, Pirate Bay,
+Cloud Kingdom, Crystal Caves).
+
+- Everyone starts at **lesson 1**; lessons 1–20 are the **catch-up zone** (pass
+  as many per day as you like). From 21 on it's the book's formula: **one new
+  lesson per day** (after passing, the big button becomes "🌙 Review time!").
+- A lesson is passed by the **Check-Out**: its new words answered right on the
+  FIRST tap (guess-tapping can't pass), with one forgiveness miss. A miss is
+  gentle — the tricky words get re-drilled and she retries in the same session,
+  or they're queued up front next time.
+- Every 10th lesson **crosses into a new region** — the big celebration.
+  Arcade games now unlock along the whole road (lesson 1 → 110). Finishing
+  lesson 120 = "You read the WHOLE book!"
+- The map IS the road: her region's 10 stops wind across it (⭐ = passed, her
+  creature = today), one big **"▶️ Lesson N!"** button, and the next region
+  peeking at the end of the path.
+- Parent corner: the "ROAD LESSON" stepper moves her anywhere on the road
+  (catch-up days, sharing with another kid at a different spot, etc.).
 
 ---
 

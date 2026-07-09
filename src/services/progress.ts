@@ -28,6 +28,12 @@ export interface ProgressData {
   levelPlays: Record<number, number>;
   /** Parent-set marker: which book lesson Evie is on. */
   bookLesson: number;
+  /** The Reading Road: the lesson she's working on now (1..120, one per day). */
+  lesson: number;
+  /** yyyy-mm-dd of the last lesson pass — the one-new-lesson-a-day gate. */
+  lastPassDate: string;
+  /** Word ids missed at the last check-out — re-drilled before her retry. */
+  checkoutMisses: string[];
   /** True once the placement voyage has confirmed the starting frontier. */
   placed: boolean;
   /** True once the first-run character creator has made Evie her own. */
@@ -83,8 +89,14 @@ export function freshProgress(): ProgressData {
     version: 1,
     currentLevel: 1,
     levelPlays: {},
-    bookLesson: 17,
-    placed: false,
+    // the Reading Road: every new reader starts at lesson 1 (free advancement
+    // through the early lessons lets a child who's further along catch up fast)
+    bookLesson: 1,
+    lesson: 1,
+    lastPassDate: '',
+    checkoutMisses: [],
+    // placement voyage is a parent tool now, not an onboarding gate
+    placed: true,
     created: false,
     words: {},
     collections: { treasures: [], pets: [], charms: [] },
@@ -126,6 +138,9 @@ export function loadProgress(): ProgressData {
     const data = JSON.parse(raw) as ProgressData;
     if (data.version !== 1) return freshProgress();
     data.levelPlays ??= {};
+    data.lesson ??= 1;
+    data.lastPassDate ??= '';
+    data.checkoutMisses ??= [];
     // saves from before the placement voyage existed were already mid-journey
     data.placed ??= data.sessions.length > 0;
     data.speedBest ??= 0;
@@ -186,6 +201,9 @@ export function importCode(code: string): ProgressData | null {
     const data = JSON.parse(decodeURIComponent(escape(atob(code.trim())))) as ProgressData;
     if (data.version !== 1 || typeof data.words !== 'object') return null;
     data.levelPlays ??= {};
+    data.lesson ??= 1;
+    data.lastPassDate ??= '';
+    data.checkoutMisses ??= [];
     data.placed ??= data.sessions.length > 0;
     data.speedBest ??= 0;
     data.storiesRead ??= [];

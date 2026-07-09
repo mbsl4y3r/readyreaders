@@ -4,6 +4,8 @@
  * Pure — takes progress data in, returns RoundSpecs out.
  */
 import { LEVELS } from '../content/levels';
+import { regionForLesson, baseRealmFor } from '../content/regions';
+import { checkoutWordsFor } from '../services/road';
 import { WORDS } from '../content/words';
 import { SENTENCES } from '../content/sentences';
 import { PHRASES } from '../content/phrases';
@@ -257,6 +259,136 @@ export function planSession(
   const speed = speedRoundFor(levelId, progress, random);
   if (speed) rounds.push(speed);
 
+  return rounds;
+}
+
+/**
+ * A Reading Road LESSON chunk: warm-up review, the lesson's new material
+ * (words, a phrase/sentence within reach), then the CHECK-OUT — a short quiz
+ * over the lesson's target words where only first-tap answers count. Missed
+ * check-out words from a previous attempt (progress.checkoutMisses) get
+ * re-drilled up front before she faces the gate again.
+ */
+export function planLesson(
+  lesson: number,
+  progress: ProgressData,
+  random: () => number = Math.random,
+): RoundSpec[] {
+  const region = regionForLesson(lesson);
+  const realm = baseRealmFor(region);
+  const wordById = new Map(WORDS.map((w) => [w.id, w]));
+
+  const targets = checkoutWordsFor(lesson, progress, random);
+  const targetIds = targets.map((w) => w.id);
+  // distractors come from everything she could have met by now
+  const reachable = WORDS.filter((w) => w.lesson <= Math.max(lesson, 3));
+
+  const rounds: RoundSpec[] = [];
+
+  // re-drill first: yesterday's (or this session's) misses, build-word style —
+  // the most supportive mechanic, sound by sound
+  for (const id of progress.checkoutMisses.filter((id) => wordById.has(id)).slice(0, 3)) {
+    rounds.push({ mechanic: 'build-word', wordId: id, realm });
+  }
+
+  // practice each target once before it gates her (feed/build alternating);
+  // heart words keep their memory-word ritual
+  targets.forEach((w, i) => {
+    if ((w.heartIndexes?.length ?? 0) > 0) {
+      rounds.push({ mechanic: 'memory-word', wordId: w.id, realm });
+    } else if (i % 2 === 0) {
+      rounds.push({
+        mechanic: 'feed-creature',
+        wordId: w.id,
+        distractorIds: pickDistractors(w, reachable.length >= 3 ? reachable : WORDS, random),
+        realm,
+      });
+    } else {
+      rounds.push({ mechanic: 'build-word', wordId: w.id, realm });
+    }
+  });
+
+  // a couple of warm-up review words from earlier lessons keep old learning warm
+  const seenIds = Object.keys(progress.words).filter(
+    (id) =>
+      !id.includes(':') &&
+      (progress.words[id]?.exposures ?? 0) > 0 &&
+      wordById.has(id) &&
+      !targetIds.includes(id),
+  );
+  const review = planQueue({ newIds: [], seenIds, stats: progress.words, slots: 2, random });
+  review.forEach((id, i) => {
+    const w = wordById.get(id);
+    if (!w) return;
+    rounds.splice(Math.min(i * 2, rounds.length), 0, {
+      mechanic: i % 2 === 0 ? 'feed-creature' : 'build-word',
+      wordId: id,
+      ...(i % 2 === 0
+        ? { distractorIds: pickDistractors(w, reachable.length >= 3 ? reachable : WORDS, random) }
+        : {}),
+      realm,
+    });
+  });
+
+  // one sentence and one phrase within today's reach, woven mid-session
+  const sent = shuffle(SENTENCES.filter((s) => s.lesson <= lesson), random)[0];
+  if (sent) {
+    rounds.splice(Math.min(3, rounds.length), 0, {
+      mechanic: 'sentence-picture',
+      sentenceId: sent.id,
+      realm,
+    });
+  }
+  const phr = shuffle(PHRASES.filter((p) => p.lesson <= lesson), random)[0];
+  if (phr) {
+    rounds.splice(Math.min(5, rounds.length), 0, {
+      mechanic: 'magic-phrase',
+      phraseId: phr.id,
+      realm,
+    });
+  }
+
+  // THE CHECK-OUT: every target word, fresh shuffled distractors, first-tap
+  // scoring (the session scene reads `checkout` rounds' firstTry results)
+  for (const w of shuffle(targets, random)) {
+    rounds.push({
+      mechanic: 'feed-creature',
+      wordId: w.id,
+      distractorIds: pickDistractors(w, reachable.length >= 3 ? reachable : WORDS, random),
+      checkout: true,
+      realm,
+    });
+  }
+
+  return rounds;
+}
+
+/** Fresh check-out rounds for a same-session retry after a re-drill. */
+export function planCheckoutRetry(
+  lesson: number,
+  missedIds: string[],
+  progress: ProgressData,
+  random: () => number = Math.random,
+): RoundSpec[] {
+  const region = regionForLesson(lesson);
+  const realm = baseRealmFor(region);
+  const wordById = new Map(WORDS.map((w) => [w.id, w]));
+  const reachable = WORDS.filter((w) => w.lesson <= Math.max(lesson, 3));
+  const rounds: RoundSpec[] = [];
+  // re-drill each missed word gently, then re-gate the FULL target set so the
+  // retry is a real pass, not a patch-up of just the missed ones
+  for (const id of missedIds) {
+    if (wordById.has(id)) rounds.push({ mechanic: 'build-word', wordId: id, realm });
+  }
+  for (const w of shuffle(checkoutWordsFor(lesson, progress, random), random)) {
+    rounds.push({
+      mechanic: 'feed-creature',
+      wordId: w.id,
+      distractorIds: pickDistractors(w, reachable.length >= 3 ? reachable : WORDS, random),
+      checkout: true,
+      realm,
+    });
+  }
   return rounds;
 }
 

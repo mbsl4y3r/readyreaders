@@ -5,10 +5,10 @@
  * lesson marker is the everyday progress. Candy Cliffs lands at region 4 —
  * right where motivation usually dips — on purpose.
  *
- * NOTE: not yet wired into the game — this is the content spine for the
- * Reading Road rebuild (see ROADMAP.md). Regions 1–3 reuse the existing
- * realm palettes so current art carries over.
+ * Regions 1–3 reuse the existing realm palettes so current art carries over.
  */
+import type { RealmId } from './types';
+import { THEMES, type RealmTheme } from './themes';
 
 export interface Region {
   id: number; // 1..12
@@ -73,6 +73,31 @@ export const TOTAL_LESSONS = 120;
 export function regionForLesson(lesson: number): Region {
   const clamped = Math.min(TOTAL_LESSONS, Math.max(1, lesson));
   return REGIONS[Math.floor((clamped - 1) / 10)]!;
+}
+
+/**
+ * Each region leans on one of the three base realms for the machinery the
+ * mini-games expect (collectible pools, collection shelf). Rotating keeps all
+ * three collection shelves filling across the whole road.
+ */
+export function baseRealmFor(region: Region): RealmId {
+  return (['cove', 'woods', 'castle'] as const)[(region.id - 1) % 3]!;
+}
+
+/** A RealmTheme dressed in the region's own palette + host creature. */
+export function themeForRegion(region: Region): RealmTheme {
+  const base = THEMES[baseRealmFor(region)];
+  return {
+    ...base,
+    name: region.name,
+    bgTop: region.bgTop,
+    bgBottom: region.bgBottom,
+    accent: region.accent,
+    accentCss: `#${region.accent.toString(16).padStart(6, '0')}`,
+    creature: region.creature,
+    creatureName: region.creatureName,
+    ambient: region.ambient,
+  };
 }
 
 /** True when `lesson` is a region's final lesson — crossing time next pass. */

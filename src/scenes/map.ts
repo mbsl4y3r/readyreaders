@@ -5,16 +5,17 @@
  * the gear.
  */
 import Phaser from 'phaser';
-import { LEVELS, SESSIONS_TO_PASS } from '../content/levels';
-import { THEMES } from '../content/themes';
+import { regionForLesson, baseRealmFor, TOTAL_LESSONS } from '../content/regions';
+import { canStartLessonToday, roadDone } from '../services/road';
 import { loadProgress } from '../services/progress';
 import { seasonFor, SEASON_THEMES } from '../services/juice';
-import { speakUI, playMusic } from '../services/audio';
-import { GAME_W, GAME_H, readingText, emojiText, drawRealmBackground, makeButton } from '../ui/kit';
+import { speakUI, playMusic, chime } from '../services/audio';
+import { GAME_W, GAME_H, readingText, emojiText, drawRealmBackground, makeButton, wiggle } from '../ui/kit';
 
+/** The ten lesson stops of the current region, winding across the middle. */
 const STOP_POS: [number, number][] = [
-  [140, 590], [330, 620], [520, 570], [700, 610], [870, 520],
-  [820, 370], [620, 320], [400, 270], [210, 180],
+  [190, 560], [300, 505], [415, 545], [530, 490], [645, 535],
+  [755, 470], [645, 400], [520, 370], [395, 400], [280, 345],
 ];
 
 export class MapScene extends Phaser.Scene {
@@ -24,17 +25,18 @@ export class MapScene extends Phaser.Scene {
 
   create(): void {
     const progress = loadProgress();
-    // Islands open by READING: finishing the frontier level SESSIONS_TO_PASS
-    // times unlocks the next one (handled in the session celebration). The map
-    // just reflects currentLevel and shows how close she is on her current stop.
+    // The Reading Road: her current REGION paints the whole map, its ten
+    // lessons wind across the middle, and the big button continues the journey.
+    const lesson = Math.min(progress.lesson, TOTAL_LESSONS);
+    const region = regionForLesson(lesson);
 
     // a gentle seasonal touch: the season's emoji drift in the background and
     // a small badge names it — date-driven, no settings to fuss with
     const season = seasonFor();
     const st = SEASON_THEMES[season];
-    drawRealmBackground(this, 0x14213d, 0x081c15, ['🌊', '🌲', '✨', ...st.emoji]);
+    drawRealmBackground(this, region.bgTop, region.bgBottom, [...region.ambient, ...st.emoji]);
     this.cameras.main.fadeIn(300);
-    playMusic('map');
+    playMusic(baseRealmFor(region));
 
     readingText(this, GAME_W / 2, 56, "Evie's Reading Realms", 40, '#ffe9a8');
 
@@ -46,30 +48,19 @@ export class MapScene extends Phaser.Scene {
     emojiText(this, GAME_W / 2 + 96, 100, '🐙', 24);
     readingText(this, GAME_W / 2 + 124, 100, `Lv${progress.inky.level}`, 22, '#ffffff').setOrigin(0, 0.5);
 
-    // seasonal badge, tucked bottom-center below the path
-    emojiText(this, GAME_W / 2 - 44, GAME_H - 26, st.emoji[0]!, 24).setAlpha(0.8);
-    readingText(this, GAME_W / 2 + 6, GAME_H - 26, st.name, 20, '#ffe9a8').setAlpha(0.8);
+    // seasonal badge, tucked bottom-left away from the Continue button
+    emojiText(this, 120, GAME_H - 26, st.emoji[0]!, 22).setAlpha(0.8);
+    readingText(this, 168, GAME_H - 26, st.name, 18, '#ffe9a8').setAlpha(0.8);
 
-    // plain-language rule so nobody (kid OR grown-up) has to guess how to progress
-    if (progress.currentLevel < 9) {
-      readingText(
-        this,
-        GAME_W / 2,
-        142,
-        `Read your glowing island ${SESSIONS_TO_PASS} times to open the next one! ⭐`,
-        20,
-        '#ffe9a8',
-      ).setAlpha(0.9);
-    }
-
-    // path
-    const path = this.add.graphics();
-    path.lineStyle(10, 0xffffff, 0.18);
-    for (let i = 0; i < STOP_POS.length - 1; i++) {
-      const [x1, y1] = STOP_POS[i]!;
-      const [x2, y2] = STOP_POS[i + 1]!;
-      path.lineBetween(x1, y1, x2, y2);
-    }
+    // where she is on the whole road — region name + lesson N of 120
+    readingText(
+      this,
+      GAME_W / 2,
+      142,
+      `${region.emoji} ${region.name}  ·  Lesson ${lesson} of ${TOTAL_LESSONS}`,
+      22,
+      '#ffe9a8',
+    ).setAlpha(0.95);
 
     // collection tally
     const c = progress.collections;
@@ -201,50 +192,92 @@ export class MapScene extends Phaser.Scene {
       });
     }
 
-    LEVELS.forEach((level, i) => {
+    // ---- the road: this region's ten lesson stops winding across the middle
+    const path = this.add.graphics();
+    path.lineStyle(9, 0xffffff, 0.16);
+    for (let i = 0; i < STOP_POS.length - 1; i++) {
+      const [x1, y1] = STOP_POS[i]!;
+      const [x2, y2] = STOP_POS[i + 1]!;
+      path.lineBetween(x1, y1, x2, y2);
+    }
+
+    const done = roadDone(progress);
+    const canStart = canStartLessonToday(progress);
+    const startLesson = (l: number): void => {
+      this.cameras.main.fadeOut(300);
+      this.time.delayedCall(330, () => this.scene.start('session', { lesson: l }));
+    };
+
+    const [regionFrom] = region.lessonRange;
+    for (let i = 0; i < 10; i++) {
+      const stopLesson = regionFrom + i;
       const [x, y] = STOP_POS[i]!;
-      const theme = THEMES[level.realm];
-      const unlocked = level.id <= progress.currentLevel;
+      const passed = stopLesson < lesson || done;
+      const isCurrent = !done && stopLesson === lesson;
 
-      const circle = this.add.circle(x, y, 46, unlocked ? theme.accent : 0x555f6b, 1);
-      circle.setStrokeStyle(5, 0xffffff, unlocked ? 0.9 : 0.3);
-      const icon = emojiText(this, x, y, unlocked ? theme.creature : '🔒', 40);
-      if (!unlocked) icon.setAlpha(0.7);
+      const r = isCurrent ? 40 : 26;
+      const circle = this.add.circle(x, y, r, passed || isCurrent ? region.accent : 0x55606e, passed || isCurrent ? 1 : 0.55);
+      circle.setStrokeStyle(isCurrent ? 5 : 3, 0xffffff, passed || isCurrent ? 0.9 : 0.25);
+      const icon = emojiText(this, x, y, isCurrent ? region.creature : passed ? '⭐' : '', isCurrent ? 36 : 22);
+      readingText(this, x, y + r + 20, `${stopLesson}`, 18, passed || isCurrent ? '#ffffff' : '#93a0ad');
 
-      if (unlocked) {
-        circle.setInteractive({ useHandCursor: true });
-        circle.on('pointerdown', () => {
-          this.tweens.add({ targets: [circle, icon], scale: 0.9, duration: 80, yoyo: true });
+      circle.setInteractive({ useHandCursor: true });
+      circle.on('pointerup', () => {
+        if (isCurrent) {
+          if (canStart) startLesson(stopLesson);
+          else {
+            chime('gentle');
+            void speakUI('road-tomorrow', 'Great reading today! A brand new lesson opens tomorrow!');
+          }
+        } else if (passed) {
+          startLesson(stopLesson); // replaying an old lesson is always welcome
+        } else {
+          wiggle(this, circle); // not yet — an invitation, never a wall
+        }
+      });
+      if (isCurrent) {
+        this.tweens.add({
+          targets: [circle, icon],
+          scale: 1.12,
+          duration: 650,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
         });
-        circle.on('pointerup', () => {
-          void speakUI(`level-${level.id}`, `${theme.name}! Here we go!`);
+      }
+    }
+
+    // the next region waits at the end of the path
+    if (region.id < 12) {
+      const nextRegion = regionForLesson(region.lessonRange[1] + 1);
+      const gx = 175;
+      const gy = 300;
+      this.add.circle(gx, gy, 34, 0x000000, 0.25).setStrokeStyle(3, 0xffffff, 0.35);
+      emojiText(this, gx, gy, nextRegion.emoji, 30).setAlpha(0.8);
+      readingText(this, gx, gy + 52, 'next!', 16, '#ffffffaa');
+    }
+
+    // the big CONTINUE button — the one thing to tap every day
+    const label = done
+      ? '🏆 You did it all!'
+      : canStart
+        ? `▶️ Lesson ${lesson}!`
+        : '🌙 Review time!';
+    makeButton(
+      this,
+      GAME_W / 2,
+      GAME_H - 56,
+      label,
+      () => {
+        if (done) return;
+        if (canStart) startLesson(lesson);
+        else {
           this.cameras.main.fadeOut(300);
-          this.time.delayedCall(330, () => this.scene.start('session', { levelId: level.id }));
-        });
-        if (level.id === progress.currentLevel) {
-          // the frontier stop gently pulses "play me"
-          this.tweens.add({
-            targets: [circle, icon],
-            scale: 1.12,
-            duration: 650,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-          });
+          this.time.delayedCall(330, () => this.scene.start('session', { review: true }));
         }
-      }
-      readingText(this, x, y + 72, `${level.id}`, 26, unlocked ? '#ffffff' : '#8a94a0');
-
-      // star meter ABOVE the CURRENT island (below-screen for low stops if under
-      // it): how many reading trips are done toward opening the next island
-      if (level.id === progress.currentLevel && level.id < 9) {
-        const plays = Math.min(SESSIONS_TO_PASS, progress.levelPlays[level.id] ?? 0);
-        for (let s = 0; s < SESSIONS_TO_PASS; s++) {
-          const star = emojiText(this, x - (SESSIONS_TO_PASS - 1) * 15 + s * 30, y - 76, '⭐', 24);
-          if (s >= plays) star.setAlpha(0.22);
-        }
-      }
-    });
+      },
+      { fontSize: 32, width: 340, height: 84, fill: 0xffe9a8 },
+    );
 
     // parent gear — a plain tap opens the parent corner (a big hit target,
     // bottom-right, out of the way of play)

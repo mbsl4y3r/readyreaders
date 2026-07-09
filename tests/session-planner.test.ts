@@ -26,6 +26,13 @@ const rng = (() => {
   };
 })();
 
+/** A save with the book marker at 17 — the legacy planner tests assume it. */
+const marked = () => {
+  const p = freshProgress();
+  p.bookLesson = 17;
+  return p;
+};
+
 describe('book-marker gating', () => {
   it('caps new material at bookLesson + lookahead', () => {
     expect(lessonCapFor(3, 17)).toBe(19); // level 3 = lessons 18-30; Evie on 17 → cap 19
@@ -42,7 +49,8 @@ describe('book-marker gating', () => {
 
 describe('planSession', () => {
   it('produces word rounds plus sentence rounds, all within the lesson cap', () => {
-    const progress = freshProgress(); // bookLesson 17
+    const progress = freshProgress();
+    progress.bookLesson = 17; // legacy planner is book-marker driven
     const rounds = planSession(2, progress, rng);
     expect(rounds.length).toBeGreaterThanOrEqual(6);
 
@@ -108,7 +116,7 @@ describe('phrase and memory-word pools', () => {
 describe('planSession phrase and memory rounds', () => {
   it('weaves in exactly one magic-phrase round when phrases exist', () => {
     for (const levelId of [1, 2, 3]) {
-      const rounds = planSession(levelId, freshProgress(), rng);
+      const rounds = planSession(levelId, marked(), rng);
       const phraseRounds = rounds.filter((r) => r.mechanic === 'magic-phrase');
       expect(phraseRounds).toHaveLength(1);
       const phrase = PHRASES.find((p) => p.id === phraseRounds[0]!.phraseId)!;
@@ -119,7 +127,7 @@ describe('planSession phrase and memory rounds', () => {
 
   it('adds at most one memory-word round — a heart word, converted not doubled', () => {
     for (const levelId of [1, 2, 3]) {
-      const rounds = planSession(levelId, freshProgress(), rng);
+      const rounds = planSession(levelId, marked(), rng);
       const memory = rounds.filter((r) => r.mechanic === 'memory-word');
       expect(memory.length).toBeLessThanOrEqual(1);
       for (const m of memory) {
@@ -129,8 +137,8 @@ describe('planSession phrase and memory rounds', () => {
         expect(rounds.filter((r) => r !== m && r.wordId === m.wordId)).toHaveLength(0);
       }
     }
-    // level 1 always has an unmastered heart word ("was") on a fresh save
-    const rounds = planSession(1, freshProgress(), rng);
+    // level 1 always has an unmastered heart word ("was") at marker 17
+    const rounds = planSession(1, marked(), rng);
     expect(rounds.filter((r) => r.mechanic === 'memory-word')).toHaveLength(1);
   });
 });

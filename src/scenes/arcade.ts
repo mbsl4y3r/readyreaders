@@ -6,8 +6,8 @@
  * update loop — see games/arcade/types.ts for the contract.
  *
  * Two gates, both intentional:
- *  - a cabinet is dark until currentLevel reaches its unlockLevel (reading
- *    progress lights up new games), and
+ *  - a cabinet is dark until her Reading Road marker reaches its
+ *    unlockLesson (reading progress lights up new games), and
  *  - playing needs an active play pass: ten pearls buys five minutes, and
  *    reading is still the only way to earn pearls.
  */
@@ -152,7 +152,7 @@ export class ArcadeScene extends Phaser.Scene {
     ARCADE_GAMES.forEach((def, i) => {
       const cx = x0 + (i % cols) * cellW;
       const cy = y0 + Math.floor(i / cols) * cellH;
-      const unlocked = progress.currentLevel >= def.unlockLevel;
+      const unlocked = progress.lesson >= def.unlockLesson;
       const best = progress.arcadeBest[def.id] ?? 0;
       layer.add(this.cabinet(def, cx, cy, unlocked, best, i));
     });
@@ -205,7 +205,7 @@ export class ArcadeScene extends Phaser.Scene {
       const bestLabel = best > 0 ? `Best: ${best}` : 'Tap to play!';
       c.add(readingText(this, 0, 41, bestLabel, 13, '#12202e').setAlpha(0.85));
     } else {
-      c.add(readingText(this, 0, 20, `Level ${def.unlockLevel}`, 16, '#c9d2de'));
+      c.add(readingText(this, 0, 20, `Lesson ${def.unlockLesson}`, 16, '#c9d2de'));
       c.add(readingText(this, 0, 41, 'to unlock', 13, '#9aa6b4'));
     }
 
@@ -222,7 +222,7 @@ export class ArcadeScene extends Phaser.Scene {
   private onCabinet(def: ArcadeGameDef, unlocked: boolean): void {
     if (!unlocked) {
       chime('gentle');
-      this.floatingNote(`Reach Level ${def.unlockLevel} to unlock this game!`);
+      this.floatingNote(`Reach Lesson ${def.unlockLesson} to unlock this game!`);
       return;
     }
     const progress = loadProgress();
