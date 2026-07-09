@@ -71,7 +71,7 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
     const baseX = r + 20 + Math.random() * (ctx.width - (r + 20) * 2);
     const y = bottom + r + 10;
     // gentle rise; golden even slower as a treat to chase
-    const vy = golden ? 34 + Math.random() * 10 : 46 + Math.random() * 28;
+    const vy = (golden ? 34 + Math.random() * 10 : 46 + Math.random() * 28) * ctx.difficulty;
 
     const bodyColor = golden ? 0xffd166 : ctx.theme.accent;
     const bodyAlpha = golden ? 0.55 : 0.3;
@@ -169,7 +169,7 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
 
       // spawn ramp: gently busier over the run (1500ms → 650ms)
       const progress = elapsed / DURATION;
-      const interval = 1500 - progress * 850;
+      const interval = (1500 - progress * 850) / ctx.difficulty;
       spawnAccum += delta;
       if (spawnAccum >= interval) {
         spawnAccum -= interval;

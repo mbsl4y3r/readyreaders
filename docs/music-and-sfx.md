@@ -44,6 +44,7 @@ The game uses three effect names; drop files into `public/audio/sfx/`:
 | `good.mp3` | correct answer, small win | **Digital Audio** pack → any `powerUp*` you like (bright, short); or **UI Audio** → `switch_002` |
 | `gentle.mp3` | soft "try again" nudge | **UI Audio** pack → `click_soft_002` / `rollover_002` (must feel kind, never a buzzer) |
 | `fanfare.mp3` | session finished, big celebration | **Music Jingles** pack → one of the short win jingles (e.g. a `jingles_PIZZI*` "win" sting, ~2s) |
+| `newbest.mp3` | new arcade high score 🏆 | **Music Jingles** pack → a bright, rising "level up / high score" sting (distinct from `fanfare`, ~1.5s) |
 
 ### Arcade flavor (optional, nice-to-have)
 

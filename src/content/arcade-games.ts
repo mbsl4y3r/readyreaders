@@ -217,6 +217,16 @@ export const ARCADE_GAMES: ArcadeGameDef[] = [
     unlockLevel: 3,
     scoreLabel: 'pops',
   },
+  {
+    id: 'versus',
+    title: 'Shell Duel',
+    emoji: '🆚',
+    blurb: 'Two players! Bat the pearl past each other!',
+    reskins: 'Two-player Pong',
+    realm: 'cove',
+    unlockLevel: 1,
+    scoreLabel: 'rallies',
+  },
 ];
 
 export const ARCADE_BY_ID = new Map(ARCADE_GAMES.map((g) => [g.id, g]));
@@ -247,6 +257,7 @@ export const ARCADE_ANNOUNCE: Record<string, string> = {
   catch: 'Treasure Catch! Swish that net — catch all the goodies!',
   echo: 'Star Echo! Watch the twinkly stars, then tap them back — ready?',
   cluster: 'Coral Cluster! Aim it up and POP three-in-a-row — ka-bloosh!',
+  versus: 'Shell Duel! Two players — bonk that pearl right past your buddy!',
 };
 
 /** True if the play pass is currently active. */

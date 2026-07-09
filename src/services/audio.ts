@@ -183,8 +183,10 @@ export function speakUI(id: string, text: string): Promise<void> {
   return playClipOr('ui', id, () => speak(text));
 }
 
+export type ChimeKind = 'good' | 'gentle' | 'fanfare' | 'newbest';
+
 /** Chime kinds double as sfx file names: public/audio/sfx/<kind>.mp3. */
-export function chime(kind: 'good' | 'gentle' | 'fanfare'): void {
+export function chime(kind: ChimeKind): void {
   // a real sound file (e.g. from a Kenney pack) beats the oscillator —
   // but never block the game on the fetch; synth is the instant fallback
   void loadClip('sfx', kind).then((buffer) => {
@@ -193,10 +195,16 @@ export function chime(kind: 'good' | 'gentle' | 'fanfare'): void {
   });
 }
 
-function synthChime(kind: 'good' | 'gentle' | 'fanfare'): void {
+function synthChime(kind: ChimeKind): void {
   if (!ctx) return;
   const notes =
-    kind === 'good' ? [523.25, 659.25] : kind === 'gentle' ? [392] : [523.25, 659.25, 783.99, 1046.5];
+    kind === 'good'
+      ? [523.25, 659.25]
+      : kind === 'gentle'
+        ? [392]
+        : kind === 'newbest'
+          ? [659.25, 783.99, 1046.5, 1318.51] // bright rising "new high score!" sting
+          : [523.25, 659.25, 783.99, 1046.5];
   const now = ctx.currentTime;
   notes.forEach((freq, i) => {
     const osc = ctx.createOscillator();

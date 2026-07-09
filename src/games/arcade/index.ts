@@ -22,6 +22,7 @@ import { run as memory } from './memory';
 import { run as catchgame } from './catch';
 import { run as echo } from './echo';
 import { run as cluster } from './cluster';
+import { run as versus } from './versus';
 
 export const ARCADE_RUNNERS: Record<string, RunArcadeGame> = {
   serpent,
@@ -42,4 +43,5 @@ export const ARCADE_RUNNERS: Record<string, RunArcadeGame> = {
   catch: catchgame,
   echo,
   cluster,
+  versus,
 };

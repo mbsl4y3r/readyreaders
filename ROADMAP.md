@@ -52,6 +52,7 @@ This is the "what's done / what's left / what **you** need to do" board. The
 | `arcade-catch` | "Treasure Catch! Swish that net — catch all the goodies!" |
 | `arcade-echo` | "Star Echo! Watch the twinkly stars, then tap them back — ready?" |
 | `arcade-cluster` | "Coral Cluster! Aim it up and POP three-in-a-row — ka-bloosh!" |
+| `arcade-versus` | "Shell Duel! Two players — bonk that pearl right past your buddy!" |
 
 ---
 
@@ -81,6 +82,7 @@ forgiving for a 6-year-old.
 | Catch | 🧺 Treasure Catch | Level 3 | net falling treasures |
 | Simon | 🌟 Star Echo | Level 4 | repeat the twinkle pattern |
 | Snood / bubble shooter | 💠 Coral Cluster | Level 3 | aim up, match 3 to pop |
+| Two-player Pong | 🆚 Shell Duel | Level 1 | you vs. a grown-up, bat the pearl |
 
 **Two gates, both intentional:**
 

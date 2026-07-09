@@ -71,6 +71,18 @@ export class ParentScene extends Phaser.Scene {
       (music.list[1] as Phaser.GameObjects.Text).setText(p.settings.musicOn ? '🎵' : '🔇');
     }, { fill: SLATE, emoji: true, fontSize: 22 });
 
+    // arcade game speed (adaptive difficulty): tap to cycle chill → normal → zippy
+    type Speed = 'chill' | 'normal' | 'zippy';
+    const speedIcon = (s: Speed): string => (s === 'chill' ? '🐌' : s === 'zippy' ? '⚡' : '🐇');
+    const nextSpeed = (s: Speed): Speed =>
+      s === 'chill' ? 'normal' : s === 'normal' ? 'zippy' : 'chill';
+    const speed = this.chip(GAME_W - 116, 38, 50, 46, speedIcon(progress.settings.gameSpeed), () => {
+      const p = loadProgress();
+      p.settings.gameSpeed = nextSpeed(p.settings.gameSpeed);
+      saveProgress(p);
+      (speed.list[1] as Phaser.GameObjects.Text).setText(speedIcon(p.settings.gameSpeed));
+    }, { fill: SLATE, emoji: true, fontSize: 22 });
+
     // ---- stats strip ----
     const wordStats = Object.entries(progress.words).filter(([k]) => !k.includes(':'));
     const mastered = wordStats.filter(([, s]) => s.mastery >= 2).length;

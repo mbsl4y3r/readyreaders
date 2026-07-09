@@ -8,6 +8,7 @@ import Phaser from 'phaser';
 import { LEVELS, highestLevelForBookLesson } from '../content/levels';
 import { THEMES } from '../content/themes';
 import { loadProgress, saveProgress } from '../services/progress';
+import { seasonFor, SEASON_THEMES } from '../services/juice';
 import { speakUI, playMusic } from '../services/audio';
 import { GAME_W, GAME_H, readingText, emojiText, drawRealmBackground, makeButton } from '../ui/kit';
 
@@ -32,11 +33,27 @@ export class MapScene extends Phaser.Scene {
       saveProgress(progress);
     }
 
-    drawRealmBackground(this, 0x14213d, 0x081c15, ['🌊', '🌲', '✨']);
+    // a gentle seasonal touch: the season's emoji drift in the background and
+    // a small badge names it — date-driven, no settings to fuss with
+    const season = seasonFor();
+    const st = SEASON_THEMES[season];
+    drawRealmBackground(this, 0x14213d, 0x081c15, ['🌊', '🌲', '✨', ...st.emoji]);
     this.cameras.main.fadeIn(300);
     playMusic('map');
 
     readingText(this, GAME_W / 2, 56, "Evie's Reading Realms", 40, '#ffe9a8');
+
+    // status row under the title: reading streak · arcade tickets · Inky level
+    emojiText(this, GAME_W / 2 - 132, 100, '🔥', 26);
+    readingText(this, GAME_W / 2 - 104, 100, `${progress.streak.days}`, 24, '#ffffff').setOrigin(0, 0.5);
+    emojiText(this, GAME_W / 2 - 20, 100, '🎟️', 24);
+    readingText(this, GAME_W / 2 + 8, 100, `${progress.tickets}`, 24, '#ffffff').setOrigin(0, 0.5);
+    emojiText(this, GAME_W / 2 + 96, 100, '🐙', 24);
+    readingText(this, GAME_W / 2 + 124, 100, `Lv${progress.inky.level}`, 22, '#ffffff').setOrigin(0, 0.5);
+
+    // seasonal badge, tucked bottom-center below the path
+    emojiText(this, GAME_W / 2 - 44, GAME_H - 26, st.emoji[0]!, 24).setAlpha(0.8);
+    readingText(this, GAME_W / 2 + 6, GAME_H - 26, st.name, 20, '#ffe9a8').setAlpha(0.8);
 
     // path
     const path = this.add.graphics();
@@ -123,6 +140,30 @@ export class MapScene extends Phaser.Scene {
       height: 64,
       fill: 0xffe9a8,
     }).setAlpha(0.92);
+    // 🌟 sticker book — milestone stickers she's collected
+    makeButton(this, 80, 428, '🌟', () => goTo('stickerbook'), {
+      emoji: true,
+      fontSize: 30,
+      width: 76,
+      height: 64,
+      fill: 0xffffff,
+    }).setAlpha(0.85);
+    // 📸 photo booth — pose dressed-up Evie and snap a picture
+    makeButton(this, GAME_W - 80, 356, '📸', () => goTo('photobooth'), {
+      emoji: true,
+      fontSize: 30,
+      width: 76,
+      height: 64,
+      fill: 0xffffff,
+    }).setAlpha(0.85);
+    // 🎟️ ticket shop — spend arcade tickets on fancy cosmetics
+    makeButton(this, GAME_W - 80, 430, '🎟️', () => goTo('ticketshop'), {
+      emoji: true,
+      fontSize: 30,
+      width: 76,
+      height: 64,
+      fill: 0xffffff,
+    }).setAlpha(0.85);
 
     // session-cap sunset: past the daily cap the map turns to dusk and
     // suggests resting — a gentle wind-down, never a lock (parents decide)

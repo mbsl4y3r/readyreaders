@@ -78,7 +78,8 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
   let score = 0;
   let acc = 0;
   // ~3.5 cells/second — gentle and slow for a 6-year-old.
-  const STEP_MS = 285;
+  // Scale cadence by difficulty: shorter interval = faster (zippy), longer = slower (chill).
+  const STEP_MS = 285 / ctx.difficulty;
   let over = false;
   let destroyed = false;
 

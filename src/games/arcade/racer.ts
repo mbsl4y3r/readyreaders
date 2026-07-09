@@ -154,7 +154,7 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
 
       // off-road slows you; otherwise speed climbs to max
       const offRoad = Math.abs(playerX) > 1;
-      const targetSpeed = offRoad ? 0.34 : 1;
+      const targetSpeed = offRoad ? 0.34 : ctx.difficulty;
       speed += (targetSpeed - speed) * Math.min(1, sec * (offRoad ? 3 : 0.5));
 
       // wandering curve — the vanishing point sways left/right
@@ -186,7 +186,7 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
       spawnAcc -= dt;
       if (spawnAcc <= 0) {
         spawnRival();
-        spawnAcc = 900 + Math.random() * 900;
+        spawnAcc = (900 + Math.random() * 900) / ctx.difficulty;
       }
 
       // move + project rivals

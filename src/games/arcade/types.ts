@@ -24,6 +24,9 @@ export interface ArcadeCtx {
   hudBottom: number;
   /** Realm palette to tint the game (accent, background). */
   theme: RealmTheme;
+  /** Game-speed factor from settings: ~0.8 chill · 1 normal · 1.25 zippy.
+   *  Speed-based games multiply their velocities/spawn-rates by this. */
+  difficulty: number;
   /** Call whenever the running score changes — updates the HUD. */
   onScore(score: number): void;
   /** Call once when the game ends. `score` is final; the host shows the overlay. */

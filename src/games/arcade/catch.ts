@@ -77,13 +77,13 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   const fallSpeed = (): number => {
     // ramps from ~90 to ~150 px/s over roughly two minutes
     const ramp = Math.min(60, elapsed / 2000);
-    return BASE_SPEED + ramp + Math.random() * 20;
+    return (BASE_SPEED + ramp + Math.random() * 20) * ctx.difficulty;
   };
   let spawnTimer = 0;
   const spawnInterval = (): number => {
     // starts ~1300ms, eases down toward ~750ms very gently
     const ramp = Math.min(550, elapsed / 220);
-    return 1300 - ramp;
+    return (1300 - ramp) / ctx.difficulty;
   };
 
   // ---- scoring / lifecycle ---------------------------------------------

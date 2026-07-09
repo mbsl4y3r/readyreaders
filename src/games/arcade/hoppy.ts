@@ -270,7 +270,7 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx) => {
       const frogX = col * cell + cell / 2; // grid-relative
       const deadly = cell * 0.42;
       for (const { lane, items } of hazards) {
-        const move = lane.dir * lane.speed * speedMul * (delta / 1000);
+        const move = lane.dir * lane.speed * speedMul * ctx.difficulty * (delta / 1000);
         for (const h of items) {
           h.x += move;
           if (h.x > gridW) h.x -= gridW;

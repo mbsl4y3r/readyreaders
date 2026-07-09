@@ -23,6 +23,7 @@ import {
 import { ARCADE_RUNNERS } from '../games/arcade';
 import { THEMES } from '../content/themes';
 import { loadProgress, saveProgress } from '../services/progress';
+import { speedFactor, TICKETS_PER_PLAY, TICKETS_NEW_BEST } from '../services/juice';
 import { speakUI, chime, playMusic } from '../services/audio';
 import {
   GAME_W,
@@ -351,6 +352,7 @@ export class ArcadeScene extends Phaser.Scene {
       height: GAME_H,
       hudBottom: HUD_BOTTOM,
       theme,
+      difficulty: speedFactor(loadProgress().settings.gameSpeed),
       onScore: (s) => this.setScore(s),
       onGameOver: (s) => this.gameOver(s),
     };
@@ -390,11 +392,12 @@ export class ArcadeScene extends Phaser.Scene {
     const progress = loadProgress();
     const prevBest = progress.arcadeBest[def.id] ?? 0;
     const newBest = finalScore > prevBest;
-    if (newBest) {
-      progress.arcadeBest[def.id] = finalScore;
-      saveProgress(progress);
-    }
-    chime(newBest ? 'fanfare' : 'good');
+    if (newBest) progress.arcadeBest[def.id] = finalScore;
+    // playing earns arcade tickets — the ticket-shop currency (a new best pays more)
+    const ticketsEarned = TICKETS_PER_PLAY + (newBest ? TICKETS_NEW_BEST : 0);
+    progress.tickets += ticketsEarned;
+    saveProgress(progress);
+    chime(newBest ? 'newbest' : 'good');
 
     const o = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(70);
     this.overlay = o;
@@ -411,6 +414,7 @@ export class ArcadeScene extends Phaser.Scene {
     if (!newBest && prevBest > 0) {
       o.add(readingText(this, 0, -4, `Best: ${prevBest} ${def.scoreLabel}`, 24, '#a7f3d0'));
     }
+    o.add(readingText(this, 0, 42, `+${ticketsEarned} 🎟️`, 30, '#ffe9a8'));
     if (newBest) confettiBurst(this, 0, -60, THEMES[def.realm].accent);
 
     const again = makeButton(this, -128, 108, '🔁 Play again', () => this.replay(), {

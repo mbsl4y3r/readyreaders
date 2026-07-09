@@ -49,6 +49,18 @@ export interface ProgressData {
   arcadeBest: Record<string, number>;
   /** Epoch ms until which the Games Arcade play pass is active (0 = none). */
   arcadePassUntil: number;
+  /** Reading-day streak — the 🔥. lastDate is an ISO yyyy-mm-dd. */
+  streak: { lastDate: string; days: number; best: number };
+  /** Arcade currency — earned by playing games, spent in the ticket shop. */
+  tickets: number;
+  /** Sticker ids earned from milestones (see services/juice STICKERS). */
+  stickers: string[];
+  /** Pet Inky's growth (xp from reading; level derived + persisted). */
+  inky: { xp: number; level: number };
+  /** Saved Photo Mode snapshots as PNG data URLs (cap 6, newest last). */
+  photos: string[];
+  /** Story page ids that have one of Evie's own recordings (audio blobs in IndexedDB). */
+  recordings: string[];
   /** Cosmetic item ids owned (see avatar/catalog.ts). */
   cosmetics: string[];
   /** What Evie and Inky are wearing right now. */
@@ -57,6 +69,8 @@ export interface ProgressData {
     sessionCapMin: number;
     /** Background music on/off (parent corner). */
     musicOn: boolean;
+    /** Arcade pace — feeds ctx.difficulty so speed-based games adapt. */
+    gameSpeed: 'chill' | 'normal' | 'zippy';
   };
 }
 
@@ -78,9 +92,15 @@ export function freshProgress(): ProgressData {
     badges: [],
     arcadeBest: {},
     arcadePassUntil: 0,
+    streak: { lastDate: '', days: 0, best: 0 },
+    tickets: 0,
+    stickers: [],
+    inky: { xp: 0, level: 1 },
+    photos: [],
+    recordings: [],
     cosmetics: starterCosmetics(),
     avatar: defaultAvatar(),
-    settings: { sessionCapMin: 18, musicOn: true },
+    settings: { sessionCapMin: 18, musicOn: true, gameSpeed: 'normal' },
   };
 }
 
@@ -110,6 +130,12 @@ export function loadProgress(): ProgressData {
     data.badges ??= [];
     data.arcadeBest ??= {};
     data.arcadePassUntil ??= 0;
+    data.streak ??= { lastDate: '', days: 0, best: 0 };
+    data.tickets ??= 0;
+    data.stickers ??= [];
+    data.inky ??= { xp: 0, level: 1 };
+    data.photos ??= [];
+    data.recordings ??= [];
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
     data.created ??= data.placed; // players from before the creator skip it
@@ -117,6 +143,7 @@ export function loadProgress(): ProgressData {
     data.avatar.glasses ??= null;
     data.avatar.earrings ??= null;
     data.settings.musicOn ??= true;
+    data.settings.gameSpeed ??= 'normal';
     return data;
   } catch {
     return freshProgress();
@@ -161,6 +188,12 @@ export function importCode(code: string): ProgressData | null {
     data.badges ??= [];
     data.arcadeBest ??= {};
     data.arcadePassUntil ??= 0;
+    data.streak ??= { lastDate: '', days: 0, best: 0 };
+    data.tickets ??= 0;
+    data.stickers ??= [];
+    data.inky ??= { xp: 0, level: 1 };
+    data.photos ??= [];
+    data.recordings ??= [];
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
     data.created ??= data.placed;
@@ -168,6 +201,7 @@ export function importCode(code: string): ProgressData | null {
     data.avatar.glasses ??= null;
     data.avatar.earrings ??= null;
     data.settings.musicOn ??= true;
+    data.settings.gameSpeed ??= 'normal';
     return data;
   } catch {
     return null;

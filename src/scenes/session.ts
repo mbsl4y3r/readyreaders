@@ -11,6 +11,13 @@ import type { RoundSpec, RoundResult } from '../engine/rounds';
 import { updateStat } from '../engine/adaptive';
 import { newlyEarned } from '../engine/achievements';
 import { loadProgress, saveProgress, statFor } from '../services/progress';
+import {
+  recordReadingDay,
+  addInkyXp,
+  inkyTitle,
+  newlyEarnedStickers,
+  INKY_XP_PER_SESSION,
+} from '../services/juice';
 import { PEARLS_PER_SESSION, PEARLS_SPEED_BEST } from '../avatar/catalog';
 import { speakUI, chime, playMusic } from '../services/audio';
 import { runFeedCreature } from '../games/feed-creature';
@@ -158,6 +165,10 @@ export class SessionScene extends Phaser.Scene {
       minutes: Math.max(1, Math.round((Date.now() - this.startedAt) / 60_000)),
     });
     progress.pearls += PEARLS_PER_SESSION; // reading is the only pearl faucet
+    // juice: advance the daily streak (pays a pearl bonus at milestones) and
+    // feed pet Inky some XP — both are earned only by reading, like pearls
+    const streak = this.review ? null : recordReadingDay(progress);
+    const inky = addInkyXp(progress, INKY_XP_PER_SESSION);
     saveProgress(progress);
 
     chime('fanfare');
@@ -203,18 +214,37 @@ export class SessionScene extends Phaser.Scene {
     );
     popIn(this, done, 600);
 
-    this.awardBadges(progress);
+    this.awardRewards(progress, streak, inky);
   }
 
-  /** Earn + celebrate any freshly-unlocked achievement badges. */
-  private awardBadges(progress: ReturnType<typeof loadProgress>): void {
-    const fresh = newlyEarned(progress);
-    if (fresh.length === 0) return;
-    fresh.forEach((b) => progress.badges.push(b.id));
+  /** Earn + celebrate freshly-unlocked badges, streak milestones, Inky level-ups, and stickers. */
+  private awardRewards(
+    progress: ReturnType<typeof loadProgress>,
+    streak: ReturnType<typeof recordReadingDay> | null,
+    inky: ReturnType<typeof addInkyXp>,
+  ): void {
+    const toasts: { emoji: string; label: string }[] = [];
+
+    const freshBadges = newlyEarned(progress);
+    freshBadges.forEach((b) => {
+      progress.badges.push(b.id);
+      toasts.push({ emoji: b.emoji, label: b.label });
+    });
+    if (streak?.milestone) toasts.push({ emoji: '🔥', label: `${streak.days}-day streak!` });
+    if (inky.leveledUp) toasts.push({ emoji: '🐙', label: `${inkyTitle(inky.level)}!` });
+    if (inky.gift) toasts.push({ emoji: '🎁', label: 'Inky got a treat!' });
+
+    const freshStickers = newlyEarnedStickers(progress);
+    freshStickers.forEach((s) => {
+      progress.stickers.push(s.id);
+      toasts.push({ emoji: s.emoji, label: 'New sticker!' });
+    });
+
     saveProgress(progress);
-    fresh.slice(0, 3).forEach((b, i) => {
-      badgeToast(this, b.emoji, b.label, 900 + i * 1400);
-      this.time.delayedCall(900 + i * 1400, () => this.alive && chime('good'));
+
+    toasts.slice(0, 5).forEach((t, i) => {
+      badgeToast(this, t.emoji, t.label, 900 + i * 1500);
+      this.time.delayedCall(900 + i * 1500, () => this.alive && chime('good'));
     });
   }
 }

@@ -16,6 +16,14 @@ import { PEARLS_PER_STORY } from '../avatar/catalog';
 import { newlyEarned } from '../engine/achievements';
 import { speakUI, chime, playMusic } from '../services/audio';
 import {
+  isRecordingSupported,
+  startRecording,
+  stopRecording,
+  saveRecording,
+  playRecording,
+  stopPlayback,
+} from '../services/recorder';
+import {
   GAME_W,
   GAME_H,
   readingText,
@@ -26,6 +34,7 @@ import {
   wiggle,
   confettiBurst,
   badgeToast,
+  type Button,
 } from '../ui/kit';
 
 export class StoryScene extends Phaser.Scene {
@@ -35,6 +44,8 @@ export class StoryScene extends Phaser.Scene {
   private pageIndex = 0;
   /** Current page's view — rebuilt per page; late audio callbacks check identity. */
   private pageView: Phaser.GameObjects.Container | null = null;
+  /** True while the mic is capturing Evie reading the current page. */
+  private recording = false;
 
   constructor() {
     super('story');
@@ -48,7 +59,15 @@ export class StoryScene extends Phaser.Scene {
     this.alive = true;
     this.pageIndex = 0;
     this.pageView = null;
-    this.events.once('shutdown', () => (this.alive = false));
+    this.recording = false;
+    this.events.once('shutdown', () => {
+      this.alive = false;
+      stopPlayback();
+      if (this.recording) {
+        this.recording = false;
+        void stopRecording(); // discard a half-finished take on the way out
+      }
+    });
 
     // the story book lives in Starlight Castle no matter which realm she's
     // adventuring in — one cozy reading nook, always the same colors
@@ -182,6 +201,9 @@ export class StoryScene extends Phaser.Scene {
     });
     view.add(replay);
 
+    // "read it yourself" — record Evie reading this page and play it back
+    this.addRecorderControls(view, speakId);
+
     const readBtn = makeButton(
       this,
       GAME_W / 2,
@@ -219,6 +241,71 @@ export class StoryScene extends Phaser.Scene {
       { fontSize: 34, width: 340, height: 84, fill: 0xffe9a8 },
     );
     view.add(readBtn);
+  }
+
+  /**
+   * The record-your-own-voice controls: a 🎤 toggle to capture Evie reading
+   * this page (saved to IndexedDB), and a ▶️ to play her take back. Skipped
+   * entirely where the mic isn't available.
+   */
+  private addRecorderControls(view: Phaser.GameObjects.Container, pageId: string): void {
+    if (!isRecordingSupported()) return;
+    const hasRec = loadProgress().recordings.includes(pageId);
+
+    const play = makeButton(this, GAME_W - 66, 132, '▶️', () => void playRecording(pageId), {
+      emoji: true,
+      fontSize: 28,
+      width: 80,
+      height: 72,
+      fill: 0xffe9a8,
+    });
+    play.setVisible(hasRec);
+    view.add(play);
+
+    const mic = makeButton(this, GAME_W - 152, 132, '🎤', () => void this.toggleRecording(view, pageId, mic, play), {
+      emoji: true,
+      fontSize: 28,
+      width: 80,
+      height: 72,
+      fill: 0xffffff,
+    });
+    view.add(mic);
+  }
+
+  private async toggleRecording(
+    view: Phaser.GameObjects.Container,
+    pageId: string,
+    mic: Button,
+    play: Button,
+  ): Promise<void> {
+    if (!this.recording) {
+      const ok = await startRecording();
+      if (!ok) return;
+      if (!this.alive || this.pageView !== view) {
+        void stopRecording(); // page/scene changed while the mic warmed up
+        return;
+      }
+      this.recording = true;
+      mic.label.setText('⏹️');
+      return;
+    }
+    // stop + save
+    this.recording = false;
+    const blob = await stopRecording();
+    const live = this.alive && this.pageView === view;
+    if (live) mic.label.setText('🎤');
+    if (blob) {
+      await saveRecording(pageId, blob);
+      const p = loadProgress();
+      if (!p.recordings.includes(pageId)) {
+        p.recordings.push(pageId);
+        saveProgress(p);
+      }
+      if (live) {
+        play.setVisible(true);
+        chime('good');
+      }
+    }
   }
 
   /** Warm ending: confetti, 'The end!', and the shelf remembers the read. */

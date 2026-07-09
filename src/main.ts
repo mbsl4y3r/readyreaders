@@ -11,6 +11,9 @@ import { StoryScene } from './scenes/story';
 import { WardrobeScene } from './scenes/wardrobe';
 import { AchievementsScene } from './scenes/achievements';
 import { ArcadeScene } from './scenes/arcade';
+import { StickerBookScene } from './scenes/stickerbook';
+import { TicketShopScene } from './scenes/ticketshop';
+import { PhotoBoothScene } from './scenes/photobooth';
 import { GAME_W, GAME_H } from './ui/kit';
 
 const game = new Phaser.Game({
@@ -36,6 +39,9 @@ const game = new Phaser.Game({
     WardrobeScene,
     AchievementsScene,
     ArcadeScene,
+    StickerBookScene,
+    TicketShopScene,
+    PhotoBoothScene,
   ],
 });
 

@@ -37,10 +37,10 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   // Physics state (units: px, px/s)
   const GRAVITY = 900;
   const FLAP = -360;
-  const SCROLL = 150;
+  const SCROLL = 150 * ctx.difficulty;
   const GAP = 260; // generous gap
   const PILLAR_W = 90;
-  const SPAWN_GAP = 460; // horizontal distance between gate pairs
+  const SPAWN_GAP = 460 / ctx.difficulty; // horizontal distance between gate pairs (closer = more frequent when zippy)
 
   let vy = 0;
   let fishY = (top + bottom) / 2;
