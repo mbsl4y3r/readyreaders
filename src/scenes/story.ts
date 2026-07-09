@@ -14,7 +14,7 @@ import { THEMES } from '../content/themes';
 import { loadProgress, saveProgress } from '../services/progress';
 import { PEARLS_PER_STORY } from '../avatar/catalog';
 import { newlyEarned } from '../engine/achievements';
-import { speakUI, chime, playMusic } from '../services/audio';
+import { speakUI, chime, playMusic, stopMusic } from '../services/audio';
 import {
   isRecordingSupported,
   startRecording,
@@ -252,20 +252,21 @@ export class StoryScene extends Phaser.Scene {
     if (!isRecordingSupported()) return;
     const hasRec = loadProgress().recordings.includes(pageId);
 
-    const play = makeButton(this, GAME_W - 66, 132, '▶️', () => void playRecording(pageId), {
+    // buttons honour makeButton's 96px min width, so give them room not to overlap
+    const play = makeButton(this, GAME_W - 78, 132, '▶️', () => void playRecording(pageId), {
       emoji: true,
       fontSize: 28,
-      width: 80,
+      width: 88,
       height: 72,
       fill: 0xffe9a8,
     });
     play.setVisible(hasRec);
     view.add(play);
 
-    const mic = makeButton(this, GAME_W - 152, 132, '🎤', () => void this.toggleRecording(view, pageId, mic, play), {
+    const mic = makeButton(this, GAME_W - 192, 132, '🎤', () => void this.toggleRecording(view, pageId, mic, play), {
       emoji: true,
       fontSize: 28,
-      width: 80,
+      width: 88,
       height: 72,
       fill: 0xffffff,
     });
@@ -286,12 +287,14 @@ export class StoryScene extends Phaser.Scene {
         return;
       }
       this.recording = true;
+      stopMusic(); // hush the background track so it isn't captured on the mic
       mic.label.setText('⏹️');
       return;
     }
     // stop + save
     this.recording = false;
     const blob = await stopRecording();
+    playMusic('story'); // mic released — bring the cozy story music back (no-ops if music is off)
     const live = this.alive && this.pageView === view;
     if (live) mic.label.setText('🎤');
     if (blob) {
