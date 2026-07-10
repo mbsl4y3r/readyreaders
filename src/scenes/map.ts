@@ -36,7 +36,7 @@ export class MapScene extends Phaser.Scene {
     const st = SEASON_THEMES[season];
     drawRealmBackground(this, region.bgTop, region.bgBottom, [...region.ambient, ...st.emoji]);
     this.cameras.main.fadeIn(300);
-    playMusic(baseRealmFor(region));
+    playMusic(`region-${region.id}`, baseRealmFor(region));
 
     readingText(this, GAME_W / 2, 56, "Evie's Reading Realms", 40, '#ffe9a8');
 
