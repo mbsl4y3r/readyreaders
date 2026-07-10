@@ -52,7 +52,7 @@ export const WORDS: Word[] = [
   W('sand', ['s', 'a', 'n', 'd'], 4, '🏖️'),
   W('hand', ['h', 'a', 'n', 'd'], 4, '✋'),
   W('wax', ['w', 'a', 'x'], 4, '🕯️'),
-  W('Max', ['M', 'a', 'x'], 4, '👦'),
+  W('Max', ['M', 'a', 'x'], 3, '👦'),
   W('Dan', ['D', 'a', 'n'], 4, '👦'),
   W('dam', ['d', 'a', 'm'], 4),
   W('was', ['w', 'a', 's'], 5, undefined, [1]),
@@ -220,7 +220,7 @@ export const WORDS: Word[] = [
   W('won', ['w', 'o', 'n'], 20, '🏆', [1]),
   W('of', ['o', 'f'], 20, undefined, [0, 1]),
   W('off', ['o', 'ff'], 20),
-  W('deck', ['d', 'e', 'ck'], 20),
+  W('deck', ['d', 'e', 'ck'], 13),
   W('put', ['p', 'u', 't'], 24, undefined, [1]),
   W('pull', ['p', 'u', 'll'], 24, undefined, [1]),
   W('push', ['p', 'u', 'sh'], 26, '🛒', [1]),
@@ -285,7 +285,7 @@ export const WORDS: Word[] = [
   W('pond', ['p', 'o', 'nd'], 41),
   W('wind', ['w', 'i', 'nd'], 41, '💨'),
   W('end', ['e', 'nd'], 41),
-  W('send', ['s', 'e', 'nd'], 41, '💌'),
+  W('send', ['s', 'e', 'n', 'd'], 15, '💌'),
   W('went', ['w', 'e', 'nt'], 41),
   W('mint', ['m', 'i', 'nt'], 41, '🍬'),
   W('pants', ['p', 'a', 'nt', 's'], 41, '👖'),
@@ -539,7 +539,7 @@ export const WORDS: Word[] = [
   W('foxes', ['f', 'o', 'x', 'es'], 22, '🦊'),
   // lesson 23
   W('eggs', ['e', 'gg', 's'], 23, '🥚'),
-  W('Pam', ['P', 'a', 'm'], 23),
+  W('Pam', ['P', 'a', 'm'], 8),
   // lesson 24
   W('sub', ['s', 'u', 'b'], 24),
   W('bud', ['b', 'u', 'd'], 24),
@@ -549,10 +549,10 @@ export const WORDS: Word[] = [
   W('buzz', ['b', 'u', 'zz'], 24),
   W('hum', ['h', 'u', 'm'], 24),
   W('full', ['f', 'u', 'll'], 24, undefined, [1]),
-  W('Jack', ['J', 'a', 'ck'], 24),
+  W('Jack', ['J', 'a', 'ck'], 11),
   // lesson 25
-  W('bad', ['b', 'a', 'd'], 25),
-  W('bib', ['b', 'i', 'b'], 25),
+  W('bad', ['b', 'a', 'd'], 7),
+  W('bib', ['b', 'i', 'b'], 17),
   W('rub', ['r', 'u', 'b'], 25),
   W('tug', ['t', 'u', 'g'], 25),
   W('sum', ['s', 'u', 'm'], 25),
@@ -575,7 +575,7 @@ export const WORDS: Word[] = [
   W('rash', ['r', 'a', 'sh'], 27),
   W('sash', ['s', 'a', 'sh'], 27),
   W('shall', ['sh', 'a', 'll'], 27),
-  W('Jan', ['J', 'a', 'n'], 27),
+  W('Jan', ['J', 'a', 'n'], 7),
   // lesson 28
   W('chess', ['ch', 'e', 'ss'], 28, '♟️'),
   W('chill', ['ch', 'i', 'll'], 28, '🥶'),
@@ -629,7 +629,7 @@ export const WORDS: Word[] = [
   W('helmet', ['h', 'e', 'l', 'm', 'e', 't'], 36, '⛑️'),
   W('tablet', ['t', 'a', 'b', 'l', 'e', 't'], 36),
   W('panel', ['p', 'a', 'n', 'e', 'l'], 36),
-  W('fill', ['f', 'i', 'll'], 36),
+  W('fill', ['f', 'i', 'll'], 17),
   W('pill', ['p', 'i', 'll'], 36, '💊'),
   // lesson 37
   W('bang', ['b', 'a', 'ng'], 37, '💥'),
@@ -644,8 +644,8 @@ export const WORDS: Word[] = [
   W('rung', ['r', 'u', 'ng'], 37),
   W('sung', ['s', 'u', 'ng'], 37),
   // lesson 39
-  W('kid', ['k', 'i', 'd'], 39, '🧒'),
-  W('yell', ['y', 'e', 'll'], 39),
+  W('kid', ['k', 'i', 'd'], 17, '🧒'),
+  W('yell', ['y', 'e', 'll'], 15),
   W('toss', ['t', 'o', 'ss'], 39),
   W('running', ['r', 'u', 'n', 'n', 'i', 'ng'], 39, '🏃'),
   W('ringing', ['r', 'i', 'ng', 'i', 'ng'], 39),
@@ -667,9 +667,9 @@ export const WORDS: Word[] = [
   W('sending', ['s', 'e', 'nd', 'i', 'ng'], 41),
   W('mints', ['m', 'i', 'nt', 's'], 41),
   // lesson 42
-  W('bend', ['b', 'e', 'nd'], 42),
+  W('bend', ['b', 'e', 'n', 'd'], 15),
   W('bending', ['b', 'e', 'nd', 'i', 'ng'], 42),
-  W('mend', ['m', 'e', 'nd'], 42),
+  W('mend', ['m', 'e', 'n', 'd'], 15),
   W('mending', ['m', 'e', 'nd', 'i', 'ng'], 42),
   W('hunt', ['h', 'u', 'nt'], 42),
   W('hunting', ['h', 'u', 'nt', 'i', 'ng'], 42),
@@ -988,7 +988,7 @@ export const WORDS: Word[] = [
   W('quart', ['qu', 'ar', 't'], 80),
   W('dwarf', ['dw', 'ar', 'f'], 80),
   // lesson 81
-  W('sip', ['s', 'i', 'p'], 81),
+  W('sip', ['s', 'i', 'p'], 17),
   // lesson 82
   W('bees', ['b', 'ee', 's'], 82, '🐝'),
   W('free', ['fr', 'ee'], 82),
@@ -1158,7 +1158,7 @@ export const WORDS: Word[] = [
   W('cook', ['c', 'oo', 'k'], 107),
   W('cookie', ['c', 'oo', 'k', 'ie'], 107, '🍪'),
   // lesson 108
-  W('bit', ['b', 'i', 't'], 108),
+  W('bit', ['b', 'i', 't'], 13),
   W('kids', ['k', 'i', 'd', 's'], 108),
   // lesson 109
   W('how', ['h', 'ow'], 109),
@@ -1286,6 +1286,69 @@ export const WORDS: Word[] = [
   W('gym', ['g', 'y', 'm'], 120, '🏋️'),
   W('gymnast', ['g', 'y', 'm', 'n', 'a', 'st'], 120, '🤸'),
   W('mystery', ['m', 'y', 'st', 'e', 'r', 'y'], 120, '🕵️'),
+
+  // ---- Early road gap-fill: transcribed from the book's lesson 1-20 pages ----
+  // lesson 6
+  W('Hal', ['H', 'a', 'l'], 6),
+  W('Sal', ['S', 'a', 'l'], 6),
+  // lesson 7
+  W('band', ['b', 'a', 'n', 'd'], 7),
+  W('cab', ['c', 'a', 'b'], 7, '🚕'),
+  W('nab', ['n', 'a', 'b'], 7),
+  // lesson 8
+  W('pad', ['p', 'a', 'd'], 8),
+  W('pal', ['p', 'a', 'l'], 8),
+  W('Pat', ['P', 'a', 't'], 8),
+  // lesson 9
+  W('Zak', ['Z', 'a', 'k'], 9),
+  W('yap', ['y', 'a', 'p'], 9),
+  // lesson 10
+  W('Matt', ['M', 'a', 't', 't'], 10),
+  // lesson 11
+  W('backpack', ['b', 'a', 'ck', 'p', 'a', 'ck'], 11, '🎒'),
+  W('Mack', ['M', 'a', 'ck'], 11),
+  W('tack', ['t', 'a', 'ck'], 11, '📌'),
+  // lesson 12
+  W('tag', ['t', 'a', 'g'], 12, '🏷️'),
+  W('wag', ['w', 'a', 'g'], 12),
+  W('ram', ['r', 'a', 'm'], 12, '🐏'),
+  // lesson 13
+  W('Ben', ['B', 'e', 'n'], 13),
+  W('peck', ['p', 'e', 'ck'], 13),
+  W('beg', ['b', 'e', 'g'], 13),
+  W('set', ['s', 'e', 't'], 13),
+  W('hit', ['h', 'i', 't'], 13),
+  // lesson 15
+  W('web', ['w', 'e', 'b'], 15, '🕸️'),
+  W('neck', ['n', 'e', 'ck'], 15),
+  W('den', ['d', 'e', 'n'], 15),
+  W('men', ['m', 'e', 'n'], 15),
+  W('met', ['m', 'e', 't'], 15),
+  W('mess', ['m', 'e', 'ss'], 15),
+  W('yet', ['y', 'e', 't'], 15),
+  W('sell', ['s', 'e', 'll'], 15),
+  W('Bess', ['B', 'e', 'ss'], 15),
+  W('Deb', ['D', 'e', 'b'], 15),
+  // lesson 17
+  W('lick', ['l', 'i', 'ck'], 17, '👅'),
+  W('lid', ['l', 'i', 'd'], 17),
+  W('fig', ['f', 'i', 'g'], 17),
+  W('dip', ['d', 'i', 'p'], 17),
+  W('rip', ['r', 'i', 'p'], 17),
+  W('tip', ['t', 'i', 'p'], 17),
+  W('fit', ['f', 'i', 't'], 17),
+  W('kit', ['k', 'i', 't'], 17),
+  W('pit', ['p', 'i', 't'], 17),
+  W('hiss', ['h', 'i', 'ss'], 17),
+  W('quiz', ['qu', 'i', 'z'], 17),
+  // lesson 20
+  W('dock', ['d', 'o', 'ck'], 20),
+  W('nod', ['n', 'o', 'd'], 20),
+  W('rod', ['r', 'o', 'd'], 20, '🎣'),
+  W('hog', ['h', 'o', 'g'], 20, '🐖'),
+  W('lot', ['l', 'o', 't'], 20),
+  W('cod', ['c', 'o', 'd'], 20, '🐟'),
+  W('cog', ['c', 'o', 'g'], 20, '⚙️'),
 ];
 
 export const WORDS_BY_ID: ReadonlyMap<string, Word> = new Map(WORDS.map((w) => [w.id, w]));
