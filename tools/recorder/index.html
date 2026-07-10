@@ -377,7 +377,15 @@ async function processTake(blob) {
     src.start();
     const mono = (await offline.startRendering()).getChannelData(0);
 
-    const trimmed = trimSilence(mono);
+    // edge guard: the mouse/key click that starts or stops a take lands in
+    // the first/last ~100ms — shave it before trimming so the loud transient
+    // never survives (speech starts much later than 120ms after the click)
+    const guard = Math.floor(SAMPLE_RATE * 0.12);
+    const guarded = mono.length > SAMPLE_RATE * 0.6
+      ? mono.subarray(guard, mono.length - guard)
+      : mono;
+
+    const trimmed = trimSilence(guarded);
     if (trimmed.length < SAMPLE_RATE * 0.05) {
       setStatus('That take was silent — try again a little louder.');
       return;
