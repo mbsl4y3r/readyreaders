@@ -143,11 +143,18 @@ forgiving for a 6-year-old.
   level unlocking, home-recording voice recorder tool (`npm run recorder`).
 - **Phase 6** — the Games Arcade: hub + 12 mini-games, Play Pass pearl economy,
   per-game hi-scores, wacky announce voice hooks.
-- **Phase 7 (latest)** — playtest polish: Reef Racer rebuilt as a real
+- **Phase 7** — playtest polish: Reef Racer rebuilt as a real
   pseudo-3D Pole-Position racer (forgiving joyride), 5 more games (Critter
   Whack, Bubble Pop, Memory Shells, Treasure Catch, Star Echo → 17 total),
   Play Pass shortened to 5 minutes, 10 new princess gowns/color dresses,
   compact 5-column arcade grid.
+- **Phase 8 (latest)** — THE REAL BOOK, transcribed: all 182 photographed
+  pages (lessons 12–120) machine-read and folded into the game. Lesson spine
+  corrected against the book's teacher pages, word bank grew 477 → 1,154
+  words, 89 → 218 sentences (verbatim from the book), and every lesson 21–120
+  now drills the book's actual sound-of-the-day with check-outs built from its
+  real word lists. Waiting on: photos of lessons 1–20 to make the early road
+  just as faithful.
 
 ---
 
