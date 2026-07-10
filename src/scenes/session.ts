@@ -91,7 +91,12 @@ export class SessionScene extends Phaser.Scene {
     drawRealmBackground(this, theme.bgTop, theme.bgBottom, theme.ambient);
     this.cameras.main.fadeIn(300);
     // each base realm has its own track (drop-in, optional)
-    playMusic(this.lesson ? baseRealmFor(regionForLesson(this.lesson)) : theme.id);
+    if (this.lesson) {
+      const region = regionForLesson(this.lesson);
+      playMusic(`region-${region.id}`, baseRealmFor(region));
+    } else {
+      playMusic(theme.id);
+    }
 
     // home button — she can always leave, mid-session exits are fine
     const home = makeButton(this, 62, 52, '🏠', () => this.scene.start('map'), {

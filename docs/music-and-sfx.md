@@ -33,6 +33,26 @@ Tips that improve Gemini's output:
 - If it's too busy, add "sparse arrangement, fewer instruments".
 - Consistency across tracks: add "same cozy storybook style as before".
 
+### Region tracks (optional, drop-in) — the Reading Road's 12 lands
+
+The map and reading sessions now look for `region-<id>.mp3` first and fall
+back to the base realm track (cove/woods/castle) when it doesn't exist — so
+add these in any order, whenever. Regions 1–3 ARE the base realms (no file
+needed). Same rules: instrumental, loopable, 60–90s, quiet under a child
+reading aloud. Save into `public/audio/music/`:
+
+| File | Region | Paste this prompt into Gemini |
+| --- | --- | --- |
+| `region-4.mp3` | 🍭 Candy Cliffs (the banger!) | Bouncy candy-land instrumental loop for a children's game: toy piano and celesta melody, pizzicato strings, bubbly percussion like popping candy, bright glockenspiel sparkles. Sweet, giggly and joyful — the most fun land in the game — but still gentle enough to talk over. 100 bpm, major key, no vocals. Seamless loop, 75 seconds. |
+| `region-5.mp3` | 🌈 Rainbow Meadow | Sunny meadow instrumental loop for a kids' game: ukulele strums, light airy flute like birdsong, soft hand claps, warm glockenspiel. Feels like butterflies in a field of flowers after rain. 90 bpm, major key, no vocals, gentle under speech. Seamless loop, 75 seconds. |
+| `region-6.mp3` | 🚀 Star Sky | Dreamy outer-space instrumental loop for a children's game: soft warm synth pads, slow twinkling arpeggios, gentle celesta, a feeling of floating among friendly stars. Wonder, not tension. 75 bpm, major key, no vocals, quiet under speech. Seamless loop, 90 seconds. |
+| `region-7.mp3` | ❄️ Snowy Summit | Cozy winter instrumental loop for a kids' game: soft sleigh bells, music box melody, warm low strings like a blanket, gentle snowfall feel. Hot-cocoa cozy, never cold or sad. 80 bpm, major key, no vocals, quiet under speech. Seamless loop, 75 seconds. |
+| `region-8.mp3` | 🧚 Fairy Garden | Tiny magical garden instrumental loop for a children's game: harp arpeggios, celesta, fluttering flute trills like fairy wings, delicate chimes. Sparkly, dainty, full of wonder. 85 bpm, major key, no vocals, gentle under speech. Seamless loop, 75 seconds. |
+| `region-9.mp3` | 🦕 Dino Valley | Playful jungle-adventure instrumental loop for a kids' game: marimba melody, soft jungle hand drums, low friendly bassoon stomps like a baby dinosaur walking, bird-call flourishes. Adventurous but cuddly. 95 bpm, major key, no vocals, gentle under speech. Seamless loop, 75 seconds. |
+| `region-10.mp3` | 🏴‍☠️ Pirate Bay | Gentle sea-shanty instrumental loop for a children's game: swaying 6/8 accordion, plucked fiddle, soft concertina, a hint of creaking-ship rhythm. Friendly treasure-hunt fun, never menacing. 90 bpm, major key, no vocals, quiet under speech. Seamless loop, 75 seconds. |
+| `region-11.mp3` | ☁️ Cloud Kingdom | Floaty daydream instrumental loop for a kids' game: soft warm pads, slow harp glissandi, weightless vibraphone melody, like bouncing gently on clouds. Airy and calm. 70 bpm, major key, no vocals, quiet under speech. Seamless loop, 90 seconds. |
+| `region-12.mp3` | 💎 Crystal Caves | Glittering crystal-cave instrumental loop for a children's game: glassy bells, vibraphone, echoing soft chimes with a touch of reverb like a sparkling cavern, slow warm bass. Magical, a little awe-struck — the road's grand finale land. 75 bpm, major key, no vocals, quiet under speech. Seamless loop, 90 seconds. |
+
 ## Sound effects (Kenney — free, CC0)
 
 Gemini can't make sfx yet, so grab these from [kenney.nl/assets](https://kenney.nl/assets)

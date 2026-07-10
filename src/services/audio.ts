@@ -279,14 +279,22 @@ function stopCurrent(fade: boolean): void {
   }
 }
 
-/** Start (or keep) the looping track for this part of the game. */
-export function playMusic(id: string): void {
+/**
+ * Start (or keep) the looping track for this part of the game.
+ * `fallbackId` plays instead when `id`'s file doesn't exist — lets regions
+ * have their own optional tracks that degrade to the base realm's music.
+ */
+export function playMusic(id: string, fallbackId?: string): void {
   if (!ctx) return;
-  if (musicId === id && musicSource) return; // already playing this one
+  if ((musicId === id || (fallbackId && musicId === fallbackId)) && musicSource) return;
   musicId = id;
   if (!musicEnabled) return;
   const token = ++musicToken;
   void loadClip('music', id).then((buffer) => {
+    if (!buffer && fallbackId && token === musicToken && musicId === id) {
+      playMusic(fallbackId); // no region track — degrade to the base realm's
+      return;
+    }
     if (!ctx || !buffer) return;
     if (token !== musicToken || musicId !== id) return; // superseded meanwhile
     stopCurrent(true);

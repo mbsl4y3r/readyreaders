@@ -7,27 +7,31 @@ This is the "what's done / what's left / what **you** need to do" board. The
 
 ---
 
-## 🌅 Do in the morning (Matthew)
+## 🌅 Matthew's list (updated after the book integration)
 
-1. **Test the arcade!** Map → 🕹️ **Games Arcade** (new gold button, left side).
-   - Fastest way to test all 12: open the parent corner (⚙️, bottom-right) →
-     🐞 debug chip → password **`bingo`**. That unlocks every game + gives 9999
-     pearls, so every cabinet is lit and you can buy Play Passes freely.
-   - Each game: tap a cabinet → buy a **Play Pass** (10 🦪 = 5 min of any game)
-     → play. Higher score is always better; new bests get a 🏆.
-   - Tell me which games feel good, too hard, too easy, or janky and I'll tune them.
-2. **Record the wacky arcade announce voices** (your idea 🎙️). 13 short lines,
-   silly announcer voice — full list below in "Arcade voice lines to record."
-   Use `npm run recorder` (or the Codespaces recorder) — the ids are already in
-   the recording script.
-3. **Review + generate the arcade music.** New Gemini prompt for `arcade.mp3` is
-   in `docs/music-and-sfx.md`. Generate it, drop it in `public/audio/music/`,
-   commit. (Everything still works without it — it's just silence until then.)
-4. **(Optional) Arcade sound effects.** The arcade reuses our existing 3 chimes,
-   so nothing is required. If you want extra juice, `docs/music-and-sfx.md` lists
-   the Kenney CC0 packs to audition.
-5. **Keep chipping at the word/phrase/sentence recordings** whenever you have time
-   — the game TTS-covers anything not yet recorded, so there's no rush.
+1. **Record the missing LETTER SOUNDS first** — these are the only clips with
+   NO fallback (a missing one is just silent in build-a-word). 101 of 139 are
+   unrecorded, but Evie only meets them as the road reaches them, so do them
+   in this order (first lesson that needs each):
+   - Soon (lessons 22–45): `es` (22) · `'s`, `n't` (32) · `ng` (37) · `nd`,
+     `nt` (41) · `er`, `nch`, `nk` (43) · `ct`, `ft`, `pt`, `xt` (45)
+   - Next (47–66): `sk sp st` · `lb ld lf lk` · `lm lp lt mp tch` ·
+     `dge nce nge nse nc` · the blends (`bl br cl cr dr fl fr gl gr pl pr
+     sl sm sn shr spl spr sc scr str sw gw thr tr tw dw`) · `a_e` (66)
+   - Later (70+): vowel teams (`ai ay ey ei eigh au aw ar ee ea e_e ie uy
+     i_e igh augh gh ough o_e oa old ow oo ou oi oy u_e ue ui eu ew ear ir
+     or ur le tle ci si ti kn mb wr bt`)
+   `npm run recorder` has them all queued with the say-the-pure-sound notes.
+2. **Music with Gemini** — prompts live in `docs/music-and-sfx.md`:
+   - `arcade.mp3` (the only wired track still missing)
+   - NEW: optional `region-4.mp3` … `region-12.mp3` — each Reading Road land
+     can now have its own track (falls back to cove/woods/castle until the
+     file exists). Candy Cliffs (`region-4`) is the banger — start there.
+3. **(Optional) `newbest.mp3` sfx** — arcade high-score sting (Kenney Music
+   Jingles); the synth chime covers it meanwhile.
+4. **Keep chipping at word/phrase/sentence recordings** whenever — now 1,950
+   clips total after the book integration (TTS covers all of these until
+   recorded, so zero rush).
 
 ### Arcade voice lines to record (id → line, wacky announcer voice)
 
