@@ -309,7 +309,7 @@ export const WORDS: Word[] = [
   W('fact', ['f', 'a', 'ct'], 45),
 
   // ---- Level 5 · book lessons 46–65 (final clusters, tch, dge/nce, blends) ----
-  W('slip', ['sl', 'i', 'p'], 47),
+  W('slip', ['sl', 'i', 'p'], 61),
   W('spell', ['sp', 'e', 'll'], 47, '✨'),
   W('spill', ['sp', 'i', 'll'], 47),
   W('stem', ['st', 'e', 'm'], 47, '🌱'),
