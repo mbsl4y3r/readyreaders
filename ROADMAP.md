@@ -22,11 +22,8 @@ This is the "what's done / what's left / what **you** need to do" board. The
      i_e igh augh gh ough o_e oa old ow oo ou oi oy u_e ue ui eu ew ear ir
      or ur le tle ci si ti kn mb wr bt`)
    `npm run recorder` has them all queued with the say-the-pure-sound notes.
-2. **Music with Gemini** — prompts live in `docs/music-and-sfx.md`:
-   - `arcade.mp3` (the only wired track still missing)
-   - NEW: optional `region-4.mp3` … `region-12.mp3` — each Reading Road land
-     can now have its own track (falls back to cove/woods/castle until the
-     file exists). Candy Cliffs (`region-4`) is the banger — start there.
+2. ~~Music with Gemini~~ **DONE 🎶** — arcade + all 9 region tracks are in;
+   every land on the Reading Road now has its own music.
 3. **(Optional) `newbest.mp3` sfx** — arcade high-score sting (Kenney Music
    Jingles); the synth chime covers it meanwhile.
 4. **Keep chipping at word/phrase/sentence recordings** whenever — now 1,950
