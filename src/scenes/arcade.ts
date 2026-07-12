@@ -171,10 +171,10 @@ export class ArcadeScene extends Phaser.Scene {
       const secs = Math.min(Math.ceil((until - now) / 1000), Math.ceil(PASS_MS / 1000));
       const m = Math.floor(secs / 60);
       const s = secs % 60;
-      this.passText.setText(`⏳ ${m}:${s.toString().padStart(2, '0')} — play away!`);
+      this.passText.setText(`⏳ ${m}:${s.toString().padStart(2, '0')} left`);
       this.passText.setColor('#a7f3d0');
     } else {
-      this.passText.setText(`Play pass: ${PASS_PEARLS} 🦪`);
+      this.passText.setText(`Pass: ${PASS_PEARLS} 🦪`);
       this.passText.setColor('#ffe9a8');
     }
   }
