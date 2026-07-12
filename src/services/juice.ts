@@ -5,6 +5,7 @@
  * they're easy to test; scenes call them and render the results.
  */
 import type { ProgressData } from './progress';
+import type { CharacterId } from '../avatar/catalog';
 import { LEVELS, SESSIONS_TO_PASS } from '../content/levels';
 
 // ---- level progression (read to open the next island) -------------------
@@ -138,13 +139,20 @@ export function addInkyXp(progress: ProgressData, amount: number): InkyResult {
   return { leveledUp: level > before, level, gift };
 }
 
-/** A friendly title Inky earns as it grows — shown by its portrait. */
-export function inkyTitle(level: number): string {
-  const titles = [
-    'Little Inky', 'Little Inky', 'Curious Inky', 'Brave Inky', 'Clever Inky',
-    'Sparkly Inky', 'Star Inky', 'Super Inky', 'Royal Inky', 'Legendary Inky',
+/** The pet's name for this reader — Inky the octopus (girl) or Rex the T-rex (boy). */
+export function petName(character: CharacterId): string {
+  return character === 'boy' ? 'Rex' : 'Inky';
+}
+
+/** A friendly title the pet earns as it grows — shown by its portrait. */
+export function petTitle(character: CharacterId, level: number): string {
+  const name = petName(character);
+  const adjectives = [
+    'Little', 'Little', 'Curious', 'Brave', 'Clever',
+    'Sparkly', 'Star', 'Super', 'Royal', 'Legendary',
   ];
-  return titles[Math.min(titles.length - 1, Math.max(0, level - 1))]!;
+  const adj = adjectives[Math.min(adjectives.length - 1, Math.max(0, level - 1))]!;
+  return `${adj} ${name}`;
 }
 
 // ---- arcade tickets ------------------------------------------------------

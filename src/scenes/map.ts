@@ -38,14 +38,14 @@ export class MapScene extends Phaser.Scene {
     this.cameras.main.fadeIn(300);
     playMusic(`region-${region.id}`, baseRealmFor(region));
 
-    readingText(this, GAME_W / 2, 56, "Evie's Reading Realms", 40, '#ffe9a8');
+    readingText(this, GAME_W / 2, 56, 'Reading Realms', 40, '#ffe9a8');
 
     // status row under the title: reading streak · arcade tickets · Inky level
     emojiText(this, GAME_W / 2 - 132, 100, '🔥', 26);
     readingText(this, GAME_W / 2 - 104, 100, `${progress.streak.days}`, 24, '#ffffff').setOrigin(0, 0.5);
     emojiText(this, GAME_W / 2 - 20, 100, '🎟️', 24);
     readingText(this, GAME_W / 2 + 8, 100, `${progress.tickets}`, 24, '#ffffff').setOrigin(0, 0.5);
-    emojiText(this, GAME_W / 2 + 96, 100, '🐙', 24);
+    emojiText(this, GAME_W / 2 + 96, 100, progress.avatar.character === 'boy' ? '🦖' : '🐙', 24);
     readingText(this, GAME_W / 2 + 124, 100, `Lv${progress.inky.level}`, 22, '#ffffff').setOrigin(0, 0.5);
 
     // seasonal badge, tucked bottom-left away from the Continue button

@@ -94,7 +94,7 @@ export class VoyageScene extends Phaser.Scene {
     this.lesson = loadProgress().bookLesson;
 
     readingText(this, GAME_W / 2, 64, 'The Placement Voyage ⛵', 40, '#ffe9a8');
-    readingText(this, GAME_W / 2, 116, 'Sail to the lesson Evie is on in her book.', 26, '#ffffffcc');
+    readingText(this, GAME_W / 2, 116, "Sail to the lesson you're on in your book.", 26, '#ffffffcc');
 
     // big current-lesson readout: the number is the thing being chosen,
     // so it gets the largest type on the screen

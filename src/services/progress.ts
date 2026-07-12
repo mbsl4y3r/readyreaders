@@ -158,6 +158,7 @@ export function loadProgress(): ProgressData {
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
     data.created ??= data.placed; // players from before the creator skip it
+    data.avatar.character ??= 'girl'; // pre-character saves are the original girl
     data.avatar.face ??= null;
     data.avatar.glasses ??= null;
     data.avatar.earrings ??= null;
@@ -220,6 +221,7 @@ export function importCode(code: string): ProgressData | null {
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
     data.created ??= data.placed;
+    data.avatar.character ??= 'girl';
     data.avatar.face ??= null;
     data.avatar.glasses ??= null;
     data.avatar.earrings ??= null;

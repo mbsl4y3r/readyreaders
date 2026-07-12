@@ -18,12 +18,15 @@ import Phaser from 'phaser';
 import {
   CREATION_CATEGORIES,
   starterItems,
+  defaultAvatar,
+  defaultBoyAvatar,
   type AvatarConfig,
+  type CharacterId,
   type CosmeticCategory,
   type CosmeticItem,
   type SkinId,
 } from '../avatar/catalog';
-import { paintEvie, paintInky } from '../avatar/paint';
+import { paintReader, paintPet } from '../avatar/paint';
 import { loadProgress, saveProgress } from '../services/progress';
 import { speakUI, chime, playMusic } from '../services/audio';
 import {
@@ -50,38 +53,43 @@ const SKINS: { id: SkinId; color: number }[] = [
   { id: 'cocoa', color: 0x8d5a3b },
 ];
 
-/** Kid-facing prompt per creator step (skin step handled separately). */
+/** Kid-facing prompt per creator step (character/skin steps handled separately). */
 const PROMPTS: Partial<Record<CosmeticCategory, string>> = {
   hairStyle: 'Pick a hairstyle',
   hairColor: 'Choose a hair color',
   outfit: 'Dress up!',
   face: 'Add a face',
-  petColor: 'Your pet Inky',
+  petColor: 'Meet your pet!',
 };
 
-/** One step of the walkthrough: the skin swatches, or one cosmetic category. */
+/** One walkthrough step: the character picker, the skin swatches, or a category. */
 interface StepDef {
-  /** null marks the skin-swatch step (identity, not a cosmetic slot). */
-  category: CosmeticCategory | null;
+  kind: 'character' | 'skin' | 'cosmetic';
+  /** Only set for a cosmetic step. */
+  category?: CosmeticCategory;
   prompt: string;
   /** Voice-clip id for the prompt — a pre-reader hears every step (clip-manifest). */
   clip: string;
 }
 
 /**
- * Step order: skin first, then exactly the catalog's CREATION_CATEGORIES
- * (hairStyle, hairColor, outfit, face, petColor). Built from the contract so
- * the flow stays honest if that list is ever reordered or extended. Each
- * step's `clip` mirrors an entry in scripts/clip-manifest.ts so the prompt is
- * spoken (recording or TTS) — the creator is a solo, pre-reading moment.
+ * Step order: WHO first (girl or boy — swaps the whole outfit world + pet),
+ * then skin, then exactly the catalog's CREATION_CATEGORIES (hairStyle,
+ * hairColor, outfit, face, petColor). Each step's `clip` mirrors an entry in
+ * scripts/clip-manifest.ts so the prompt is spoken (recording or TTS).
  */
 const STEPS: StepDef[] = [
-  { category: null, prompt: 'Pick your skin', clip: 'creator-step-skin' },
-  ...CREATION_CATEGORIES.map((c) => ({
-    category: c,
-    prompt: PROMPTS[c] ?? c,
-    clip: `creator-step-${c}`,
-  })),
+  { kind: 'character', prompt: 'Who are you?', clip: 'creator-step-character' },
+  { kind: 'skin', prompt: 'Pick your skin', clip: 'creator-step-skin' },
+  ...CREATION_CATEGORIES.map(
+    (c): StepDef => ({ kind: 'cosmetic', category: c, prompt: PROMPTS[c] ?? c, clip: `creator-step-${c}` }),
+  ),
+];
+
+/** The two portraits the character step offers — a live girl and boy. */
+const CHARACTERS: { id: CharacterId; label: string; make: () => AvatarConfig }[] = [
+  { id: 'girl', label: 'Girl', make: defaultAvatar },
+  { id: 'boy', label: 'Boy', make: defaultBoyAvatar },
 ];
 
 // ---- stage geometry --------------------------------------------------------
@@ -147,10 +155,10 @@ export class CreatorScene extends Phaser.Scene {
     playMusic('wardrobe');
     ensureSparkTexture(this);
 
-    readingText(this, GAME_W / 2, 56, 'Make your Evie! ✨', 40, '#ffe9a8');
+    readingText(this, GAME_W / 2, 56, 'Make your reader! ✨', 40, '#ffe9a8');
     // welcome, then name the very first step so a pre-reader knows what to do
     // (later steps are voiced on the step change — see goToStep)
-    void speakUI('creator-welcome', "Let's make your very own Evie!").then(() => {
+    void speakUI('creator-welcome', "Let's make your very own reader!").then(() => {
       if (this.alive && this.stepIndex === 0) this.speakStep();
     });
 
@@ -169,7 +177,7 @@ export class CreatorScene extends Phaser.Scene {
     pool.fillStyle(0xffffff, 0.08);
     pool.fillEllipse(EVIE_X + 40, 622, 320, 60);
 
-    paintEvie(this, this.working, EVIE_KEY);
+    paintReader(this, this.working, EVIE_KEY);
     this.evieImg = this.add.image(EVIE_X, EVIE_Y, EVIE_KEY);
     // Painter renders at 2× resolution — scale from the texture's real pixel
     // height, or Evie doubles in size. Display height lands at EVIE_H.
@@ -185,7 +193,7 @@ export class CreatorScene extends Phaser.Scene {
       }),
     );
 
-    paintInky(this, this.working, INKY_KEY);
+    paintPet(this, this.working, INKY_KEY);
     this.inkyImg = this.add.image(INKY_X, INKY_Y, INKY_KEY);
     this.inkyScale = INKY_H / this.inkyImg.height;
     this.inkyImg.setScale(this.inkyScale);
@@ -204,10 +212,10 @@ export class CreatorScene extends Phaser.Scene {
 
   /** Repaint both textures from the working look and keep their display size. */
   private repaintAvatars(): void {
-    paintEvie(this, this.working, EVIE_KEY);
+    paintReader(this, this.working, EVIE_KEY);
     this.evieImg.setTexture(EVIE_KEY);
     this.evieImg.setScale(EVIE_H / this.evieImg.height);
-    paintInky(this, this.working, INKY_KEY);
+    paintPet(this, this.working, INKY_KEY);
     this.inkyImg.setTexture(INKY_KEY);
     this.inkyImg.setScale(this.inkyScale);
   }
@@ -260,10 +268,67 @@ export class CreatorScene extends Phaser.Scene {
     layer.add(readingText(this, RACK_CX, 188, step.prompt, 30, '#ffe9a8'));
     this.buildDots(layer);
 
-    if (step.category === null) this.buildSkinRow(layer);
-    else this.buildChips(layer, step.category, animateChips);
+    if (step.kind === 'character') this.buildCharacterRow(layer);
+    else if (step.kind === 'skin') this.buildSkinRow(layer);
+    else this.buildChips(layer, step.category!, animateChips);
 
     this.buildNav(layer);
+  }
+
+  /** Two live portraits — tap to become the girl (mermaid + Inky) or boy (hero + Rex). */
+  private buildCharacterRow(layer: Phaser.GameObjects.Container): void {
+    const CW = 150;
+    const CH = 214;
+    const cy = 396; // sits clear of the dots above (226) and the nav below (650)
+    CHARACTERS.forEach((ch, i) => {
+      const x = RACK_CX + (i === 0 ? -100 : 100); // 200px apart → a clear 50px gap
+      const card = this.add.container(x, cy);
+      const selected = this.working.character === ch.id;
+
+      const g = this.add.graphics();
+      // soft drop shadow gives the card real presence on the panel
+      g.fillStyle(0x1c1230, 0.35);
+      g.fillRoundedRect(-CW / 2 + 2, -CH / 2 + 6, CW, CH, 22);
+      // card face — quiet by default, warm gold wash when chosen
+      g.fillStyle(selected ? 0xffe9a8 : 0xffffff, selected ? 0.16 : 0.06);
+      g.fillRoundedRect(-CW / 2, -CH / 2, CW, CH, 22);
+      g.lineStyle(selected ? 4 : 2, 0xffe9a8, selected ? 1 : 0.28);
+      g.strokeRoundedRect(-CW / 2, -CH / 2, CW, CH, 22);
+      // a little stage the portrait stands on
+      g.fillStyle(0x000000, 0.16);
+      g.fillEllipse(0, CH / 2 - 44, CW * 0.62, 16);
+      card.add(g);
+
+      const key = `creator-pick-${ch.id}`;
+      paintReader(this, ch.make(), key);
+      const img = this.add.image(0, -14, key);
+      img.setScale(158 / img.height);
+      card.add(img);
+
+      card.add(readingText(this, 0, CH / 2 - 22, ch.label, 24, selected ? '#ffe9a8' : '#ffffffcc'));
+
+      // one clear "chosen" mark: a gold check badge, top-right
+      if (selected) {
+        const badge = this.add.graphics();
+        badge.fillStyle(0xffe9a8, 1);
+        badge.fillCircle(CW / 2 - 16, -CH / 2 + 16, 14);
+        card.add(badge);
+        card.add(readingText(this, CW / 2 - 16, -CH / 2 + 16, '✓', 20, '#7a4a2a'));
+      }
+
+      card.setSize(CW, CH);
+      // explicit CENTERED hit area — a bare container hit area anchors top-left,
+      // which would drop taps just left/above the card's middle.
+      card.setInteractive(
+        new Phaser.Geom.Rectangle(-CW / 2, -CH / 2, CW, CH),
+        Phaser.Geom.Rectangle.Contains,
+      );
+      card.on('pointerover', () => !selected && card.setScale(1.03));
+      card.on('pointerout', () => card.setScale(1));
+      card.on('pointerup', () => this.chooseCharacter(ch.id));
+      layer.add(card);
+      popIn(this, card, i * 90);
+    });
   }
 
   /**
@@ -322,7 +387,7 @@ export class CreatorScene extends Phaser.Scene {
     category: CosmeticCategory,
     animate: boolean,
   ): void {
-    const items: (CosmeticItem | null)[] = starterItems(category);
+    const items: (CosmeticItem | null)[] = starterItems(category, this.working.character);
     // Face is optional: a bare face (face=null) is a real, valid choice.
     if (category === 'face') items.push(null);
 
@@ -399,6 +464,19 @@ export class CreatorScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------- choices
+
+  /**
+   * Swap the whole reader. A boy can't wear a gown and a girl can't wear a
+   * firefighter coat, so picking a character resets outfit/hair/pet to that
+   * character's defaults — but keeps the skin and face they may have set (both
+   * shared identity, not outfit). Same character = no-op.
+   */
+  private chooseCharacter(id: CharacterId): void {
+    if (this.working.character === id) return;
+    const base = CHARACTERS.find((c) => c.id === id)!.make();
+    this.working = { ...base, skin: this.working.skin, face: this.working.face };
+    this.onChoiceMade();
+  }
 
   private chooseSkin(id: SkinId): void {
     if (this.working.skin === id) return;

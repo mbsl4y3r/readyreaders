@@ -7,6 +7,8 @@ import {
   starterItems,
   starterCosmetics,
   defaultAvatar,
+  defaultBoyAvatar,
+  type CharacterId,
   type CosmeticCategory,
 } from '../src/avatar/catalog';
 
@@ -50,9 +52,22 @@ describe('wardrobe catalog integrity', () => {
     }
   });
 
-  it('every creation category offers at least two starter choices', () => {
-    for (const cat of CREATION_CATEGORIES) {
-      expect(starterItems(cat).length, `${cat} needs starter options`).toBeGreaterThanOrEqual(2);
+  it('every creation category offers at least two starter choices for both characters', () => {
+    for (const character of ['girl', 'boy'] as CharacterId[]) {
+      for (const cat of CREATION_CATEGORIES) {
+        expect(
+          starterItems(cat, character).length,
+          `${cat} needs starter options for ${character}`,
+        ).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
+  it('the boy default avatar wears only owned (free) cosmetics', () => {
+    const owned = new Set(starterCosmetics());
+    const a = defaultBoyAvatar();
+    for (const id of [a.hairStyle, a.hairColor, a.outfit, a.petColor]) {
+      expect(owned.has(id), `boy default "${id}" must be free`).toBe(true);
     }
   });
 

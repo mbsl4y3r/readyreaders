@@ -149,7 +149,16 @@ forgiving for a 6-year-old.
   Whack, Bubble Pop, Memory Shells, Treasure Catch, Star Echo → 17 total),
   Play Pass shortened to 5 minutes, 10 new princess gowns/color dresses,
   compact 5-column arcade grid.
-- **Phase 8 (latest)** — THE REAL BOOK, transcribed: all 182 photographed
+- **Phase 9 (latest)** — TWO READERS: the game is now **Reading Realms** (name-
+  neutral for any child). A first "Who are you?" step picks **girl** (mermaid /
+  princess / fairy + Inky the octopus) or **boy** (superhero / real-life jobs +
+  **Rex the T-rex**). Each reader gets its own outfit universe — 8 hero suits
+  (Captain Bolt, Blaze, Frostbite…), 8 jobs (firefighter, police, astronaut,
+  doctor…), 3 everyday, 6 short hairstyles, hero/job toppers — all in the same
+  hand-drawn chibi style, wardrobe-filtered so nobody sees the other world.
+  Switchable anytime in the parent corner. Everything shared (skin, hair color,
+  faces) stays shared. Reading, lessons, arcade — identical for both.
+- **Phase 8** — THE REAL BOOK, transcribed: all 182 photographed
   pages (lessons 12–120) machine-read and folded into the game. Lesson spine
   corrected against the book's teacher pages, word bank grew 477 → 1,154
   words, 89 → 218 sentences (verbatim from the book), and every lesson 21–120

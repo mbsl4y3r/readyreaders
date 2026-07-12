@@ -23,7 +23,8 @@ import { WORDS_BY_ID } from '../content/words';
 import {
   recordReadingDay,
   addInkyXp,
-  inkyTitle,
+  petName,
+  petTitle,
   newlyEarnedStickers,
   INKY_XP_PER_SESSION,
 } from '../services/juice';
@@ -370,8 +371,10 @@ export class SessionScene extends Phaser.Scene {
       toasts.push({ emoji: b.emoji, label: b.label });
     });
     if (streak?.milestone) toasts.push({ emoji: '🔥', label: `${streak.days}-day streak!` });
-    if (inky.leveledUp) toasts.push({ emoji: '🐙', label: `${inkyTitle(inky.level)}!` });
-    if (inky.gift) toasts.push({ emoji: '🎁', label: 'Inky got a treat!' });
+    const character = progress.avatar.character;
+    const petEmoji = character === 'boy' ? '🦖' : '🐙';
+    if (inky.leveledUp) toasts.push({ emoji: petEmoji, label: `${petTitle(character, inky.level)}!` });
+    if (inky.gift) toasts.push({ emoji: '🎁', label: `${petName(character)} got a treat!` });
 
     const freshStickers = newlyEarnedStickers(progress);
     freshStickers.forEach((s) => {

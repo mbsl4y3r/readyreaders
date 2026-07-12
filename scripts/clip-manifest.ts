@@ -45,7 +45,7 @@ export function buildManifest(): Clip[] {
   // (tests/clip-manifest.test.ts enforces this so new lines are never
   // silently missing from the family recording script)
   const ui: [string, string][] = [
-    ['welcome', "Welcome to Evie's Reading Realms!"],
+    ['welcome', 'Welcome to Reading Realms!'],
     ['lets-read', "Let's read!"],
     ['feed-me', 'Feed me the word:'],
     ['yum', 'Yum! Thank you!'],
@@ -86,21 +86,22 @@ export function buildManifest(): Clip[] {
     ['story-locked', 'Keep adventuring — this story unlocks soon!'],
     ['story-the-end', 'The end! You read the whole story!'],
     // wardrobe
-    ['wardrobe-welcome', "Evie's wardrobe! Let's play dress-up!"],
+    ['wardrobe-welcome', "Your wardrobe! Let's play dress-up!"],
     ['new-outfit', 'Ooh! You look wonderful!'],
     ['need-pearls', 'Read to earn more pearls!'],
     ['wardrobe-nudge', "Let's go read to earn more pearls!"],
     // first-run character creator
-    ['creator-welcome', "Let's make your very own Evie!"],
+    ['creator-welcome', "Let's make your very own reader!"],
     ['creator-done', "Yay! Let's start your adventure!"],
     // one spoken prompt per creator step (a pre-reader plays this solo) —
     // keep these in sync with the PROMPTS/STEPS in src/scenes/creator.ts
+    ['creator-step-character', 'Who are you?'],
     ['creator-step-skin', 'Pick your skin'],
     ['creator-step-hairStyle', 'Pick a hairstyle'],
     ['creator-step-hairColor', 'Choose a hair color'],
     ['creator-step-outfit', 'Dress up!'],
     ['creator-step-face', 'Add a face'],
-    ['creator-step-petColor', 'Your pet Inky'],
+    ['creator-step-petColor', 'Meet your pet!'],
     // level progression — the big "you opened a new island" cheer
     ['level-up', 'You passed the level! A brand new island just opened!'],
     // the Reading Road — daily lesson gate + journey milestones

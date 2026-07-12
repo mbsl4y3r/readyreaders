@@ -12,7 +12,7 @@
  * rendered inside the frame (backdrop + avatars + stamps) becomes the PNG.
  */
 import Phaser from 'phaser';
-import { paintEvie, paintInky } from '../avatar/paint';
+import { paintReader, paintPet } from '../avatar/paint';
 import { loadProgress, saveProgress, type ProgressData } from '../services/progress';
 import { chime, speakUI } from '../services/audio';
 import {
@@ -257,7 +257,7 @@ export class PhotoBoothScene extends Phaser.Scene {
   // ----------------------------------------------------------------- avatars
 
   private buildAvatars(): void {
-    paintEvie(this, this.progress.avatar, EVIE_KEY);
+    paintReader(this, this.progress.avatar, EVIE_KEY);
     const evie = this.add.image(300, 440, EVIE_KEY).setDepth(4);
     evie.setScale(330 / evie.height);
     this.tweens.add({
@@ -269,7 +269,7 @@ export class PhotoBoothScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    paintInky(this, this.progress.avatar, INKY_KEY);
+    paintPet(this, this.progress.avatar, INKY_KEY);
     const inky = this.add.image(442, 553, INKY_KEY).setDepth(3);
     inky.setScale(95 / inky.height);
     this.tweens.add({

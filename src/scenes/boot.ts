@@ -16,8 +16,8 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     drawRealmBackground(this, THEMES.cove.bgTop, THEMES.castle.bgBottom, ['✨', '🫧', '⭐']);
 
-    emojiText(this, GAME_W / 2, 170, '🧜‍♀️📖✨', 84);
-    readingText(this, GAME_W / 2, 300, "Evie's Reading Realms", 60, '#ffe9a8');
+    emojiText(this, GAME_W / 2, 170, '🦸📖🧜‍♀️', 84);
+    readingText(this, GAME_W / 2, 300, 'Reading Realms', 60, '#ffe9a8');
 
     const star = emojiText(this, GAME_W / 2, 470, '⭐', 130).setInteractive({ useHandCursor: true });
     this.tweens.add({
@@ -34,7 +34,7 @@ export class BootScene extends Phaser.Scene {
       unlockAudio();
       const progress = loadProgress();
       setMusicEnabled(progress.settings.musicOn); // honor the parent toggle from launch
-      void speakUI('welcome', "Welcome to Evie's Reading Realms!");
+      void speakUI('welcome', 'Welcome to Reading Realms!');
       // first launch: make your character, then a grown-up sets the book
       // marker (the voyage); after both, the star goes straight to the map
       const next = !progress.created ? 'creator' : !progress.placed ? 'voyage' : 'map';

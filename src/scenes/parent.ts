@@ -20,7 +20,7 @@ import {
   importCode,
 } from '../services/progress';
 import { setMusicEnabled } from '../services/audio';
-import { allCosmeticIds } from '../avatar/catalog';
+import { allCosmeticIds, defaultAvatar, defaultBoyAvatar } from '../avatar/catalog';
 import { GAME_W, GAME_H, readingText, emojiText } from '../ui/kit';
 
 /** Parent-facing names for the mastery ladder (see engine/adaptive.ts). */
@@ -82,6 +82,19 @@ export class ParentScene extends Phaser.Scene {
       p.settings.gameSpeed = nextSpeed(p.settings.gameSpeed);
       saveProgress(p);
       (speed.list[1] as Phaser.GameObjects.Text).setText(speedIcon(p.settings.gameSpeed));
+    }, { fill: SLATE, emoji: true, fontSize: 22 });
+
+    // switch reader: girl (mermaid + Inky) ⇄ boy (superhero + Rex). Resets the
+    // outfit/hair/pet to that reader's defaults (a gown can't become a cape),
+    // keeping the skin tone and face. Reading progress is untouched.
+    const charIcon = (c: 'girl' | 'boy'): string => (c === 'boy' ? '🦸' : '🧜‍♀️');
+    const chr = this.chip(GAME_W - 178, 38, 50, 46, charIcon(progress.avatar.character), () => {
+      const p = loadProgress();
+      const next = p.avatar.character === 'boy' ? 'girl' : 'boy';
+      const base = next === 'boy' ? defaultBoyAvatar() : defaultAvatar();
+      p.avatar = { ...base, skin: p.avatar.skin, face: p.avatar.face };
+      saveProgress(p);
+      (chr.list[1] as Phaser.GameObjects.Text).setText(charIcon(next));
     }, { fill: SLATE, emoji: true, fontSize: 22 });
 
     // ---- stats strip ----

@@ -130,6 +130,8 @@ const PETS: Record<PetColorId, { base: string; deep: string }> = {
   coral: { base: '#ff8f6b', deep: '#e3564f' },
   gold: { base: '#ffcf6a', deep: '#e0a52e' },
   'pet-midnight': { base: '#5b6bb0', deep: '#2a2f5c' },
+  forest: { base: '#5fbf5a', deep: '#2f8a3a' },
+  sky: { base: '#5aa8f0', deep: '#2f6fc4' },
 };
 
 // ---------------------------------------------------------------- color math
@@ -238,12 +240,14 @@ const HEAD_CX = 100;
 const HEAD_CY = 80;
 const HEAD_R = 42;
 
-export function drawEvieInto(ctx: Ctx, config: AvatarConfig): void {
+/**
+ * Paint the reader. The lower body (outfit) is the only girl/boy-specific
+ * stack; the head, face, hair, and accessory layers on top are shared, so both
+ * characters share one warm chibi look — only the wardrobe universe differs.
+ */
+export function drawReaderInto(ctx: Ctx, config: AvatarConfig): void {
   const skin = SKINS[config.skin];
   const hair = HAIRS[config.hairColor];
-  // Outfits render by prefix family; the colorway is whatever follows it.
-  const family = config.outfit.slice(0, config.outfit.indexOf('-')); // tail|gown|fairy|play
-  const colorway = config.outfit.slice(config.outfit.indexOf('-') + 1);
 
   ctx.save();
   ctx.lineCap = 'round';
@@ -252,31 +256,9 @@ export function drawEvieInto(ctx: Ctx, config: AvatarConfig): void {
   // 1. back hair silhouette
   drawBackHair(ctx, config.hairStyle, hair);
 
-  // 1b. fairy wings sit behind the body but over the back hair so they always
-  // read; every other layer paints on top of them.
-  if (family === 'fairy') drawWings(ctx, colorway);
-
-  // 2. outfit bottom — legs peek out first so the short skirt overlaps them.
-  if (family === 'tail') {
-    drawTail(ctx, colorway);
-  } else if (family === 'gown') {
-    drawGownSkirt(ctx, colorway);
-  } else if (family === 'fairy') {
-    drawLegs(ctx, skin, slipperFill(colorway), 'plain');
-    drawFairySkirt(ctx, colorway);
-  } else {
-    const look = PLAY_LOOKS[colorway] ?? PLAY_LOOKS['sunny']!;
-    drawLegs(ctx, skin, look.shoe, look.shoeKind);
-    drawPlaySkirt(ctx, look);
-  }
-
-  // 3. torso, top garment, arms
-  drawTorso(ctx, skin);
-  if (family === 'tail') drawBandeau(ctx, colorway);
-  else if (family === 'gown') drawBodice(ctx, colorway);
-  else if (family === 'fairy') drawFairyBodice(ctx, colorway);
-  else drawPlayTop(ctx, colorway);
-  drawArms(ctx, skin, family, colorway);
+  // 2–3. the outfit stack (wings/tail/gown vs. cape/suit) + torso + arms
+  if (config.character === 'boy') drawBoyStack(ctx, config, skin);
+  else drawGirlStack(ctx, config, skin);
 
   // 4. necklace (head chin overlaps its top edge)
   if (config.necklace) drawNecklace(ctx, config.necklace);
@@ -294,7 +276,7 @@ export function drawEvieInto(ctx: Ctx, config: AvatarConfig): void {
   // 8c. glasses sit on the nose bridge, in front of the face and fringe.
   if (config.glasses) drawGlasses(ctx, config.glasses);
 
-  // held item in her right hand (viewer left) — in front of the long hair
+  // held item in the right hand (viewer left) — in front of the long hair
   // so wand/star stay visible with every hairstyle.
   if (config.held) drawHeld(ctx, config.held);
 
@@ -302,6 +284,529 @@ export function drawEvieInto(ctx: Ctx, config: AvatarConfig): void {
   if (config.headwear) drawHeadwear(ctx, config.headwear, config.hairStyle);
 
   ctx.restore();
+}
+
+/** The girl's outfit universe: wings/tail/gown/fairy/play + torso + arms. */
+function drawGirlStack(ctx: Ctx, config: AvatarConfig, skin: { base: string; shadow: string }): void {
+  const family = config.outfit.slice(0, config.outfit.indexOf('-')); // tail|gown|fairy|play
+  const colorway = config.outfit.slice(config.outfit.indexOf('-') + 1);
+
+  // fairy wings sit behind the body but over the back hair so they always read.
+  if (family === 'fairy') drawWings(ctx, colorway);
+
+  // outfit bottom — legs peek out first so the short skirt overlaps them.
+  if (family === 'tail') {
+    drawTail(ctx, colorway);
+  } else if (family === 'gown') {
+    drawGownSkirt(ctx, colorway);
+  } else if (family === 'fairy') {
+    drawLegs(ctx, skin, slipperFill(colorway), 'plain');
+    drawFairySkirt(ctx, colorway);
+  } else {
+    const look = PLAY_LOOKS[colorway] ?? PLAY_LOOKS['sunny']!;
+    drawLegs(ctx, skin, look.shoe, look.shoeKind);
+    drawPlaySkirt(ctx, look);
+  }
+
+  drawTorso(ctx, skin);
+  if (family === 'tail') drawBandeau(ctx, colorway);
+  else if (family === 'gown') drawBodice(ctx, colorway);
+  else if (family === 'fairy') drawFairyBodice(ctx, colorway);
+  else drawPlayTop(ctx, colorway);
+  drawArms(ctx, skin, family, colorway);
+}
+
+/** Keep the old export name working for any stragglers. */
+export const drawEvieInto = drawReaderInto;
+
+// ================================================================ BOY outfits
+// Same chibi body as the girl; only the outfit universe changes. Torso spans
+// y120–154, legs 166–204, arms 124–163, chest emblem centre ≈ (100, 136).
+
+interface HeroLook {
+  suit: [string, string]; // bodysuit top→bottom
+  trim: string; // belt + cuffs
+  cape: string;
+  boot: string;
+  emblem: string;
+  shape: 'bolt' | 'flame' | 'frost' | 'star' | 'sun' | 'wave';
+}
+const HERO_LOOKS: Record<string, HeroLook> = {
+  bolt: { suit: ['#3f74d6', '#2b4fa8'], trim: '#ffd23f', cape: '#ffd23f', boot: '#26397a', emblem: '#ffd23f', shape: 'bolt' },
+  flame: { suit: ['#e2503a', '#b0311c'], trim: '#ffcf3f', cape: '#ff7a2f', boot: '#7a2214', emblem: '#ffd76a', shape: 'flame' },
+  frost: { suit: ['#5fc4e6', '#2f8fc4'], trim: '#eaffff', cape: '#bfeeff', boot: '#1f6a8a', emblem: '#ffffff', shape: 'frost' },
+  thunder: { suit: ['#7a5ad6', '#4f36a8'], trim: '#ffd23f', cape: '#b89aff', boot: '#3a2680', emblem: '#ffe06a', shape: 'bolt' },
+  storm: { suit: ['#3fb06a', '#1f8047'], trim: '#eaffea', cape: '#8fe0a0', boot: '#186236', emblem: '#eaffea', shape: 'star' },
+  solar: { suit: ['#ffb03f', '#e0801f'], trim: '#fff0c0', cape: '#ffd76a', boot: '#a85f14', emblem: '#fff0c0', shape: 'sun' },
+  shadow: { suit: ['#3a3f66', '#22263f'], trim: '#8f9ad6', cape: '#2a2f4a', boot: '#161a2e', emblem: '#aeb8ff', shape: 'star' },
+  aqua: { suit: ['#2fb0c4', '#1f7f9c'], trim: '#eaffff', cape: '#7fe6f0', boot: '#175668', emblem: '#eaffff', shape: 'wave' },
+};
+
+interface JobLook {
+  top: string;
+  pants: string;
+  trim: string;
+  boot: string;
+  detail: 'fire' | 'police' | 'build' | 'space' | 'doctor' | 'army' | 'chef' | 'racer';
+}
+const JOB_LOOKS: Record<string, JobLook> = {
+  fire: { top: '#c9993f', pants: '#3a3a3a', trim: '#ffe23f', boot: '#222222', detail: 'fire' },
+  police: { top: '#2f3f66', pants: '#26324f', trim: '#ffd23f', boot: '#1a1a1a', detail: 'police' },
+  build: { top: '#ff8a1f', pants: '#c9a15a', trim: '#fff0a0', boot: '#6a4a24', detail: 'build' },
+  space: { top: '#eef2f6', pants: '#eef2f6', trim: '#5a86c4', boot: '#9aa6b4', detail: 'space' },
+  doctor: { top: '#f4f7fa', pants: '#4fa0c4', trim: '#e2503a', boot: '#ffffff', detail: 'doctor' },
+  army: { top: '#5f6a3a', pants: '#4a5230', trim: '#39412450', boot: '#3a3220', detail: 'army' },
+  chef: { top: '#f4f4ee', pants: '#3a3a3a', trim: '#e2503a', boot: '#222222', detail: 'chef' },
+  racer: { top: '#e23f3a', pants: '#e23f3a', trim: '#ffffff', boot: '#1a1a1a', detail: 'racer' },
+};
+
+interface SportLook {
+  jersey: string;
+  shorts: string;
+  trim: string;
+  shoe: string;
+  motif: 'num' | 'dino';
+}
+const SPORT_LOOKS: Record<string, SportLook> = {
+  blue: { jersey: '#3f74d6', shorts: '#eef2f6', trim: '#ffffff', shoe: '#ffffff', motif: 'num' },
+  red: { jersey: '#e2433a', shorts: '#eef2f6', trim: '#ffffff', shoe: '#ffffff', motif: 'num' },
+  dino: { jersey: '#4fae5a', shorts: '#3a5a8a', trim: '#ffffff', shoe: '#ffffff', motif: 'dino' },
+};
+
+/** The boy's outfit universe: cape/suit/uniform + torso + arms. */
+function drawBoyStack(ctx: Ctx, config: AvatarConfig, skin: { base: string; shadow: string }): void {
+  const family = config.outfit.slice(0, config.outfit.indexOf('-')); // hero|job|sport
+  const colorway = config.outfit.slice(config.outfit.indexOf('-') + 1);
+  if (family === 'hero') drawHeroSuit(ctx, colorway, skin);
+  else if (family === 'job') drawJobSuit(ctx, colorway, skin);
+  else drawSportSuit(ctx, colorway, skin);
+}
+
+/** The torso block of a suit — matches the chibi torso silhouette, one fill. */
+function drawSuitTorso(ctx: Ctx, fill: string): void {
+  ctx.beginPath();
+  ctx.moveTo(84, 120);
+  ctx.quadraticCurveTo(100, 127, 116, 120);
+  ctx.bezierCurveTo(120, 134, 119, 146, 117, 154);
+  ctx.lineTo(83, 154);
+  ctx.bezierCurveTo(81, 146, 80, 134, 84, 120);
+  ctx.closePath();
+  fillOutlined(ctx, fill, 0.82, 1.5);
+}
+
+/** Same, filled with a vertical gradient (hero bodysuits). */
+function drawSuitTorsoGrad(ctx: Ctx, stops: [string, string]): void {
+  ctx.beginPath();
+  ctx.moveTo(84, 120);
+  ctx.quadraticCurveTo(100, 127, 116, 120);
+  ctx.bezierCurveTo(120, 134, 119, 146, 117, 154);
+  ctx.lineTo(83, 154);
+  ctx.bezierCurveTo(81, 146, 80, 134, 84, 120);
+  ctx.closePath();
+  fillGradientOutlined(ctx, stops, 120, 154, 0.8, 1.5);
+}
+
+/** Sleeved arms: long sleeves take the suit color, short stay skin + a cap. */
+function drawBoyArms(
+  ctx: Ctx,
+  skin: { base: string; shadow: string },
+  sleeveFill: string,
+  short: boolean,
+): void {
+  for (const s of [-1, 1]) {
+    const shX = 100 + s * 16;
+    const handX = 100 + s * 31;
+    ctx.beginPath();
+    ctx.moveTo(shX - s * 2, 124);
+    ctx.bezierCurveTo(shX + s * 9, 128, shX + s * 14, 142, handX + s * 2, 162);
+    ctx.bezierCurveTo(handX - s * 2, 166, handX - s * 5, 162, handX - s * 4, 158);
+    ctx.bezierCurveTo(shX + s * 6, 144, shX + s * 3, 132, shX - s * 4, 128);
+    ctx.closePath();
+    fillOutlined(ctx, short ? skin.base : sleeveFill, 0.86, 1.3);
+    // mitten hand (always skin)
+    ctx.beginPath();
+    ctx.arc(handX, 163, 6, 0, Math.PI * 2);
+    fillOutlined(ctx, skin.base, 0.86, 1.3);
+    if (short) {
+      // short-sleeve cap in the jersey color
+      ctx.beginPath();
+      ctx.moveTo(100 + s * 9, 123);
+      ctx.bezierCurveTo(100 + s * 20, 123, 100 + s * 25, 130, 100 + s * 24, 138);
+      ctx.quadraticCurveTo(100 + s * 16, 141, 100 + s * 9, 137);
+      ctx.closePath();
+      fillOutlined(ctx, sleeveFill, 0.82, 1.3);
+    } else {
+      // a cuff hint near the wrist
+      ctx.strokeStyle = shade(sleeveFill, 0.7);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(handX - s * 7, 156);
+      ctx.quadraticCurveTo(handX, 160, handX + s * 3, 157);
+      ctx.stroke();
+    }
+  }
+}
+
+/**
+ * A flowing hero cape behind the body (drawn first so the body covers its top).
+ * Wide at the shoulders, tapering to a narrower billowing hem so it reads as a
+ * cape flowing behind — not a skirt around the legs.
+ */
+function drawCape(ctx: Ctx, color: string): void {
+  ctx.beginPath();
+  ctx.moveTo(86, 122);
+  ctx.bezierCurveTo(70, 150, 62, 194, 74, 226); // left edge
+  ctx.quadraticCurveTo(86, 234, 94, 226); // narrower billowing hem
+  ctx.quadraticCurveTo(100, 234, 106, 226);
+  ctx.quadraticCurveTo(114, 234, 126, 226);
+  ctx.bezierCurveTo(138, 194, 130, 150, 114, 122); // right edge
+  ctx.closePath();
+  fillGradientOutlined(ctx, [color, shade(color, 0.82)], 122, 230, 0.72, 1.8);
+  // a soft center fold
+  ctx.strokeStyle = shade(color, 0.82);
+  ctx.globalAlpha = 0.5;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(100, 130);
+  ctx.quadraticCurveTo(98, 180, 100, 226);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+/** The cape's collar peeking over the shoulders — sells the cape, drawn on top. */
+function drawCapeCollar(ctx: Ctx, color: string): void {
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(100 + s * 5, 118);
+    ctx.lineTo(100 + s * 22, 120);
+    ctx.lineTo(100 + s * 12, 132);
+    ctx.closePath();
+    fillOutlined(ctx, color, 0.75, 1.3);
+  }
+  // a round clasp at the throat
+  ctx.beginPath();
+  ctx.arc(100, 120, 3, 0, Math.PI * 2);
+  fillOutlined(ctx, lighten(color, 0.2), 0.7, 1);
+}
+
+/** A belt band across the waist with a small buckle. */
+function drawBelt(ctx: Ctx, color: string): void {
+  ctx.beginPath();
+  ctx.moveTo(82, 149);
+  ctx.quadraticCurveTo(100, 154, 118, 149);
+  ctx.lineTo(118, 157);
+  ctx.quadraticCurveTo(100, 162, 82, 157);
+  ctx.closePath();
+  fillOutlined(ctx, color, 0.7, 1.3);
+  ctx.beginPath();
+  ctx.arc(100, 153, 3.2, 0, Math.PI * 2);
+  fillOutlined(ctx, lighten(color, 0.3), 0.66, 1);
+}
+
+/** The chest emblem for a hero (a crisp, outlined little symbol). */
+function drawEmblem(ctx: Ctx, shape: HeroLook['shape'], color: string): void {
+  const cx = 100;
+  const cy = 136;
+  if (shape === 'bolt') {
+    ctx.beginPath();
+    ctx.moveTo(cx - 3, cy - 9);
+    ctx.lineTo(cx + 4, cy - 9);
+    ctx.lineTo(cx - 0.5, cy - 1);
+    ctx.lineTo(cx + 4.5, cy - 1);
+    ctx.lineTo(cx - 4, cy + 10);
+    ctx.lineTo(cx - 0.5, cy + 1.5);
+    ctx.lineTo(cx - 4.5, cy + 1.5);
+    ctx.closePath();
+    fillOutlined(ctx, color, 0.7, 1.4);
+  } else if (shape === 'star') {
+    starPath(ctx, cx, cy, 8.5, 3.6, 5, -Math.PI / 2);
+    fillOutlined(ctx, color, 0.7, 1.4);
+  } else if (shape === 'flame') {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 9);
+    ctx.bezierCurveTo(cx + 8, cy - 1, cx + 5, cy + 8, cx, cy + 9);
+    ctx.bezierCurveTo(cx - 5, cy + 8, cx - 8, cy - 1, cx, cy - 9);
+    ctx.closePath();
+    fillOutlined(ctx, color, 0.7, 1.4);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 2);
+    ctx.bezierCurveTo(cx + 4, cy + 1, cx + 2, cy + 6, cx, cy + 7);
+    ctx.bezierCurveTo(cx - 2, cy + 6, cx - 4, cy + 1, cx, cy - 2);
+    ctx.closePath();
+    ctx.fillStyle = lighten(color, 0.45);
+    ctx.fill();
+  } else if (shape === 'frost') {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 3; k++) {
+      const a = (k * Math.PI) / 3;
+      const dx = Math.cos(a) * 9;
+      const dy = Math.sin(a) * 9;
+      ctx.beginPath();
+      ctx.moveTo(cx - dx, cy - dy);
+      ctx.lineTo(cx + dx, cy + dy);
+      ctx.stroke();
+    }
+  } else if (shape === 'sun') {
+    for (let k = 0; k < 8; k++) {
+      const a = (k * Math.PI) / 4;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 5, cy + Math.sin(a) * 5);
+      ctx.lineTo(cx + Math.cos(a) * 9.5, cy + Math.sin(a) * 9.5);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+    fillOutlined(ctx, color, 0.7, 1.2);
+  } else {
+    // wave — two stacked ripples
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    for (const dy of [-3, 3]) {
+      ctx.beginPath();
+      ctx.moveTo(cx - 8, cy + dy);
+      ctx.quadraticCurveTo(cx - 4, cy + dy - 4, cx, cy + dy);
+      ctx.quadraticCurveTo(cx + 4, cy + dy + 4, cx + 8, cy + dy);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawHeroSuit(ctx: Ctx, colorway: string, skin: { base: string; shadow: string }): void {
+  const look = HERO_LOOKS[colorway] ?? HERO_LOOKS['bolt']!;
+  drawCape(ctx, look.cape);
+  drawLegs(ctx, skin, look.boot, 'plain', look.suit[0]);
+  drawSuitTorsoGrad(ctx, look.suit);
+  drawBelt(ctx, look.trim);
+  drawBoyArms(ctx, skin, look.suit[0], false);
+  drawCapeCollar(ctx, look.cape);
+  drawEmblem(ctx, look.shape, look.emblem);
+}
+
+function drawJobSuit(ctx: Ctx, colorway: string, skin: { base: string; shadow: string }): void {
+  const look = JOB_LOOKS[colorway] ?? JOB_LOOKS['fire']!;
+  drawLegs(ctx, skin, look.boot, 'plain', look.pants);
+  drawSuitTorso(ctx, look.top);
+  drawBoyArms(ctx, skin, look.top, false);
+  drawJobDetail(ctx, look);
+}
+
+function drawJobDetail(ctx: Ctx, look: JobLook): void {
+  const d = look.detail;
+  if (d === 'fire') {
+    // two reflective bands across the coat + a collar
+    ctx.strokeStyle = look.trim;
+    ctx.lineWidth = 3;
+    for (const y of [134, 146]) {
+      ctx.beginPath();
+      ctx.moveTo(85, y);
+      ctx.quadraticCurveTo(100, y + 3, 115, y);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = shade(look.top, 0.7);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(88, 123);
+    ctx.quadraticCurveTo(100, 130, 112, 123);
+    ctx.stroke();
+  } else if (d === 'police') {
+    // shirt placket + collar + a gold star badge on the left chest
+    ctx.strokeStyle = shade(look.top, 0.72);
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(100, 124);
+    ctx.lineTo(100, 152);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(90, 123);
+    ctx.lineTo(100, 129);
+    ctx.lineTo(110, 123);
+    ctx.stroke();
+    starPath(ctx, 91, 135, 4, 1.7, 5, -Math.PI / 2);
+    fillOutlined(ctx, look.trim, 0.7, 1);
+  } else if (d === 'build') {
+    // hi-vis reflective stripes + a chest pocket
+    ctx.strokeStyle = look.trim;
+    ctx.lineWidth = 2.6;
+    for (const y of [136, 147]) {
+      ctx.beginPath();
+      ctx.moveTo(86, y);
+      ctx.quadraticCurveTo(100, y + 2, 114, y);
+      ctx.stroke();
+    }
+    for (const s of [-1, 1]) {
+      ctx.strokeStyle = shade(look.top, 0.7);
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(100 + s * 6, 124);
+      ctx.lineTo(100 + s * 9, 148);
+      ctx.stroke();
+    }
+  } else if (d === 'space') {
+    // control panel of colored squares + a mission stripe
+    const cols = ['#e2503a', '#4fae5a', '#3f74d6'];
+    cols.forEach((c, i) => {
+      ctx.beginPath();
+      ctx.rect(92 + i * 6, 132, 4, 4);
+      fillOutlined(ctx, c, 0.7, 0.9);
+    });
+    ctx.strokeStyle = look.trim;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(85, 126);
+    ctx.quadraticCurveTo(100, 131, 115, 126);
+    ctx.stroke();
+    // a little flag patch on the shoulder
+    ctx.beginPath();
+    ctx.rect(82, 127, 6, 4);
+    fillOutlined(ctx, '#e2503a', 0.7, 0.8);
+  } else if (d === 'doctor') {
+    // white-coat lapels (V), a red cross pocket, and a stethoscope
+    ctx.fillStyle = shade(look.top, 0.92);
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(100, 122);
+      ctx.lineTo(100 + s * 12, 124);
+      ctx.lineTo(100 + s * 5, 150);
+      ctx.lineTo(100, 140);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // scrubs V of the shirt beneath
+    ctx.fillStyle = look.pants;
+    ctx.beginPath();
+    ctx.moveTo(100, 122);
+    ctx.lineTo(94, 124);
+    ctx.lineTo(100, 138);
+    ctx.lineTo(106, 124);
+    ctx.closePath();
+    ctx.fill();
+    // stethoscope: grey tube looping from the neck + a disc
+    ctx.strokeStyle = '#5a6472';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(94, 122);
+    ctx.quadraticCurveTo(90, 140, 100, 146);
+    ctx.quadraticCurveTo(110, 140, 106, 122);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(100, 148, 3, 0, Math.PI * 2);
+    fillOutlined(ctx, '#c0c8d2', 0.7, 1);
+    // red cross on the pocket
+    drawCross(ctx, 110, 148, look.trim);
+  } else if (d === 'army') {
+    // camo blotches + a shoulder star
+    const blobs: ReadonlyArray<readonly [number, number, number]> = [
+      [90, 130, 5], [110, 134, 4.5], [98, 144, 5.5], [86, 146, 4], [112, 147, 4],
+    ];
+    ctx.fillStyle = shade(look.top, 0.72);
+    for (const [x, y, r] of blobs) {
+      ellipsePath(ctx, x, y, r, r * 0.8, 0.4);
+      ctx.fill();
+    }
+    ctx.fillStyle = lighten(look.top, 0.16);
+    for (const [x, y, r] of blobs) {
+      ellipsePath(ctx, x + 2, y - 1, r * 0.6, r * 0.5, 0.4);
+      ctx.fill();
+    }
+    starPath(ctx, 100, 127, 3.2, 1.4, 5, -Math.PI / 2);
+    fillOutlined(ctx, '#e8c94a', 0.7, 0.9);
+  } else if (d === 'chef') {
+    // double-breasted button dots + a red neckerchief
+    ctx.fillStyle = shade(look.top, 0.7);
+    for (const s of [-1, 1]) {
+      for (const y of [130, 138, 146]) {
+        ctx.beginPath();
+        ctx.arc(100 + s * 5, y, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.beginPath();
+    ctx.moveTo(94, 122);
+    ctx.lineTo(106, 122);
+    ctx.lineTo(100, 132);
+    ctx.closePath();
+    fillOutlined(ctx, look.trim, 0.72, 1.2);
+  } else {
+    // racer — white diagonal stripes + a star sponsor patch
+    ctx.strokeStyle = look.trim;
+    ctx.lineWidth = 3;
+    for (const dx of [-6, 2]) {
+      ctx.beginPath();
+      ctx.moveTo(88 + dx, 123);
+      ctx.lineTo(96 + dx, 152);
+      ctx.stroke();
+    }
+    starPath(ctx, 108, 132, 3.4, 1.5, 5, -Math.PI / 2);
+    fillOutlined(ctx, '#ffffff', 0.7, 0.9);
+    drawBelt(ctx, '#1a1a1a');
+  }
+}
+
+/** A little plus/cross (medical). */
+function drawCross(ctx: Ctx, cx: number, cy: number, color: string): void {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.rect(cx - 1.4, cy - 4, 2.8, 8);
+  ctx.rect(cx - 4, cy - 1.4, 8, 2.8);
+  ctx.fill();
+}
+
+function drawShorts(ctx: Ctx, fill: string): void {
+  ctx.beginPath();
+  ctx.moveTo(83, 150);
+  ctx.lineTo(117, 150);
+  ctx.lineTo(116, 173);
+  ctx.lineTo(104, 171);
+  ctx.lineTo(100, 160);
+  ctx.lineTo(96, 171);
+  ctx.lineTo(84, 173);
+  ctx.closePath();
+  fillOutlined(ctx, fill, 0.82, 1.4);
+}
+
+function drawSportSuit(ctx: Ctx, colorway: string, skin: { base: string; shadow: string }): void {
+  const look = SPORT_LOOKS[colorway] ?? SPORT_LOOKS['blue']!;
+  drawLegs(ctx, skin, look.shoe, 'sneaker');
+  drawShorts(ctx, look.shorts);
+  drawSuitTorso(ctx, look.jersey);
+  drawBoyArms(ctx, skin, look.jersey, true);
+  // collar
+  ctx.strokeStyle = look.trim;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(89, 123);
+  ctx.quadraticCurveTo(100, 130, 111, 123);
+  ctx.stroke();
+  if (look.motif === 'num') {
+    // a bold jersey number "1"
+    ctx.fillStyle = look.trim;
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('1', 100, 139);
+  } else {
+    // a little dino silhouette
+    ctx.fillStyle = look.trim;
+    ctx.beginPath();
+    ctx.moveTo(92, 142);
+    ctx.quadraticCurveTo(92, 132, 100, 132);
+    ctx.quadraticCurveTo(104, 132, 105, 136);
+    ctx.lineTo(109, 135);
+    ctx.lineTo(106, 139);
+    ctx.quadraticCurveTo(108, 145, 104, 146);
+    ctx.lineTo(104, 143);
+    ctx.lineTo(100, 143);
+    ctx.lineTo(99, 146);
+    ctx.lineTo(96, 146);
+    ctx.lineTo(97, 142);
+    ctx.closePath();
+    ctx.fill();
+  }
 }
 
 /** A soft matching slipper color for a fairy's little feet. */
@@ -936,12 +1441,17 @@ function drawFairyBodice(ctx: Ctx, colorway: string): void {
 
 type ShoeKind = 'plain' | 'maryjane' | 'sneaker';
 
-/** Skin-tone chibi legs from the hem down to little rounded shoes. */
+/**
+ * Chibi legs from the hem down to little rounded shoes. `legFill` defaults to
+ * skin (bare legs) but a boy's suit/trousers pass their own color so the leg
+ * reads as covered by the outfit.
+ */
 function drawLegs(
   ctx: Ctx,
   skin: { base: string; shadow: string },
   shoeFill: string,
   shoeKind: ShoeKind,
+  legFill?: string,
 ): void {
   for (const s of [-1, 1]) {
     const lx = 100 + s * 11;
@@ -951,7 +1461,7 @@ function drawLegs(
     ctx.quadraticCurveTo(lx, 207, lx + 5, 204);
     ctx.bezierCurveTo(lx + 6, 196, lx + 8, 182, lx + 7, 166);
     ctx.closePath();
-    fillOutlined(ctx, skin.base, 0.86, 1.3);
+    fillOutlined(ctx, legFill ?? skin.base, 0.86, 1.3);
     drawShoe(ctx, lx, 202, s, shoeFill, shoeKind);
   }
 }
@@ -2048,6 +2558,133 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     // the plait itself hangs from BEHIND the head (drawn in the back pass),
     // so up front we draw only the swept fringe.
     sheenArc();
+  } else if (style === 'crop') {
+    // short neat cap with a soft side part
+    ctx.beginPath();
+    ctx.moveTo(58, 90);
+    ctx.bezierCurveTo(54, 54, 74, 33, 100, 33);
+    ctx.bezierCurveTo(126, 33, 146, 54, 142, 90);
+    ctx.bezierCurveTo(140, 74, 133, 64, 124, 60);
+    ctx.bezierCurveTo(108, 66, 84, 68, 68, 60); // fringe edge across the brow
+    ctx.bezierCurveTo(62, 66, 59, 76, 58, 90);
+    ctx.closePath();
+    fillOutlined(ctx, base, 0.8, 1.7);
+    ctx.strokeStyle = shade(base, 0.76);
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(84, 40);
+    ctx.quadraticCurveTo(96, 50, 112, 57);
+    ctx.stroke();
+    sheenArc();
+  } else if (style === 'spiky') {
+    // base cap + a zig-zag of spikes over the crown
+    ctx.beginPath();
+    ctx.moveTo(58, 88);
+    ctx.bezierCurveTo(54, 56, 74, 40, 100, 40);
+    ctx.bezierCurveTo(126, 40, 146, 56, 142, 88);
+    ctx.bezierCurveTo(140, 72, 133, 62, 124, 58);
+    ctx.bezierCurveTo(108, 64, 84, 66, 68, 58);
+    ctx.bezierCurveTo(62, 64, 59, 74, 58, 88);
+    ctx.closePath();
+    fillOutlined(ctx, base, 0.8, 1.6);
+    ctx.beginPath();
+    ctx.moveTo(60, 62);
+    ctx.lineTo(68, 38);
+    ctx.lineTo(79, 54);
+    ctx.lineTo(90, 32);
+    ctx.lineTo(100, 50);
+    ctx.lineTo(110, 32);
+    ctx.lineTo(121, 54);
+    ctx.lineTo(132, 38);
+    ctx.lineTo(140, 62);
+    ctx.bezierCurveTo(120, 55, 80, 55, 60, 62);
+    ctx.closePath();
+    fillOutlined(ctx, base, 0.78, 1.5);
+    sheenArc();
+  } else if (style === 'buzz') {
+    // very short — a thin close cap with a stubbly texture and low hairline
+    ctx.beginPath();
+    ctx.moveTo(60, 84);
+    ctx.bezierCurveTo(57, 56, 75, 42, 100, 42);
+    ctx.bezierCurveTo(125, 42, 143, 56, 140, 84);
+    ctx.bezierCurveTo(138, 72, 132, 64, 124, 61);
+    ctx.bezierCurveTo(108, 66, 84, 67, 68, 61);
+    ctx.bezierCurveTo(60, 64, 57, 72, 60, 84);
+    ctx.closePath();
+    fillOutlined(ctx, base, 0.85, 1.4);
+    ctx.fillStyle = shade(base, 0.84);
+    for (const [x, y] of [[80, 52], [100, 48], [120, 52], [90, 60], [110, 60], [100, 56]] as const) {
+      ctx.beginPath();
+      ctx.arc(x, y, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    sheenArc();
+  } else if (style === 'curlytop') {
+    // a cluster of short curl lobes on the crown (short sides)
+    const lobes: ReadonlyArray<readonly [number, number, number]> = [
+      [72, 52, 11], [88, 44, 12], [104, 44, 12], [120, 52, 11],
+      [80, 60, 10], [100, 56, 11], [120, 62, 10], [64, 62, 9], [136, 62, 9],
+    ];
+    for (const [x, y, r] of lobes) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      fillOutlined(ctx, base, 0.8, 1.4);
+    }
+    ctx.globalAlpha = 0.7;
+    ctx.strokeStyle = sheen;
+    ctx.lineWidth = 1.8;
+    for (const [x, y, r] of lobes.slice(0, 4)) {
+      ctx.beginPath();
+      ctx.arc(x - 2, y - 2, r * 0.5, Math.PI * 1.0, Math.PI * 1.8);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else if (style === 'flow') {
+    // medium swept-back with side length past the ears
+    crownCap(100, 50);
+    ctx.beginPath();
+    ctx.moveTo(70, 60);
+    ctx.bezierCurveTo(84, 44, 116, 44, 132, 58);
+    ctx.bezierCurveTo(124, 50, 100, 48, 84, 56);
+    ctx.closePath();
+    fillOutlined(ctx, base, 0.8, 1.4);
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(100 + s * 42, 64);
+      ctx.quadraticCurveTo(100 + s * 51, 86, 100 + s * 40, 104);
+      ctx.quadraticCurveTo(100 + s * 47, 84, 100 + s * 40, 66);
+      ctx.closePath();
+      fillOutlined(ctx, base, 0.8, 1.3);
+    }
+    sheenArc();
+  } else if (style === 'mohawk') {
+    // shaved sides (a faint stubble arc) + a tall central spiked strip
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = base;
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.arc(HEAD_CX, HEAD_CY - 2, HEAD_R - 1, Math.PI * 1.08, Math.PI * 1.92);
+    ctx.stroke();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.moveTo(91, 66);
+    ctx.lineTo(89, 42);
+    ctx.lineTo(96, 50);
+    ctx.lineTo(98, 22);
+    ctx.lineTo(104, 50);
+    ctx.lineTo(111, 40);
+    ctx.lineTo(109, 66);
+    ctx.closePath();
+    fillOutlined(ctx, base, 0.78, 1.6);
+    ctx.strokeStyle = sheen;
+    ctx.globalAlpha = 0.7;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(99, 30);
+    ctx.lineTo(99, 62);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   } else {
     // braids: center part + bangs. The two plaits hang from behind the head
     // (back pass) so they stay anchored up top and never cover the face.
@@ -2305,6 +2942,166 @@ function drawHeadwear(ctx: Ctx, headwear: HeadwearId, hairStyle: HairStyleId): v
       fillOutlined(ctx, GOLD, 0.74, 0.8);
     }
     ctx.restore();
+  } else if (headwear === 'heromask') {
+    // a domino mask across the eyes with cut-out eye holes (evenodd)
+    const mask = '#232842';
+    ctx.beginPath();
+    ctx.moveTo(70, 76);
+    ctx.quadraticCurveTo(100, 70, 130, 76);
+    ctx.quadraticCurveTo(132, 92, 118, 96);
+    ctx.quadraticCurveTo(100, 92, 82, 96);
+    ctx.quadraticCurveTo(68, 92, 70, 76);
+    ctx.closePath();
+    ctx.moveTo(92, 84);
+    ctx.ellipse(86, 84, 6, 7.5, 0, 0, Math.PI * 2);
+    ctx.moveTo(120, 84);
+    ctx.ellipse(114, 84, 6, 7.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = mask;
+    ctx.fill('evenodd');
+    // clean outer edge
+    ctx.beginPath();
+    ctx.moveTo(70, 76);
+    ctx.quadraticCurveTo(100, 70, 130, 76);
+    ctx.quadraticCurveTo(132, 92, 118, 96);
+    ctx.quadraticCurveTo(100, 92, 82, 96);
+    ctx.quadraticCurveTo(68, 92, 70, 76);
+    ctx.closePath();
+    ctx.strokeStyle = shade(mask, 0.7);
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  } else if (headwear === 'firehelmet') {
+    ctx.save();
+    ctx.translate(0, topY);
+    const red = '#d23a2a';
+    ellipsePath(ctx, 100, 52, 45, 12, 0);
+    fillOutlined(ctx, shade(red, 0.85), 0.75, 1.5);
+    ctx.beginPath();
+    ctx.moveTo(72, 51);
+    ctx.bezierCurveTo(70, 24, 130, 24, 128, 51);
+    ctx.quadraticCurveTo(100, 45, 72, 51);
+    ctx.closePath();
+    fillGradientOutlined(ctx, [lighten(red, 0.12), red], 24, 52, 0.78, 1.6);
+    // center ridge
+    ctx.strokeStyle = shade(red, 0.8);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(100, 26);
+    ctx.lineTo(100, 48);
+    ctx.stroke();
+    // gold front shield badge
+    ctx.beginPath();
+    ctx.moveTo(100, 34);
+    ctx.lineTo(107, 37);
+    ctx.lineTo(105, 47);
+    ctx.lineTo(100, 50);
+    ctx.lineTo(95, 47);
+    ctx.lineTo(93, 37);
+    ctx.closePath();
+    fillOutlined(ctx, GOLD, 0.7, 1.2);
+    ctx.restore();
+  } else if (headwear === 'policecap') {
+    ctx.save();
+    ctx.translate(0, topY);
+    const navy = '#2a3560';
+    // peak brim in front
+    ellipsePath(ctx, 100, 58, 34, 8, 0);
+    fillOutlined(ctx, shade(navy, 0.7), 0.72, 1.4);
+    // band
+    ctx.beginPath();
+    ctx.moveTo(72, 52);
+    ctx.quadraticCurveTo(100, 58, 128, 52);
+    ctx.lineTo(128, 46);
+    ctx.quadraticCurveTo(100, 52, 72, 46);
+    ctx.closePath();
+    fillOutlined(ctx, shade(navy, 0.8), 0.75, 1.3);
+    // crown
+    ctx.beginPath();
+    ctx.moveTo(74, 47);
+    ctx.bezierCurveTo(74, 28, 126, 28, 126, 47);
+    ctx.quadraticCurveTo(100, 40, 74, 47);
+    ctx.closePath();
+    fillGradientOutlined(ctx, [lighten(navy, 0.14), navy], 28, 48, 0.78, 1.5);
+    // gold badge
+    starPath(ctx, 100, 40, 4.5, 2, 5, -Math.PI / 2);
+    fillOutlined(ctx, GOLD, 0.7, 1);
+    ctx.restore();
+  } else if (headwear === 'hardhat') {
+    ctx.save();
+    ctx.translate(0, topY);
+    const hard = '#f4b02a';
+    ellipsePath(ctx, 100, 52, 42, 10, 0);
+    fillOutlined(ctx, shade(hard, 0.9), 0.75, 1.5);
+    ctx.beginPath();
+    ctx.moveTo(76, 52);
+    ctx.bezierCurveTo(74, 28, 126, 28, 124, 52);
+    ctx.quadraticCurveTo(100, 46, 76, 52);
+    ctx.closePath();
+    fillGradientOutlined(ctx, [lighten(hard, 0.12), hard], 28, 53, 0.78, 1.6);
+    ctx.strokeStyle = shade(hard, 0.82);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(100, 30);
+    ctx.lineTo(100, 50);
+    ctx.moveTo(85, 34);
+    ctx.quadraticCurveTo(100, 32, 115, 34);
+    ctx.stroke();
+    ctx.restore();
+  } else if (headwear === 'ballcap') {
+    ctx.save();
+    ctx.translate(0, topY);
+    const cap = '#3f74d6';
+    // curved brim to the front
+    ctx.beginPath();
+    ctx.moveTo(96, 54);
+    ctx.quadraticCurveTo(132, 52, 140, 60);
+    ctx.quadraticCurveTo(132, 62, 96, 60);
+    ctx.closePath();
+    fillOutlined(ctx, shade(cap, 0.82), 0.75, 1.4);
+    // crown
+    ctx.beginPath();
+    ctx.moveTo(72, 54);
+    ctx.bezierCurveTo(70, 28, 126, 28, 124, 54);
+    ctx.quadraticCurveTo(100, 47, 72, 54);
+    ctx.closePath();
+    fillGradientOutlined(ctx, [lighten(cap, 0.12), cap], 28, 55, 0.78, 1.5);
+    // top button + seams
+    ctx.beginPath();
+    ctx.arc(100, 32, 2.4, 0, Math.PI * 2);
+    fillOutlined(ctx, lighten(cap, 0.2), 0.75, 0.9);
+    ctx.strokeStyle = shade(cap, 0.82);
+    ctx.lineWidth = 1.2;
+    for (const dx of [-12, 12]) {
+      ctx.beginPath();
+      ctx.moveTo(100, 33);
+      ctx.quadraticCurveTo(100 + dx, 42, 100 + dx * 1.2, 52);
+      ctx.stroke();
+    }
+    ctx.restore();
+  } else if (headwear === 'spacehelmet') {
+    // a clear bubble helmet over the whole head + a white collar ring
+    ctx.save();
+    ctx.globalAlpha = 0.16;
+    ctx.beginPath();
+    ctx.arc(100, 82, 50, 0, Math.PI * 2);
+    ctx.fillStyle = '#bfe4ff';
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = '#dfeeff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(100, 82, 50, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(100, 82, 44, Math.PI * 1.05, Math.PI * 1.5);
+    ctx.stroke();
+    ctx.restore();
+    // collar ring
+    ellipsePath(ctx, 100, 122, 30, 9, 0);
+    fillOutlined(ctx, '#e6edf4', 0.82, 1.6);
   } else {
     // big two-loop ribbon bow on top
     ctx.save();
@@ -2569,6 +3366,46 @@ function drawPetHat(ctx: Ctx, hat: PetHatId): void {
     ctx.fill();
     ctx.restore();
     ctx.restore();
+  } else if (hat === 'petcap') {
+    // a little backwards-ish ball cap perched on the dome
+    ctx.save();
+    ctx.translate(80, 16);
+    const cap = '#e2503a';
+    // brim to the front
+    ctx.beginPath();
+    ctx.moveTo(-3, 3);
+    ctx.quadraticCurveTo(-20, 2, -26, 8);
+    ctx.quadraticCurveTo(-20, 10, -3, 8);
+    ctx.closePath();
+    fillOutlined(ctx, shade(cap, 0.82), 0.75, 1.2);
+    // crown
+    ctx.beginPath();
+    ctx.moveTo(-16, 4);
+    ctx.bezierCurveTo(-16, -12, 16, -12, 16, 4);
+    ctx.quadraticCurveTo(0, -2, -16, 4);
+    ctx.closePath();
+    fillOutlined(ctx, cap, 0.78, 1.3);
+    ctx.beginPath();
+    ctx.arc(0, -8, 1.8, 0, Math.PI * 2);
+    fillOutlined(ctx, lighten(cap, 0.25), 0.75, 0.8);
+    ctx.restore();
+  } else if (hat === 'petspikes') {
+    // a colorful little fin/mohawk of spikes down the crown
+    ctx.save();
+    ctx.translate(80, 18);
+    const cols = ['#ffcf3f', '#ff8a3f', '#e2503a'];
+    const spikes: ReadonlyArray<readonly [number, number]> = [
+      [-14, 10], [-1, 15], [12, 11],
+    ];
+    spikes.forEach(([x, h], i) => {
+      ctx.beginPath();
+      ctx.moveTo(x - 6, 6);
+      ctx.lineTo(x, 6 - h);
+      ctx.lineTo(x + 6, 6);
+      ctx.closePath();
+      fillOutlined(ctx, cols[i % cols.length]!, 0.75, 1.2);
+    });
+    ctx.restore();
   } else {
     // mini 3-point gold crown
     ctx.save();
@@ -2589,6 +3426,156 @@ function drawPetHat(ctx: Ctx, hat: PetHatId): void {
     fillOutlined(ctx, '#ff6fa0', 0.72, 0.8);
     ctx.restore();
   }
+}
+
+// ================================================================ REX (boy pet)
+// A chibi baby T-rex — same box as Inky (160×170, centred x=80), palette-swapped
+// by petColor and wearing the same pet hats, so the boy's pet slots into every
+// place Inky did with zero extra plumbing.
+
+export function drawRexInto(ctx: Ctx, config: AvatarConfig): void {
+  const pet = PETS[config.petColor] ?? PETS.forest;
+  const belly = lighten(pet.base, 0.42);
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // tail sweeping out behind to the right
+  ctx.beginPath();
+  ctx.moveTo(98, 118);
+  ctx.quadraticCurveTo(140, 116, 151, 94);
+  ctx.quadraticCurveTo(151, 110, 138, 120);
+  ctx.quadraticCurveTo(120, 133, 100, 132);
+  ctx.closePath();
+  fillOutlined(ctx, shade(pet.base, 0.92), 0.82, 1.4);
+
+  // two stubby feet with little claws
+  for (const s of [-1, 1]) {
+    ellipsePath(ctx, 80 + s * 20, 150, 15, 9, 0);
+    fillOutlined(ctx, pet.deep, 0.82, 1.4);
+    ctx.fillStyle = '#fff6e0';
+    for (const t of [-1, 0, 1]) {
+      ctx.beginPath();
+      ctx.arc(80 + s * 20 + t * 5, 156, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // body — a rounded egg with a top-left light, just like Inky's dome
+  ctx.beginPath();
+  ctx.moveTo(80, 30);
+  ctx.bezierCurveTo(44, 32, 30, 66, 34, 100);
+  ctx.bezierCurveTo(36, 130, 54, 150, 80, 150);
+  ctx.bezierCurveTo(106, 150, 124, 130, 126, 100);
+  ctx.bezierCurveTo(130, 66, 116, 32, 80, 30);
+  ctx.closePath();
+  const g = ctx.createRadialGradient(60, 60, 8, 80, 96, 92);
+  g.addColorStop(0, lighten(pet.base, 0.22));
+  g.addColorStop(0.55, pet.base);
+  g.addColorStop(1, pet.deep);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = shade(pet.deep, 0.85);
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  // lighter belly patch
+  ctx.save();
+  ctx.globalAlpha = 0.85;
+  ellipsePath(ctx, 80, 114, 26, 30, 0);
+  ctx.fillStyle = belly;
+  ctx.fill();
+  ctx.restore();
+
+  // tiny arms at the sides
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(80 + s * 30, 94);
+    ctx.quadraticCurveTo(80 + s * 41, 99, 80 + s * 37, 110);
+    ctx.quadraticCurveTo(80 + s * 30, 108, 80 + s * 27, 99);
+    ctx.closePath();
+    fillOutlined(ctx, pet.base, 0.82, 1.3);
+  }
+
+  // a little back-crest of three spikes on the crown
+  for (const [x, y, h] of [[64, 36, 9], [80, 30, 12], [96, 36, 9]] as const) {
+    ctx.beginPath();
+    ctx.moveTo(x - 6, y + 4);
+    ctx.lineTo(x, y - h);
+    ctx.lineTo(x + 6, y + 4);
+    ctx.closePath();
+    fillOutlined(ctx, pet.deep, 0.8, 1.2);
+  }
+
+  // eyes
+  for (const s of [-1, 1]) {
+    const ex = 80 + s * 17;
+    ctx.beginPath();
+    ctx.arc(ex, 72, 11, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = shade(pet.deep, 0.9);
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(ex + s * 1, 74, 5.2, 0, Math.PI * 2);
+    ctx.fillStyle = '#352a2a';
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(ex - 1, 71, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // muzzle
+  ellipsePath(ctx, 80, 99, 24, 17, 0);
+  fillOutlined(ctx, lighten(pet.base, 0.14), 0.85, 1.4);
+  // nostrils
+  ctx.fillStyle = shade(pet.deep, 0.8);
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.arc(80 + s * 7, 91, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // wide grin
+  ctx.strokeStyle = shade(pet.deep, 0.75);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(66, 101);
+  ctx.quadraticCurveTo(80, 113, 94, 101);
+  ctx.stroke();
+  // two friendly top teeth
+  ctx.fillStyle = '#fffaf0';
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(80 + s * 6, 102);
+    ctx.lineTo(80 + s * 10, 102);
+    ctx.lineTo(80 + s * 8, 107);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // cheeks
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = '#ff9db5';
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.arc(80 + s * 28, 93, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // hat rides the crown
+  if (config.petHat) drawPetHat(ctx, config.petHat);
+
+  ctx.restore();
+}
+
+/** Paint whichever pet this reader has — Inky (girl) or Rex (boy). */
+export function drawPetInto(ctx: Ctx, config: AvatarConfig): void {
+  if (config.character === 'boy') drawRexInto(ctx, config);
+  else drawInkyInto(ctx, config);
 }
 
 // ================================================================ Phaser wrappers
@@ -2613,22 +3600,26 @@ function paintTo(
   return key;
 }
 
-/** Paint Evie for `config` into texture `key` (re-paint safe). Returns `key`. */
-export function paintEvie(
+/** Paint the reader for `config` into texture `key` (re-paint safe). */
+export function paintReader(
   scene: Phaser.Scene,
   config: AvatarConfig,
   key: string,
   scale = 2,
 ): string {
-  return paintTo(scene, key, EVIE_W, EVIE_H, scale, (ctx) => drawEvieInto(ctx, config));
+  return paintTo(scene, key, EVIE_W, EVIE_H, scale, (ctx) => drawReaderInto(ctx, config));
 }
 
-/** Paint Inky for `config` into texture `key` (re-paint safe). Returns `key`. */
-export function paintInky(
+/** Paint the reader's pet (Inky or Rex, by character) into texture `key`. */
+export function paintPet(
   scene: Phaser.Scene,
   config: AvatarConfig,
   key: string,
   scale = 2,
 ): string {
-  return paintTo(scene, key, INKY_W, INKY_H, scale, (ctx) => drawInkyInto(ctx, config));
+  return paintTo(scene, key, INKY_W, INKY_H, scale, (ctx) => drawPetInto(ctx, config));
 }
+
+/** Back-compat aliases (scenes are migrating to paintReader/paintPet). */
+export const paintEvie = paintReader;
+export const paintInky = paintPet;

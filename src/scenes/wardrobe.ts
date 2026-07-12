@@ -16,12 +16,15 @@ import Phaser from 'phaser';
 import {
   COSMETICS,
   OPTIONAL_CATEGORIES,
+  visibleTo,
   type AvatarConfig,
+  type CharacterId,
   type CosmeticCategory,
   type CosmeticItem,
   type SkinId,
 } from '../avatar/catalog';
-import { paintEvie, paintInky } from '../avatar/paint';
+import { petName } from '../services/juice';
+import { paintReader, paintPet } from '../avatar/paint';
 import { loadProgress, saveProgress, type ProgressData } from '../services/progress';
 import { speakUI, chime, playMusic } from '../services/audio';
 import {
@@ -40,14 +43,18 @@ import {
 
 type TabId = 'hair' | 'color' | 'outfit' | 'face' | 'sparkle' | 'inky';
 
-const TAB_DEFS: { id: TabId; name: string; emoji: string }[] = [
-  { id: 'hair', name: 'Hair', emoji: '💇‍♀️' },
-  { id: 'color', name: 'Color', emoji: '🎨' },
-  { id: 'outfit', name: 'Outfit', emoji: '👗' },
-  { id: 'face', name: 'Face', emoji: '😊' },
-  { id: 'sparkle', name: 'Sparkle', emoji: '✨' },
-  { id: 'inky', name: 'Inky', emoji: '🐙' },
-];
+/** Tabs, with the pet + outfit chips labelled for whichever reader this is. */
+function tabDefs(character: CharacterId): { id: TabId; name: string; emoji: string }[] {
+  const boy = character === 'boy';
+  return [
+    { id: 'hair', name: 'Hair', emoji: '💇' },
+    { id: 'color', name: 'Color', emoji: '🎨' },
+    { id: 'outfit', name: 'Outfit', emoji: boy ? '🦸' : '👗' },
+    { id: 'face', name: 'Face', emoji: '😊' },
+    { id: 'sparkle', name: 'Sparkle', emoji: '✨' },
+    { id: 'inky', name: boy ? 'Rex' : 'Inky', emoji: boy ? '🦖' : '🐙' },
+  ];
+}
 
 // Six tabs share the panel width (x 516→1008). Stepping 82 from 558 with a
 // 76px button keeps a 6px gap, the first tab's left edge at 520 and the last
@@ -146,7 +153,7 @@ export class WardrobeScene extends Phaser.Scene {
     playMusic('wardrobe');
     ensureSparkTexture(this);
 
-    readingText(this, GAME_W / 2, 56, "Evie's Wardrobe ✨", 40, '#ffe9a8');
+    readingText(this, GAME_W / 2, 56, 'Your Wardrobe ✨', 40, '#ffe9a8');
     void speakUI('wardrobe-welcome', 'Welcome to your wardrobe!');
 
     // home button — she can always leave
@@ -181,7 +188,7 @@ export class WardrobeScene extends Phaser.Scene {
     pool.fillStyle(0xffffff, 0.08);
     pool.fillEllipse(300, 630, 300, 58);
 
-    paintEvie(this, this.progress.avatar, EVIE_KEY);
+    paintReader(this, this.progress.avatar, EVIE_KEY);
     this.evieImg = this.add.image(EVIE_X, EVIE_Y, EVIE_KEY);
     // the painter renders at 2x resolution — scale from the texture's real
     // pixel height or Evie doubles in size and her hit area smothers 🏠
@@ -201,7 +208,7 @@ export class WardrobeScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    paintInky(this, this.progress.avatar, INKY_KEY);
+    paintPet(this, this.progress.avatar, INKY_KEY);
     this.inkyImg = this.add.image(INKY_X, INKY_Y, INKY_KEY);
     this.inkyScale = 130 / this.inkyImg.height;
     this.inkyImg.setScale(this.inkyScale);
@@ -226,10 +233,10 @@ export class WardrobeScene extends Phaser.Scene {
     const cfg = this.previewItem
       ? withPart(this.progress.avatar, this.previewItem.category, this.previewItem.id)
       : this.progress.avatar;
-    paintEvie(this, cfg, EVIE_KEY);
+    paintReader(this, cfg, EVIE_KEY);
     this.evieImg.setTexture(EVIE_KEY);
     this.evieImg.setScale(400 / this.evieImg.height);
-    paintInky(this, cfg, INKY_KEY);
+    paintPet(this, cfg, INKY_KEY);
     this.inkyImg.setTexture(INKY_KEY);
     this.inkyImg.setScale(this.inkyScale);
   }
@@ -285,7 +292,7 @@ export class WardrobeScene extends Phaser.Scene {
   // ----------------------------------------------------------------- tabs
 
   private buildTabs(): void {
-    TAB_DEFS.forEach((def, i) => {
+    tabDefs(this.progress.avatar.character).forEach((def, i) => {
       const tab = makeButton(this, TAB_X0 + i * TAB_STEP, 138, def.emoji, () => this.switchTab(def.id), {
         emoji: true,
         fontSize: 28,
@@ -444,8 +451,9 @@ export class WardrobeScene extends Phaser.Scene {
         cursor += ROW_H;
       }
     };
+    const character = this.progress.avatar.character;
     const addCategory = (category: CosmeticCategory): void => {
-      for (const item of COSMETICS.filter((c) => c.category === category)) {
+      for (const item of COSMETICS.filter((c) => c.category === category && visibleTo(c, character))) {
         addChip(item, category);
       }
       // "none" is a real choice for optional slots — a free take-it-off chip
@@ -464,28 +472,18 @@ export class WardrobeScene extends Phaser.Scene {
         addHeader('Hair colors');
         addCategory('hairColor');
         break;
-      case 'outfit':
-        addHeader('Mermaid tails');
-        for (const item of COSMETICS.filter((c) => c.id.startsWith('tail-'))) {
-          addChip(item, 'outfit');
+      case 'outfit': {
+        const groups: [string, string][] =
+          character === 'boy'
+            ? [['Superheroes', 'hero-'], ['Jobs', 'job-'], ['Everyday', 'sport-']]
+            : [['Mermaid tails', 'tail-'], ['Princess gowns', 'gown-'], ['Fairy dresses', 'fairy-'], ['Everyday', 'play-']];
+        for (const [name, prefix] of groups) {
+          addHeader(name);
+          for (const item of COSMETICS.filter((c) => c.id.startsWith(prefix))) addChip(item, 'outfit');
+          flushRow();
         }
-        flushRow();
-        addHeader('Princess gowns');
-        for (const item of COSMETICS.filter((c) => c.id.startsWith('gown-'))) {
-          addChip(item, 'outfit');
-        }
-        flushRow();
-        addHeader('Fairy dresses');
-        for (const item of COSMETICS.filter((c) => c.id.startsWith('fairy-'))) {
-          addChip(item, 'outfit');
-        }
-        flushRow();
-        addHeader('Everyday');
-        for (const item of COSMETICS.filter((c) => c.id.startsWith('play-'))) {
-          addChip(item, 'outfit');
-        }
-        flushRow();
         break;
+      }
       case 'face':
         // all three are optional slots, so addCategory appends a free "None ✖"
         addHeader('Freckles & blush');
@@ -503,12 +501,14 @@ export class WardrobeScene extends Phaser.Scene {
         addHeader('To hold');
         addCategory('held');
         break;
-      case 'inky':
-        addHeader('Inky colors');
+      case 'inky': {
+        const pet = petName(character);
+        addHeader(`${pet} colors`);
         addCategory('petColor');
-        addHeader('Inky hats');
+        addHeader(`${pet} hats`);
         addCategory('petHat');
         break;
+      }
     }
     flushRow();
     this.contentHeight = cursor + 12;
