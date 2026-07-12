@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 import { getWord } from '../content/words';
 import { speakWord, speakUI, chime } from '../services/audio';
-import { GAME_W, makeButton, emojiText, readingText, wiggle, popIn, type Button } from '../ui/kit';
+import { GAME_W, makeButton, emojiText, displayText, wiggle, popIn, type Button, HEX } from '../ui/kit';
 import type { RunRound } from './types';
 
 export const runFeedCreature: RunRound = (scene, spec, ctx) => {
@@ -31,13 +31,13 @@ export const runFeedCreature: RunRound = (scene, spec, ctx) => {
       ease: 'Sine.easeInOut',
     });
 
-    const prompt = readingText(
+    const prompt = displayText(
       scene,
       GAME_W / 2,
       340,
       `Feed ${ctx.theme.creatureName}!`,
-      34,
-      '#ffffffcc',
+      36,
+      HEX.white,
     );
     container.add(prompt);
 
@@ -122,7 +122,7 @@ export const runFeedCreature: RunRound = (scene, spec, ctx) => {
           if (w.id === word.id) finish(btn);
           else miss(btn);
         },
-        { width: cardW, height: 100, fontSize: 54 },
+        { width: cardW, height: 100, fontSize: 54, reading: true, fill: 0xfff8ec },
       );
       choiceButtons.push(btn);
       container.add(btn);

@@ -1,8 +1,12 @@
 /**
- * The island map: 9 level stops along a winding path through the three
- * realms. Icon-first (no text she must read to navigate); each stop speaks
- * its name when unlocked. Parent screen hides behind a 2s long-press on
- * the gear.
+ * The Reading Road map — the home screen and the game's hero. The child's
+ * current REGION paints the world; its ten lesson stops wind across the middle
+ * as a sticker-medallion trail; one big gold button continues the journey.
+ *
+ * "Storybook Atlas" treatment: the region stays a full-color illustrated place,
+ * but chrome (title, buttons, currency, milestones) is cut-paper stickers in the
+ * display face. Navigation is four persistent destinations + a "More" chest, so
+ * the road and the Lesson button own the screen instead of ten edge icons.
  */
 import Phaser from 'phaser';
 import { regionForLesson, baseRealmFor, TOTAL_LESSONS } from '../content/regions';
@@ -10,12 +14,27 @@ import { canStartLessonToday, roadDone } from '../services/road';
 import { loadProgress } from '../services/progress';
 import { seasonFor, SEASON_THEMES } from '../services/juice';
 import { speakUI, playMusic, chime } from '../services/audio';
-import { GAME_W, GAME_H, readingText, emojiText, drawRealmBackground, makeButton, wiggle } from '../ui/kit';
+import {
+  GAME_W,
+  GAME_H,
+  readingText,
+  displayText,
+  emojiText,
+  drawRealmBackground,
+  makeButton,
+  makePanel,
+  coinChip,
+  wiggle,
+  bob,
+  breathe,
+  COL,
+  HEX,
+} from '../ui/kit';
 
 /** The ten lesson stops of the current region, winding across the middle. */
 const STOP_POS: [number, number][] = [
-  [190, 560], [300, 505], [415, 545], [530, 490], [645, 535],
-  [755, 470], [645, 400], [520, 370], [395, 400], [280, 345],
+  [210, 560], [320, 505], [435, 545], [545, 495], [650, 535],
+  [755, 470], [650, 405], [525, 375], [400, 405], [285, 350],
 ];
 
 export class MapScene extends Phaser.Scene {
@@ -25,181 +44,62 @@ export class MapScene extends Phaser.Scene {
 
   create(): void {
     const progress = loadProgress();
-    // The Reading Road: her current REGION paints the whole map, its ten
-    // lessons wind across the middle, and the big button continues the journey.
     const lesson = Math.min(progress.lesson, TOTAL_LESSONS);
     const region = regionForLesson(lesson);
+    const boy = progress.avatar.character === 'boy';
 
-    // a gentle seasonal touch: the season's emoji drift in the background and
-    // a small badge names it — date-driven, no settings to fuss with
     const season = seasonFor();
     const st = SEASON_THEMES[season];
-    drawRealmBackground(this, region.bgTop, region.bgBottom, [...region.ambient, ...st.emoji]);
+    // the region is a full-color place; only a few calm set-dressing emoji
+    drawRealmBackground(this, region.bgTop, region.bgBottom, [...region.ambient, ...st.emoji], undefined, 3);
     this.cameras.main.fadeIn(300);
     playMusic(`region-${region.id}`, baseRealmFor(region));
 
-    readingText(this, GAME_W / 2, 56, 'Reading Realms', 40, '#ffe9a8');
+    // ---- header: the LAND is the headline; the app name is a small eyebrow
+    displayText(this, GAME_W / 2, 34, 'Reading Realms', 17, '#ffffffcc', '500').setAlpha(0.9);
+    const head = this.add.container(GAME_W / 2, 74);
+    const name = displayText(this, 0, 0, region.name, 42, HEX.white, '700');
+    const emo = emojiText(this, -name.width / 2 - 26, 0, region.emoji, 34);
+    head.add([emo, name]);
+    displayText(this, GAME_W / 2, 112, `Lesson ${lesson} of ${TOTAL_LESSONS}`, 19, '#ffffffcc', '500');
 
-    // status row under the title: reading streak · arcade tickets · Inky level
-    emojiText(this, GAME_W / 2 - 132, 100, '🔥', 26);
-    readingText(this, GAME_W / 2 - 104, 100, `${progress.streak.days}`, 24, '#ffffff').setOrigin(0, 0.5);
-    emojiText(this, GAME_W / 2 - 20, 100, '🎟️', 24);
-    readingText(this, GAME_W / 2 + 8, 100, `${progress.tickets}`, 24, '#ffffff').setOrigin(0, 0.5);
-    emojiText(this, GAME_W / 2 + 96, 100, progress.avatar.character === 'boy' ? '🦖' : '🐙', 24);
-    readingText(this, GAME_W / 2 + 124, 100, `Lv${progress.inky.level}`, 22, '#ffffff').setOrigin(0, 0.5);
-
-    // seasonal badge, tucked bottom-left away from the Continue button
-    emojiText(this, 120, GAME_H - 26, st.emoji[0]!, 22).setAlpha(0.8);
-    readingText(this, 168, GAME_H - 26, st.name, 18, '#ffe9a8').setAlpha(0.8);
-
-    // where she is on the whole road — region name + lesson N of 120
-    readingText(
-      this,
-      GAME_W / 2,
-      142,
-      `${region.emoji} ${region.name}  ·  Lesson ${lesson} of ${TOTAL_LESSONS}`,
-      22,
-      '#ffe9a8',
-    ).setAlpha(0.95);
-
-    // collection tally
+    // ---- currency, top-left: pearls + a shell/collection tally as coin chips
     const c = progress.collections;
     const total = c.treasures.length + c.pets.length + c.charms.length;
-    emojiText(this, 80, 60, '🐚', 34);
-    readingText(this, 130, 60, `${total}`, 34, '#ffffff');
+    coinChip(this, 80, 44, '⚪', `${progress.pearls}`, 24);
+    coinChip(this, 80, 92, '🐚', `${total}`, 22);
 
-    // pearl purse — the wardrobe currency, always visible so earning feels real
-    const pearl = this.add.circle(80, 206, 12, 0xffffff, 1).setStrokeStyle(2, 0xd8e6ee, 1);
-    pearl.setDepth(1);
-    this.add.circle(76, 202, 3.5, 0xffffff, 0.95).setDepth(1);
-    readingText(this, 130, 206, `${progress.pearls}`, 30, '#ffffff');
+    // ---- status, top-right cluster: streak · tickets · pet level
+    coinChip(this, GAME_W - 210, 44, '🔥', `${progress.streak.days}`, 22);
+    coinChip(this, GAME_W - 128, 44, '🎟️', `${progress.tickets}`, 22);
+    coinChip(this, GAME_W - 44, 44, boy ? '🦖' : '🐙', `${progress.inky.level}`, 22);
 
-    // side doors off the map — icon-only, scenes greet with their own audio
+    // ---- navigation: FOUR persistent destinations + a "More" chest ----
     const goTo = (key: string) => {
       this.cameras.main.fadeOut(300);
       this.time.delayedCall(330, () => this.scene.start(key));
     };
-    // 📚 sits under the shell tally: "see what those shells are"
-    makeButton(this, 80, 134, '📚', () => goTo('collection'), {
-      emoji: true,
-      fontSize: 30,
-      width: 76,
-      height: 64,
-      fill: 0xffffff,
-    }).setAlpha(0.85);
-    // ✨ in the opposite top corner, clear of the path and the gear
-    makeButton(this, GAME_W - 80, 60, '✨', () => goTo('phrases-hub'), {
-      emoji: true,
-      fontSize: 30,
-      width: 76,
-      height: 64,
-      fill: 0xffffff,
-    }).setAlpha(0.85);
-    // 📖 story pages under the sparkles — the castle's bookshelf
-    makeButton(this, GAME_W - 80, 134, '📖', () => goTo('story'), {
-      emoji: true,
-      fontSize: 30,
-      width: 76,
-      height: 64,
-      fill: 0xffffff,
-    }).setAlpha(0.85);
-    // 👗 the wardrobe — dress-up with pearls earned by reading
-    makeButton(this, GAME_W - 80, 208, '👗', () => goTo('wardrobe'), {
-      emoji: true,
-      fontSize: 30,
-      width: 76,
-      height: 64,
-      fill: 0xffffff,
-    }).setAlpha(0.85);
-    // 🔁 review — a gentler second-session pass over words she's already met
-    makeButton(this, 80, 280, '🔁', () => {
+    const startReview = () => {
       this.cameras.main.fadeOut(300);
       this.time.delayedCall(330, () => this.scene.start('session', { review: true }));
-    }, {
-      emoji: true,
-      fontSize: 30,
-      width: 76,
-      height: 64,
-      fill: 0xffe9a8,
-    }).setAlpha(0.9);
-    // 🏅 achievements — the badge shelf
-    makeButton(this, GAME_W - 80, 282, '🏅', () => goTo('achievements'), {
-      emoji: true,
-      fontSize: 30,
-      width: 76,
-      height: 64,
-      fill: 0xffffff,
-    }).setAlpha(0.85);
-    // 🕹️ the Games Arcade — spend pearls on a play pass, earned by reading
-    makeButton(this, 80, 354, '🕹️', () => goTo('arcade'), {
-      emoji: true,
-      fontSize: 30,
-      width: 76,
-      height: 64,
-      fill: 0xffe9a8,
-    }).setAlpha(0.92);
-    // 🌟 sticker book — milestone stickers she's collected
-    makeButton(this, 80, 428, '🌟', () => goTo('stickerbook'), {
-      emoji: true,
-      fontSize: 30,
-      width: 76,
-      height: 64,
-      fill: 0xffffff,
-    }).setAlpha(0.85);
-    // 📸 photo booth — pose dressed-up Evie and snap a picture
-    makeButton(this, GAME_W - 80, 356, '📸', () => goTo('photobooth'), {
-      emoji: true,
-      fontSize: 30,
-      width: 76,
-      height: 64,
-      fill: 0xffffff,
-    }).setAlpha(0.85);
-    // 🎟️ ticket shop — spend arcade tickets on fancy cosmetics
-    makeButton(this, GAME_W - 80, 430, '🎟️', () => goTo('ticketshop'), {
-      emoji: true,
-      fontSize: 30,
-      width: 76,
-      height: 64,
-      fill: 0xffffff,
-    }).setAlpha(0.85);
-
-    // session-cap sunset: past the daily cap the map turns to dusk and
-    // suggests resting — a gentle wind-down, never a lock (parents decide)
-    const today = new Date().toISOString().slice(0, 10);
-    const minutesToday = progress.sessions
-      .filter((s) => s.date === today)
-      .reduce((sum, s) => sum + (s.minutes ?? 0), 0);
-    if (minutesToday >= progress.settings.sessionCapMin) {
-      this.add
-        .rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x1a1035, 0.35)
-        .setDepth(5);
-      const moon = emojiText(this, GAME_W / 2 - 205, 116, '🌙', 40).setDepth(6);
-      const note = readingText(
-        this,
-        GAME_W / 2 + 24,
-        116,
-        'What a lot of reading today! ⭐',
-        30,
-        '#ffe9a8',
-      ).setDepth(6);
-      this.tweens.add({
-        targets: [moon, note],
-        alpha: 0.75,
-        duration: 1800,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
+    };
+    const navBtn = (x: number, y: number, glyph: string, cap: string, onTap: () => void, gold = false) => {
+      const b = makeButton(this, x, y, glyph, onTap, {
+        emoji: true, fontSize: 30, width: 78, height: 66, fill: gold ? COL.gold : COL.paper,
       });
-    }
+      displayText(this, x, y + 46, cap, 14, gold ? HEX.goldEdge : '#ffffffdd', '500');
+      return b;
+    };
+    // right-edge toolbelt: the four the child reaches for most
+    navBtn(GAME_W - 66, 190, '📚', 'Book', () => goTo('collection'));
+    navBtn(GAME_W - 66, 286, '👗', 'Dress', () => goTo('wardrobe'));
+    navBtn(GAME_W - 66, 382, '🕹️', 'Games', () => goTo('arcade'), true);
+    navBtn(GAME_W - 66, 478, '🔁', 'Review', startReview);
+    // the "More adventures" chest — opens a paper tray with the rest
+    navBtn(GAME_W - 66, 574, '🧰', 'More', () => this.openMore(goTo));
 
-    // ---- the road: this region's ten lesson stops winding across the middle
-    const path = this.add.graphics();
-    path.lineStyle(9, 0xffffff, 0.16);
-    for (let i = 0; i < STOP_POS.length - 1; i++) {
-      const [x1, y1] = STOP_POS[i]!;
-      const [x2, y2] = STOP_POS[i + 1]!;
-      path.lineBetween(x1, y1, x2, y2);
-    }
+    // ---- the road: a dotted trail of sticker medallions ----
+    this.drawTrail(region);
 
     const done = roadDone(progress);
     const canStart = canStartLessonToday(progress);
@@ -214,79 +114,140 @@ export class MapScene extends Phaser.Scene {
       const [x, y] = STOP_POS[i]!;
       const passed = stopLesson < lesson || done;
       const isCurrent = !done && stopLesson === lesson;
-
-      const r = isCurrent ? 40 : 26;
-      const circle = this.add.circle(x, y, r, passed || isCurrent ? region.accent : 0x55606e, passed || isCurrent ? 1 : 0.55);
-      circle.setStrokeStyle(isCurrent ? 5 : 3, 0xffffff, passed || isCurrent ? 0.9 : 0.25);
-      const icon = emojiText(this, x, y, isCurrent ? region.creature : passed ? '⭐' : '', isCurrent ? 36 : 22);
-      readingText(this, x, y + r + 20, `${stopLesson}`, 18, passed || isCurrent ? '#ffffff' : '#93a0ad');
-
-      circle.setInteractive({ useHandCursor: true });
-      circle.on('pointerup', () => {
-        if (isCurrent) {
-          if (canStart) startLesson(stopLesson);
-          else {
-            chime('gentle');
-            void speakUI('road-tomorrow', 'Great reading today! A brand new lesson opens tomorrow!');
-          }
-        } else if (passed) {
-          startLesson(stopLesson); // replaying an old lesson is always welcome
-        } else {
-          wiggle(this, circle); // not yet — an invitation, never a wall
-        }
+      this.drawMilestone(x, y, stopLesson, passed, isCurrent, boy, () => {
+        if (isCurrent && !canStart) {
+          chime('gentle');
+          void speakUI('road-tomorrow', 'Great reading today! A brand new lesson opens tomorrow!');
+        } else if (passed || isCurrent) startLesson(stopLesson);
+        else wiggle(this, this.add.container(x, y)); // an invitation, never a wall
       });
-      if (isCurrent) {
-        this.tweens.add({
-          targets: [circle, icon],
-          scale: 1.12,
-          duration: 650,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut',
-        });
-      }
     }
 
-    // the next region waits at the end of the path
+    // the next land peeks at the end of the trail
     if (region.id < 12) {
       const nextRegion = regionForLesson(region.lessonRange[1] + 1);
-      const gx = 175;
-      const gy = 300;
-      this.add.circle(gx, gy, 34, 0x000000, 0.25).setStrokeStyle(3, 0xffffff, 0.35);
-      emojiText(this, gx, gy, nextRegion.emoji, 30).setAlpha(0.8);
-      readingText(this, gx, gy + 52, 'next!', 16, '#ffffffaa');
+      makePanel(this, 120, 250, 108, 96, { fill: COL.paper, radius: 18 }).setAlpha(0.85);
+      emojiText(this, 174, 286, nextRegion.emoji, 34).setAlpha(0.9);
+      displayText(this, 174, 322, 'next!', 15, HEX.inkSoft, '500');
     }
 
-    // the big CONTINUE button — the one thing to tap every day
-    const label = done
-      ? '🏆 You did it all!'
-      : canStart
-        ? `▶️ Lesson ${lesson}!`
-        : '🌙 Review time!';
-    makeButton(
-      this,
-      GAME_W / 2,
-      GAME_H - 56,
-      label,
-      () => {
-        if (done) return;
-        if (canStart) startLesson(lesson);
-        else {
-          this.cameras.main.fadeOut(300);
-          this.time.delayedCall(330, () => this.scene.start('session', { review: true }));
-        }
-      },
-      { fontSize: 32, width: 340, height: 84, fill: 0xffe9a8 },
-    );
+    // ---- session-cap sunset (unchanged gentle wind-down) ----
+    const today = new Date().toISOString().slice(0, 10);
+    const minutesToday = progress.sessions
+      .filter((s) => s.date === today)
+      .reduce((sum, s) => sum + (s.minutes ?? 0), 0);
+    if (minutesToday >= progress.settings.sessionCapMin) {
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x1a1035, 0.3).setDepth(5);
+      const note = displayText(this, GAME_W / 2, 150, '🌙  What a lot of reading today!', 28, HEX.gold).setDepth(6);
+      breathe(this, note, 1.04, 1800);
+    }
 
-    // parent gear — a plain tap opens the parent corner (a big hit target,
-    // bottom-right, out of the way of play)
-    makeButton(this, GAME_W - 58, GAME_H - 48, '⚙️', () => this.scene.start('parent'), {
-      emoji: true,
-      fontSize: 34,
-      width: 76,
-      height: 68,
-      fill: 0xffffff,
-    }).setAlpha(0.7);
+    // ---- the ONE gold action ----
+    const label = done ? '🏆 You did it all!' : canStart ? `Lesson ${lesson}!` : '🌙 Review time!';
+    const cta = makeButton(this, GAME_W / 2, GAME_H - 54, label, () => {
+      if (done) return;
+      if (canStart) startLesson(lesson);
+      else startReview();
+    }, { fontSize: 32, width: 340, height: 88, fill: COL.gold, textColor: HEX.ink });
+    if (canStart && !done) breathe(this, cta, 1.03, 1300);
+
+    // parent gear — quiet, bottom-left, out of the way of play
+    makeButton(this, 58, GAME_H - 46, '⚙️', () => this.scene.start('parent'), {
+      emoji: true, fontSize: 30, width: 72, height: 64, fill: COL.paper,
+    }).setAlpha(0.85);
+  }
+
+  /** A dotted stitched trail connecting the ten stops. */
+  private drawTrail(region: { accent: number }): void {
+    const g = this.add.graphics();
+    for (let i = 0; i < STOP_POS.length - 1; i++) {
+      const [x1, y1] = STOP_POS[i]!;
+      const [x2, y2] = STOP_POS[i + 1]!;
+      const dist = Phaser.Math.Distance.Between(x1, y1, x2, y2);
+      const dots = Math.max(3, Math.round(dist / 26));
+      for (let d = 1; d < dots; d++) {
+        const t = d / dots;
+        const x = x1 + (x2 - x1) * t;
+        const y = y1 + (y2 - y1) * t;
+        g.fillStyle(0xffffff, 0.5);
+        g.fillCircle(x, y, 4);
+      }
+    }
+  }
+
+  /** One road stop as a cut-paper medallion: passed = gold coin, today = pet marker, upcoming = paper coin. */
+  private drawMilestone(
+    x: number, y: number, lessonNum: number,
+    passed: boolean, isCurrent: boolean, boy: boolean, onTap: () => void,
+  ): void {
+    const cont = this.add.container(x, y);
+    const g = this.add.graphics();
+    const r = isCurrent ? 38 : 26;
+    // shadow
+    g.fillStyle(0x000000, 0.18);
+    g.fillCircle(0, 4, r);
+    if (isCurrent) {
+      g.fillStyle(COL.paper, 1); g.fillCircle(0, 0, r);
+      g.lineStyle(4, COL.gold, 1); g.strokeCircle(0, 0, r);
+    } else if (passed) {
+      g.fillStyle(COL.gold, 1); g.fillCircle(0, 0, r);
+      g.lineStyle(3, COL.goldEdge, 1); g.strokeCircle(0, 0, r);
+    } else {
+      g.fillStyle(COL.paper, 0.9); g.fillCircle(0, 0, r);
+      g.lineStyle(3, COL.paperEdge, 1); g.strokeCircle(0, 0, r);
+    }
+    cont.add(g);
+
+    if (isCurrent) {
+      // the child's pet marks "you are here", under a little flag
+      const region = regionForLesson(lessonNum);
+      cont.add(emojiText(this, 0, 2, region.creature, 34));
+      const flag = this.add.container(0, -r - 20);
+      const fg = this.add.graphics();
+      fg.fillStyle(COL.gold, 1); fg.fillRoundedRect(-52, -15, 104, 26, 8);
+      fg.lineStyle(2, COL.goldEdge, 1); fg.strokeRoundedRect(-52, -15, 104, 26, 8);
+      flag.add(fg);
+      flag.add(displayText(this, 0, -2, "YOU'RE HERE", 13, HEX.ink, '700'));
+      cont.add(flag);
+      bob(this, cont, 6, 1400);
+    } else if (passed) {
+      cont.add(emojiText(this, 0, 0, '⭐', 24));
+    }
+    // number label
+    cont.add(displayText(this, 0, r + 18, `${lessonNum}`, 16, passed || isCurrent ? HEX.white : '#ffffff99', '700'));
+
+    g.setInteractive(new Phaser.Geom.Circle(0, 0, r), Phaser.Geom.Circle.Contains);
+    g.on('pointerup', onTap);
+  }
+
+  /** The "More adventures" chest: a paper tray of the six less-frequent destinations. */
+  private openMore(goTo: (k: string) => void): void {
+    const scrim = this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x201018, 0.55).setDepth(20).setInteractive();
+    const panel = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(21);
+    panel.add(makePanel(this, -320, -150, 640, 300, { fill: COL.paper }));
+    panel.add(displayText(this, 0, -112, 'More adventures', 30, HEX.ink, '700'));
+    const items: [string, string, string][] = [
+      ['✨', 'Phrases', 'phrases-hub'],
+      ['📖', 'Stories', 'story'],
+      ['🏅', 'Badges', 'achievements'],
+      ['🌟', 'Stickers', 'stickerbook'],
+      ['📸', 'Photos', 'photobooth'],
+      ['🎟️', 'Shop', 'ticketshop'],
+    ];
+    const close = () => { scrim.destroy(); panel.destroy(); };
+    items.forEach(([glyph, cap, key], i) => {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      const bx = -200 + col * 200;
+      const by = -30 + row * 96;
+      const b = makeButton(this, bx, by, glyph, () => { close(); goTo(key); }, {
+        emoji: true, fontSize: 34, width: 96, height: 76, fill: COL.paper,
+      });
+      panel.add(b);
+      panel.add(displayText(this, bx, by + 50, cap, 15, HEX.inkSoft, '500'));
+    });
+    const x = makeButton(this, 296, -138, '✕', close, { emoji: true, fontSize: 22, width: 52, height: 52, fill: COL.paper });
+    panel.add(x);
+    scrim.on('pointerup', close);
   }
 }

@@ -81,6 +81,7 @@ export const runMemoryWord: RunRound = (scene, spec, ctx) => {
           fontSize: 56,
           fill: 0xfff3d6,
           textColor: hearts.has(gi) ? HEART_COLOR : isVowel ? VOWEL_COLOR : '#26323f',
+          reading: true,
         },
       );
       tile.disableInteractive(); // look, don't touch, until the scatter

@@ -172,7 +172,7 @@ export const runSpeedRound: RunRound = (scene, spec, ctx) => {
             if (w.id === word.id) hit(btn);
             else miss(btn);
           },
-          { width: cardW, height: 100, fontSize: 54 },
+          { width: cardW, height: 100, fontSize: 54, reading: true },
         );
         buttons.push(btn);
         group.add(btn);

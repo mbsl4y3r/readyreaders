@@ -179,6 +179,7 @@ export const runMagicPhrase: RunRound = (scene, spec, ctx) => {
         const card = makeButton(scene, 0, 0, dw, () => onCard(i, card, cardButtons), {
           height: 104,
           fontSize: 46,
+          reading: true,
         });
         cardButtons.push(card);
         container.add(card);

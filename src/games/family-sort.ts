@@ -112,6 +112,7 @@ export const runFamilySort: RunRound = (scene, spec, ctx) => {
         width: 300,
         height: 120,
         fontSize: 64,
+        reading: true,
       });
       container.add(card);
       popIn(scene, card);

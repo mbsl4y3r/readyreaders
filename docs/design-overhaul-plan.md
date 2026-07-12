@@ -7,6 +7,59 @@ and approve before we execute._
 
 ---
 
+## 0. Review outcome & revisions
+
+The direction below (**"Storybook Atlas"**) was **reviewed and approved in
+principle**, with a set of revisions applied before execution. Recorded here so
+the plan and the build stay honest to what was actually decided.
+
+**Kept as-is:**
+- **Font separation is the highest-value move.** Chrome → a real display face;
+  decodable words → Andika forever. We chose **Fredoka** (over Baloo 2).
+- **The Reading Road is the centerpiece.** Build the map around the trail.
+- **Build through one shared kit** (`ui/kit.ts`) so a single pass lifts every screen.
+- **Preserve the educational core.** Words/sentences the child *decodes* stay in
+  Andika. Enforced in code by a `reading: true` button flag so the global
+  display-font swap can never leak into decodable content.
+
+**Revised before executing:**
+1. **Recapture screenshots first.** The audit shots were captured mid-camera-fade
+   (a headless-render artifact) and made bright surfaces look grey. Re-shot with
+   the fade forced complete; the map is genuinely bright, cards genuinely light.
+2. **"Touch/earn = sticker; read = clean page."** Things the child taps or
+   collects look like cut-paper stickers. Things she must *read* sit on a calm,
+   uncluttered page. This is the governing rule, not "everything is a sticker."
+3. **Don't turn every screen into a cream dashboard.** Keep the full-color,
+   illustrated **regional backdrops**; use paper surfaces only where readability
+   needs them. Region supplies the color; paper supplies the legibility.
+4. **Don't hide all destinations behind one button.** Keep **3–4 persistent**
+   entries (Book / Dress / Games / Review) + the rest behind a single "More"
+   treasure chest — reduce the clutter, don't bury the navigation.
+5. **The Collection tabs are a product decision, not a bug.** Today's 3 tabs vs.
+   the 12 regions is a real choice — **3 grand collections** or **12 regional
+   albums** — to be decided deliberately, not patched.
+6. **Prototype first, then test on iPad, then propagate.** Build only the
+   foundation + three representative screens; get real-device confirmation before
+   touching the other ~12 screens or merging to main. (The audit's "16 agents /
+   717k tokens" is not evidence of quality and carries no weight in this call.)
+
+**Status — prototype built (awaiting iPad review):**
+- ✅ **Foundation kit** — Fredoka bundled + `displayText()`; `drawButtonBg`
+  rebuilt as the cut-paper StickerButton; `makePanel` / `coinChip` / `bob` /
+  `breathe` / `reading` flag / paper+ink tokens / reduced-motion flag.
+- ✅ **Candy Cliffs map** — region name as the headline, the road as a stitched
+  trail with gold star-coin milestones and the pet "YOU'RE HERE" marker, 4
+  persistent nav stickers + a "More" chest, one gold Lesson CTA.
+- ✅ **Feed Taffy round** — chrome ("Feed Taffy the Unicorn!", "Lesson 35") in
+  Fredoka; the words she decodes (cats / cut / cat) stay in Andika on cut-paper
+  cards; progress pips are quiet paper coins that fill gold as she reads.
+- ✅ **Sticker Book** — a paper open-book spread; earned = cut-paper slot with a
+  white halo + gold ring, locked = quiet embossed socket; a `coinChip` count + a
+  gold collection meter.
+- ⏳ Everything else in §4 is **not built yet** — pending iPad sign-off.
+
+---
+
 ## 1. The honest diagnosis
 
 The game is **functional, kind, and cohesive** — but visually it lands on the

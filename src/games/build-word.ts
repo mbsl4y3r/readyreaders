@@ -94,6 +94,7 @@ export const runBuildWord: RunRound = (scene, spec, ctx) => {
           fontSize: 56,
           fill: 0xfff3d6,
           textColor: isVowel ? '#d1495b' : '#26323f',
+          reading: true,
         },
       );
       tiles[gi] = tile;

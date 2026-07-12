@@ -42,12 +42,15 @@ import {
   GAME_W,
   GAME_H,
   readingText,
+  displayText,
   emojiText,
   drawRealmBackground,
   makeButton,
   confettiBurst,
   popIn,
   badgeToast,
+  COL,
+  HEX,
 } from '../ui/kit';
 
 const RUNNERS: Record<RoundSpec['mechanic'], RunRound> = {
@@ -105,12 +108,12 @@ export class SessionScene extends Phaser.Scene {
       fontSize: 30,
       width: 76,
       height: 64,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
-    home.setAlpha(0.85);
+    home.setAlpha(0.95);
 
     if (this.lesson) {
-      readingText(this, GAME_W / 2, 96, `Lesson ${this.lesson}`, 22, '#ffffff').setAlpha(0.7);
+      displayText(this, GAME_W / 2, 96, `Lesson ${this.lesson}`, 20, HEX.white, '500').setAlpha(0.85);
     }
 
     void this.runChunk(theme);
@@ -124,11 +127,12 @@ export class SessionScene extends Phaser.Scene {
         ? planReview(progress)
         : planSession(this.levelId, progress);
 
-    // progress pips (the retry extension redraws its own smaller row)
+    // progress pips: quiet paper coins that fill gold as she reads — the
+    // reward color, earned one round at a time (retry redraws its own row)
     let pips = rounds.map((_, i) =>
       this.add
-        .circle(GAME_W / 2 + (i - (rounds.length - 1) / 2) * 34, 52, 10, 0xffffff, 0.25)
-        .setStrokeStyle(2, 0xffffff, 0.5),
+        .circle(GAME_W / 2 + (i - (rounds.length - 1) / 2) * 34, 52, 9, COL.paper, 0.32)
+        .setStrokeStyle(2, COL.paperEdge, 0.7),
     );
 
     const checkoutResults: { wordId: string; firstTry: boolean }[] = [];
@@ -145,7 +149,7 @@ export class SessionScene extends Phaser.Scene {
       }
       const result = await RUNNERS[spec.mechanic](this, spec, { theme });
       if (!this.alive) return;
-      pips[i]?.setFillStyle(0xffe9a8, 1);
+      pips[i]?.setFillStyle(COL.gold, 1).setStrokeStyle(2, COL.goldEdge, 1);
       this.recordResult(spec, result);
       if (spec.checkout && spec.wordId) {
         checkoutResults.push({ wordId: spec.wordId, firstTry: result.firstTry });
@@ -166,8 +170,14 @@ export class SessionScene extends Phaser.Scene {
           pips.forEach((p) => p.destroy());
           pips = rounds.map((_, j) =>
             this.add
-              .circle(GAME_W / 2 + (j - (rounds.length - 1) / 2) * 26, 52, 8, 0xffffff, j <= i ? 1 : 0.25)
-              .setStrokeStyle(2, 0xffffff, 0.5),
+              .circle(
+                GAME_W / 2 + (j - (rounds.length - 1) / 2) * 26,
+                52,
+                8,
+                j <= i ? COL.gold : COL.paper,
+                j <= i ? 1 : 0.32,
+              )
+              .setStrokeStyle(2, j <= i ? COL.goldEdge : COL.paperEdge, j <= i ? 1 : 0.7),
           );
         }
       }

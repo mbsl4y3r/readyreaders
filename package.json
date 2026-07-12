@@ -17,6 +17,7 @@
     "fetch-assets": "tsx scripts/fetch-assets.ts"
   },
   "dependencies": {
+    "@fontsource/fredoka": "^5.2.10",
     "phaser": "^3.87.0"
   },
   "devDependencies": {

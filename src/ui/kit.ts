@@ -7,13 +7,65 @@ import Phaser from 'phaser';
 export const GAME_W = 1024;
 export const GAME_H = 720;
 
-/** Font for text Evie READS — early-reader letterforms. */
+/** Font for text the child READS — early-reader letterforms (NEVER for chrome). */
 export const READING_FONT = 'Andika, "Comic Sans MS", sans-serif';
+/** Display face for CHROME — titles, buttons, scores, labels. Playful + rounded. */
+export const DISPLAY_FONT = 'Fredoka, "Baloo 2", "Comic Sans MS", sans-serif';
 /** Font stack that renders color emoji. */
 export const EMOJI_FONT =
   '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 
+/**
+ * "Storybook Atlas" tokens. UI surfaces are warm paper; regions supply the
+ * color behind them. Gold is reserved for the primary action + rewards.
+ */
+export const COL = {
+  paper: 0xfbf3e3,
+  paperEdge: 0xe7d6b8,
+  ink: 0x3b2a1e,
+  inkSoft: 0x7a6a58,
+  gold: 0xf5b841,
+  goldEdge: 0xc98a1e,
+  coral: 0xf0876b,
+  teal: 0x3fb8a6,
+} as const;
+/** Same tokens as CSS hex strings for text colors. */
+export const HEX = {
+  paper: '#fbf3e3',
+  ink: '#3b2a1e',
+  inkSoft: '#7a6a58',
+  gold: '#f5b841',
+  goldEdge: '#c98a1e',
+  teal: '#3fb8a6',
+  white: '#ffffff',
+} as const;
+
+/** Some children (and some parents) prefer calm — honor the OS setting. */
+export const REDUCED_MOTION =
+  globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
 const RES = Math.min(3, (globalThis.devicePixelRatio ?? 1) * 1.5);
+
+/** Chrome text in the display face (titles, buttons, labels, scores). */
+export function displayText(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  text: string,
+  size = 40,
+  color: string = HEX.ink,
+  weight: '500' | '700' = '700',
+): Phaser.GameObjects.Text {
+  return scene.add
+    .text(x, y, text, {
+      fontFamily: DISPLAY_FONT,
+      fontSize: `${size}px`,
+      color,
+      fontStyle: weight,
+    })
+    .setResolution(RES)
+    .setOrigin(0.5);
+}
 
 export function readingText(
   scene: Phaser.Scene,
@@ -54,6 +106,8 @@ export interface ButtonOpts {
   fontSize?: number;
   textColor?: string;
   emoji?: boolean;
+  /** True when the label is a DECODABLE word/sentence — keep it in Andika, not the display face. */
+  reading?: boolean;
 }
 
 export interface Button extends Phaser.GameObjects.Container {
@@ -71,18 +125,14 @@ export function makeButton(
   onTap: () => void,
   opts: ButtonOpts = {},
 ): Button {
-  const label = (opts.emoji ? emojiText : readingText)(
-    scene,
-    0,
-    0,
-    text,
-    opts.fontSize ?? 44,
-    opts.textColor ?? '#26323f',
-  );
+  // Emoji buttons use the emoji font; decodable words stay in Andika (reading);
+  // all other chrome uses the display face.
+  const labelFn = opts.emoji ? emojiText : opts.reading ? readingText : displayText;
+  const label = labelFn(scene, 0, 0, text, opts.fontSize ?? 34, opts.textColor ?? HEX.ink);
   const w = Math.max(opts.width ?? 0, label.width + 56, 96);
   const h = Math.max(opts.height ?? 0, label.height + 28, 72);
   const bg = scene.add.graphics();
-  drawButtonBg(bg, w, h, opts.fill ?? 0xffffff);
+  drawButtonBg(bg, w, h, opts.fill ?? COL.paper);
 
   const container = scene.add.container(x, y, [bg, label]) as Button;
   container.bg = bg;
@@ -107,12 +157,92 @@ export function makeButton(
   return container;
 }
 
+/**
+ * The cut-paper "sticker" background: a soft layered drop shadow, an opaque
+ * fill, and a thick edge stroke (a darker shade of the fill) so every control
+ * reads as a physical sticker laid on the page.
+ */
 function drawButtonBg(g: Phaser.GameObjects.Graphics, w: number, h: number, fill: number): void {
   g.clear();
-  g.fillStyle(0x000000, 0.25);
-  g.fillRoundedRect(-w / 2 + 3, -h / 2 + 5, w, h, 20);
+  const r = 22;
+  for (const [off, a] of [
+    [6, 0.1],
+    [4, 0.12],
+    [2, 0.14],
+  ] as const) {
+    g.fillStyle(0x000000, a);
+    g.fillRoundedRect(-w / 2, -h / 2 + off, w, h, r);
+  }
   g.fillStyle(fill, 1);
-  g.fillRoundedRect(-w / 2, -h / 2, w, h, 20);
+  g.fillRoundedRect(-w / 2, -h / 2, w, h, r);
+  g.lineStyle(3, shadeColor(fill, 0.8), 1);
+  g.strokeRoundedRect(-w / 2, -h / 2, w, h, r);
+}
+
+/** A paper card / panel sticker — fill + paper-edge stroke + soft shadow. */
+export function makePanel(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  opts: { fill?: number; edge?: number; radius?: number } = {},
+): Phaser.GameObjects.Graphics {
+  const g = scene.add.graphics();
+  const r = opts.radius ?? 24;
+  for (const [off, a] of [
+    [9, 0.07],
+    [5, 0.09],
+    [2, 0.1],
+  ] as const) {
+    g.fillStyle(0x000000, a);
+    g.fillRoundedRect(x, y + off, w, h, r);
+  }
+  g.fillStyle(opts.fill ?? COL.paper, 1);
+  g.fillRoundedRect(x, y, w, h, r);
+  g.lineStyle(2, opts.edge ?? COL.paperEdge, 1);
+  g.strokeRoundedRect(x, y, w, h, r);
+  return g;
+}
+
+/** A currency/score pill: a glyph + a tabular numeral in the display face. */
+export function coinChip(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  glyph: string,
+  value: string,
+  size = 22,
+): Phaser.GameObjects.Container {
+  const c = scene.add.container(x, y);
+  const num = displayText(scene, 0, 0, value, size, HEX.ink, '700');
+  const w = 46 + num.width;
+  const h = size + 18;
+  const g = scene.add.graphics();
+  g.fillStyle(0x000000, 0.1);
+  g.fillRoundedRect(-w / 2, -h / 2 + 2, w, h, h / 2);
+  g.fillStyle(COL.paper, 1);
+  g.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2);
+  g.lineStyle(2, COL.paperEdge, 1);
+  g.strokeRoundedRect(-w / 2, -h / 2, w, h, h / 2);
+  c.add(g);
+  c.add(emojiText(scene, -w / 2 + 18, 0, glyph, size));
+  num.setPosition(9, 0);
+  c.add(num);
+  c.setSize(w, h);
+  return c;
+}
+
+/** Gentle infinite vertical bob (e.g. the "you are here" marker). Honors reduced-motion. */
+export function bob(scene: Phaser.Scene, target: Phaser.GameObjects.Components.Transform, amp = 8, dur = 1400): void {
+  if (REDUCED_MOTION) return;
+  scene.tweens.add({ targets: target, y: `-=${amp}`, duration: dur, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+}
+
+/** Gentle infinite scale "breathe" (e.g. the primary button). Honors reduced-motion. */
+export function breathe(scene: Phaser.Scene, target: Phaser.GameObjects.Components.Transform & { scale?: number }, to = 1.05, dur = 1000): void {
+  if (REDUCED_MOTION) return;
+  scene.tweens.add({ targets: target, scale: to, duration: dur, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 }
 
 /** Gentle no-fail "hmm, not that one" wiggle. */
@@ -288,6 +418,7 @@ export function drawRealmBackground(
   bgBottom: number,
   ambient: string[],
   mood?: BackgroundMood,
+  count?: number,
 ): void {
   const g = scene.add.graphics();
   const steps = 12;
@@ -316,23 +447,28 @@ export function drawRealmBackground(
   // Atmosphere particles behind the emoji layer.
   addAtmosphereParticles(scene, mood ?? moodFromHue(bgTop));
 
-  for (let i = 0; i < 7; i++) {
+  // A few quiet set-dressing emoji (curated, not a swarm — the region gradient
+  // + silhouette bands carry the sense of place). `ambientCount: 0` opts out.
+  const n = Math.max(0, count ?? 4);
+  for (let i = 0; i < n; i++) {
     const e = ambient[i % ambient.length]!;
     const t = emojiText(
       scene,
       60 + Math.random() * (GAME_W - 120),
       60 + Math.random() * (GAME_H - 120),
       e,
-      26 + Math.random() * 22,
-    ).setAlpha(0.35);
-    scene.tweens.add({
-      targets: t,
-      y: t.y - 14 - Math.random() * 18,
-      duration: 2200 + Math.random() * 1800,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+      24 + Math.random() * 18,
+    ).setAlpha(0.22);
+    if (!REDUCED_MOTION) {
+      scene.tweens.add({
+        targets: t,
+        y: t.y - 14 - Math.random() * 18,
+        duration: 2600 + Math.random() * 1800,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
   }
 
   // Gentle vignette: layered edge frames, cumulative edge alpha ≈ 0.19.
