@@ -19,12 +19,15 @@ import {
   GAME_W,
   GAME_H,
   EMOJI_FONT,
-  readingText,
   emojiText,
   makeButton,
   drawRealmBackground,
   popIn,
   confettiBurst,
+  sceneTitle,
+  displayText,
+  HEX,
+  COL,
 } from '../ui/kit';
 
 // ---- frame geometry (left-centre of the screen) -----------------------------
@@ -145,16 +148,16 @@ export class PhotoBoothScene extends Phaser.Scene {
     this.cameras.main.fadeIn(300);
     void speakUI('photo-booth', "Photo booth! Let's take a picture of you!");
 
-    readingText(this, GAME_W / 2, 56, 'Photo Booth 📸', 40, '#ffe9a8');
+    sceneTitle(this, 'Photo Booth', '📸', 56);
 
     const home = makeButton(this, 62, 52, '🏠', () => this.scene.start('map'), {
       emoji: true,
       fontSize: 30,
       width: 76,
       height: 64,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
-    home.setAlpha(0.85);
+    home.setAlpha(0.95);
     home.setDepth(30);
 
     this.buildFrame();
@@ -287,7 +290,7 @@ export class PhotoBoothScene extends Phaser.Scene {
 
   private buildBackgroundChooser(): void {
     if (!this.chooserLabel) {
-      this.chooserLabel = readingText(this, RX, 132, 'Backdrops', 26, '#ffe9a8').setDepth(30);
+      this.chooserLabel = displayText(this, RX, 132, 'Backdrops', 26, '#ffe9a8', '700').setDepth(30);
     }
     this.chooserBtns.forEach((b) => b.destroy());
     this.chooserBtns = [];
@@ -319,7 +322,7 @@ export class PhotoBoothScene extends Phaser.Scene {
   // ------------------------------------------------------------------ stamps
 
   private buildStampBar(): void {
-    readingText(this, RX, 326, 'Stamps', 26, '#ffe9a8').setDepth(30);
+    displayText(this, RX, 326, 'Stamps', 26, '#ffe9a8', '700').setDepth(30);
     STAMPS.forEach((emoji, i) => {
       const col = i % 5;
       const x = RX + (col - 2) * CHOOSER_STEP;
@@ -374,7 +377,7 @@ export class PhotoBoothScene extends Phaser.Scene {
       fontSize: 32,
       width: 96,
       height: 84,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
     reset.setDepth(30);
     reset.setAlpha(0.92);
@@ -420,13 +423,14 @@ export class PhotoBoothScene extends Phaser.Scene {
 
     const photos = this.progress.photos;
     if (photos.length === 0) {
-      this.emptyHint = readingText(
+      this.emptyHint = displayText(
         this,
         512,
         GALLERY_Y,
         'Your photos will appear here 📷',
         20,
         '#c9b8e8',
+        '500',
       ).setDepth(24);
       return;
     }
@@ -481,7 +485,7 @@ export class PhotoBoothScene extends Phaser.Scene {
     const zone = this.add.zone(0, 0, GAME_W, GAME_H).setOrigin(0).setInteractive();
     overlay.add(zone);
 
-    overlay.add(readingText(this, GAME_W / 2, 60, 'Tap to close', 24, '#ffe9a8'));
+    overlay.add(displayText(this, GAME_W / 2, 60, 'Tap to close', 24, '#ffe9a8', '500'));
 
     const key = `pb-big-${this.thumbSeq++}`;
     const img = new Image();

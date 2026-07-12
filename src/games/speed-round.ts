@@ -12,7 +12,7 @@ import {
   GAME_W,
   makeButton,
   emojiText,
-  readingText,
+  displayText,
   wiggle,
   popIn,
   confettiBurst,
@@ -53,7 +53,7 @@ export const runSpeedRound: RunRound = (scene, spec, ctx) => {
       return star;
     });
 
-    const title = readingText(scene, GAME_W / 2, 190, '⚡ Lightning round!', 44, '#ffffffcc');
+    const title = displayText(scene, GAME_W / 2, 190, '⚡ Lightning round!', 40, '#ffffffcc');
     container.add(title);
 
     let started = performance.now();
@@ -67,12 +67,13 @@ export const runSpeedRound: RunRound = (scene, spec, ctx) => {
       const secs = (elapsed / 1000).toFixed(1);
       chime('fanfare');
       confettiBurst(scene, GAME_W / 2, 300, ctx.theme.accent);
-      const banner = readingText(
+      const banner = displayText(
         scene,
         GAME_W / 2,
         410,
         `⚡ You read 5 words in ${secs} seconds!`,
-        40,
+        38,
+        '#ffffff',
       );
       if (banner.width > GAME_W - 80) banner.setStyle({ wordWrap: { width: GAME_W - 120 } });
       container.add(banner);
@@ -182,7 +183,7 @@ export const runSpeedRound: RunRound = (scene, spec, ctx) => {
 
     // --- intro beat: ready… set… read! with a 3-2-1 star pulse ---
     const countStar = emojiText(scene, GAME_W / 2, 420, '⭐', 170).setAlpha(0);
-    const countNum = readingText(scene, GAME_W / 2, 420, '', 110, '#26323f');
+    const countNum = displayText(scene, GAME_W / 2, 420, '', 110, '#3b2a1e');
     container.add(countStar);
     container.add(countNum);
 

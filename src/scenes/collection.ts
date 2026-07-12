@@ -13,7 +13,6 @@ import { speakUI, chime } from '../services/audio';
 import {
   GAME_W,
   GAME_H,
-  readingText,
   emojiText,
   makeButton,
   drawRealmBackground,
@@ -21,6 +20,12 @@ import {
   wiggle,
   confettiBurst,
   type Button,
+  sceneTitle,
+  displayText,
+  makePanel,
+  coinChip,
+  COL,
+  HEX,
 } from '../ui/kit';
 
 const REALM_ORDER: RealmId[] = ['cove', 'woods', 'castle'];
@@ -49,7 +54,7 @@ export class CollectionScene extends Phaser.Scene {
     drawRealmBackground(this, 0x14213d, 0x081c15, ['🌊', '🌲', '✨']);
     this.cameras.main.fadeIn(300);
 
-    readingText(this, GAME_W / 2, 56, 'My Collection Book 📚', 40, '#ffe9a8');
+    sceneTitle(this, 'My Collection Book', '📚', 56);
     void speakUI('collection-book', 'Your collection book! Look at everything you found!');
 
     // home button — she can always leave
@@ -58,9 +63,9 @@ export class CollectionScene extends Phaser.Scene {
       fontSize: 30,
       width: 76,
       height: 64,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
-    home.setAlpha(0.85);
+    home.setAlpha(0.95);
 
     // open on the realm she's currently adventuring in — her newest finds
     const level = LEVELS.find((l) => l.id === progress.currentLevel) ?? LEVELS[0]!;
@@ -100,7 +105,7 @@ export class CollectionScene extends Phaser.Scene {
       const active = realm === this.activeRealm;
       // kill the press-feedback tween so it can't yoyo back over our scale
       this.tweens.killTweensOf(tab);
-      tab.setAlpha(active ? 1 : 0.55);
+      tab.setAlpha(active ? 1 : 0.82);
       this.tweens.add({
         targets: tab,
         scale: active ? 1.06 : 1,
@@ -122,33 +127,34 @@ export class CollectionScene extends Phaser.Scene {
     const grid = this.add.container(0, 0);
     this.grid = grid;
 
-    // the "shelf": a wide panel tinted with the realm accent — this is where
-    // switching tabs changes the room's color
-    const shelf = this.add.graphics();
-    shelf.fillStyle(theme.accent, 0.14);
-    shelf.fillRoundedRect(58, 208, GAME_W - 116, 428, 28);
-    shelf.lineStyle(4, theme.accent, 0.5);
-    shelf.strokeRoundedRect(58, 208, GAME_W - 116, 428, 28);
+    // the "shelf": a warm paper page; the active realm tints its edge so
+    // switching tabs still changes the room's color, but text always reads
+    const shelf = makePanel(this, 58, 200, GAME_W - 116, 444, {
+      edge: theme.accent,
+      radius: 28,
+    });
     grid.add(shelf);
 
     let found = 0;
     theme.collectibles.forEach((emoji, i) => {
       const x = 164 + (i % 5) * 174;
-      const y = 318 + Math.floor(i / 5) * 178;
+      const y = 316 + Math.floor(i / 5) * 178;
       const isEarned = earned.has(emoji);
       if (isEarned) found++;
 
       const slot = this.add.container(x, y);
-      const card = this.add.graphics();
-      card.fillStyle(0xffffff, isEarned ? 0.16 : 0.07);
-      card.fillRoundedRect(-75, -75, 150, 150, 22);
-      card.lineStyle(3, theme.accent, isEarned ? 0.8 : 0.25);
-      card.strokeRoundedRect(-75, -75, 150, 150, 22);
-      slot.add(card);
-
-      const glyph = emojiText(this, 0, 0, emoji, 72);
-      slot.add(glyph);
       if (isEarned) {
+        // a cut-paper sticker: white halo disc + realm-accent ring, lifts off the page
+        const card = this.add.graphics();
+        card.fillStyle(0x000000, 0.1);
+        card.fillCircle(0, 4, 62);
+        card.fillStyle(0xffffff, 1);
+        card.fillCircle(0, 0, 60);
+        card.lineStyle(4, theme.accent, 0.95);
+        card.strokeCircle(0, 0, 60);
+        slot.add(card);
+        const glyph = emojiText(this, 0, 0, emoji, 70);
+        slot.add(glyph);
         // gentle idle bob (staggered periods so the shelf breathes, not marches)
         this.gridTweens.push(
           this.tweens.add({
@@ -162,8 +168,15 @@ export class CollectionScene extends Phaser.Scene {
           }),
         );
       } else {
-        glyph.setAlpha(0.18);
-        slot.add(readingText(this, 0, 0, '?', 40, '#ffffff'));
+        // a quiet embossed socket, waiting to be filled
+        const card = this.add.graphics();
+        card.fillStyle(COL.paperEdge, 0.6);
+        card.fillCircle(0, 0, 58);
+        card.lineStyle(3, 0x000000, 0.06);
+        card.strokeCircle(0, 0, 56);
+        slot.add(card);
+        slot.add(emojiText(this, 0, 0, emoji, 60).setAlpha(0.14));
+        slot.add(displayText(this, 0, 2, '?', 40, HEX.inkSoft, '700').setAlpha(0.7));
       }
 
       slot.setSize(150, 150);
@@ -177,7 +190,7 @@ export class CollectionScene extends Phaser.Scene {
       popIn(this, slot, i * 55);
     });
 
-    grid.add(readingText(this, GAME_W / 2, 602, `${found} of 10 found!`, 32, theme.accentCss));
+    grid.add(displayText(this, GAME_W / 2, 608, `${found} of 10 found!`, 30, HEX.ink, '700'));
   }
 
   /** One quiet bottom line: every realm's found-count at a glance. */
@@ -189,8 +202,8 @@ export class CollectionScene extends Phaser.Scene {
       const count = theme.collectibles.filter((e) => inBook.has(e)).length;
       const gx = GAME_W / 2 + (i - 1) * 170;
       emojiText(this, gx - 22, y, theme.creature, 30).setAlpha(0.9);
-      readingText(this, gx + 22, y, `${count}`, 28, '#ffffff').setAlpha(0.9);
-      if (i > 0) readingText(this, gx - 85, y, '⋅', 28, '#8a94a0');
+      displayText(this, gx + 22, y, `${count}`, 26, HEX.white, '700').setAlpha(0.9);
+      if (i > 0) displayText(this, gx - 85, y, '·', 26, '#ffffff88', '500');
     });
   }
 

@@ -30,7 +30,6 @@ import { speakUI, chime, playMusic } from '../services/audio';
 import {
   GAME_W,
   GAME_H,
-  readingText,
   emojiText,
   makeButton,
   drawRealmBackground,
@@ -39,6 +38,11 @@ import {
   wiggle,
   confettiBurst,
   type Button,
+  sceneTitle,
+  displayText,
+  coinChip,
+  HEX,
+  COL,
 } from '../ui/kit';
 
 type TabId = 'hair' | 'color' | 'outfit' | 'face' | 'sparkle' | 'inky';
@@ -153,7 +157,7 @@ export class WardrobeScene extends Phaser.Scene {
     playMusic('wardrobe');
     ensureSparkTexture(this);
 
-    readingText(this, GAME_W / 2, 56, 'Your Wardrobe ✨', 40, '#ffe9a8');
+    sceneTitle(this, 'Your Wardrobe', '✨', 56);
     void speakUI('wardrobe-welcome', 'Welcome to your wardrobe!');
 
     // home button — she can always leave
@@ -162,9 +166,9 @@ export class WardrobeScene extends Phaser.Scene {
       fontSize: 30,
       width: 76,
       height: 64,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
-    this.homeBtn.setAlpha(0.85);
+    this.homeBtn.setAlpha(0.95);
 
     this.buildStage();
     this.buildPurse();
@@ -271,9 +275,9 @@ export class WardrobeScene extends Phaser.Scene {
 
     this.pearlDisplay.v = this.progress.pearls;
     // fixed left edge so the number doesn't shimmy as digits change
-    this.pearlText = readingText(this, 878, 44, `${this.progress.pearls}`, 34, '#ffffff');
+    this.pearlText = displayText(this, 878, 44, `${this.progress.pearls}`, 30, '#ffffff');
     this.pearlText.setOrigin(0, 0.5);
-    readingText(this, 878, 74, 'pearls', 18, '#c9b8d8').setOrigin(0, 0.5);
+    displayText(this, 878, 74, 'pearls', 18, '#c9b8d8', '500').setOrigin(0, 0.5);
   }
 
   /** Tween the visible count to the real balance (spend/earn feedback). */
@@ -300,7 +304,7 @@ export class WardrobeScene extends Phaser.Scene {
         height: 76,
       });
       tab.label.setY(-12);
-      tab.add(readingText(this, 0, 20, def.name, 15, '#26323f'));
+      tab.add(displayText(this, 0, 20, def.name, 15, '#26323f', '500'));
       this.fitTab(tab);
       this.tabs.set(def.id, tab);
     });
@@ -436,7 +440,7 @@ export class WardrobeScene extends Phaser.Scene {
     const addHeader = (text: string): void => {
       flushRow();
       cursor += 6;
-      content.add(readingText(this, (COL_X[0]! + COL_X[1]!) / 2, cursor + 12, text, 20, '#e8d5f5'));
+      content.add(displayText(this, (COL_X[0]! + COL_X[1]!) / 2, cursor + 12, text, 20, '#e8d5f5', '500'));
       cursor += 36;
     };
     const addChip = (item: CosmeticItem | null, category: CosmeticCategory): void => {
@@ -584,7 +588,7 @@ export class WardrobeScene extends Phaser.Scene {
     chip.add(emojiText(this, -88, 0, item?.emoji ?? '✖', 30));
 
     if (equipped) {
-      chip.add(readingText(this, 88, 0, '✓', 26, '#3c7a3c'));
+      chip.add(displayText(this, 88, 0, '✓', 26, '#3c7a3c'));
     } else if (item && !owned) {
       // price with a tiny pearl dot; not shown once it's hers
       const dot = this.add.graphics();
@@ -593,7 +597,7 @@ export class WardrobeScene extends Phaser.Scene {
       dot.fillStyle(0xffffff, 1);
       dot.fillCircle(64, -2, 2);
       chip.add(dot);
-      chip.add(readingText(this, 84, 0, `${item.price}`, 18, '#4a5568'));
+      chip.add(displayText(this, 84, 0, `${item.price}`, 18, '#4a5568', '500'));
       chip.setAlpha(affordable ? 0.9 : 0.45);
     }
 
@@ -696,7 +700,7 @@ export class WardrobeScene extends Phaser.Scene {
     dot.fillStyle(0xf4f6ff, 1);
     dot.fillCircle(58, 0, 5);
     keep.add(dot);
-    keep.add(readingText(this, 78, 0, `${item.price}`, 22, '#4a5568'));
+    keep.add(displayText(this, 78, 0, `${item.price}`, 22, '#4a5568'));
     bar.add(keep);
 
     const back = makeButton(this, 138, 0, 'Put back', () => this.clearPreview(), {

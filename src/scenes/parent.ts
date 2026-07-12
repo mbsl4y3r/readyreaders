@@ -21,7 +21,7 @@ import {
 } from '../services/progress';
 import { setMusicEnabled } from '../services/audio';
 import { allCosmeticIds, defaultAvatar, defaultBoyAvatar } from '../avatar/catalog';
-import { GAME_W, GAME_H, readingText, emojiText } from '../ui/kit';
+import { GAME_W, GAME_H, readingText, emojiText, sceneTitle } from '../ui/kit';
 
 /** Parent-facing names for the mastery ladder (see engine/adaptive.ts). */
 const MASTERY_LABELS = ['learning', 'known', 'quick', 'automatic'] as const;
@@ -62,7 +62,7 @@ export class ParentScene extends Phaser.Scene {
 
     const progress = loadProgress();
 
-    readingText(this, cx, 36, 'Parent corner', 30, '#ffe9a8');
+    sceneTitle(this, 'Parent corner', undefined, 36);
 
     const music = this.chip(GAME_W - 54, 38, 50, 46, progress.settings.musicOn ? '🎵' : '🔇', () => {
       const p = loadProgress();

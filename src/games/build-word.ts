@@ -11,7 +11,7 @@ import {
   GAME_W,
   makeButton,
   emojiText,
-  readingText,
+  displayText,
   wiggle,
   popIn,
   confettiBurst,
@@ -33,7 +33,7 @@ export const runBuildWord: RunRound = (scene, spec, ctx) => {
     const container = scene.add.container(0, 0);
     const graphemes = word.graphemes;
 
-    const title = readingText(scene, GAME_W / 2, 130, 'Build the word!', 40, '#ffffffcc');
+    const title = displayText(scene, GAME_W / 2, 130, 'Build the word!', 36, '#ffffffcc');
     container.add(title);
 
     const sayIt = () => void speakWord(word.id, word.text);

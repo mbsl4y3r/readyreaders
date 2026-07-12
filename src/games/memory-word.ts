@@ -13,7 +13,7 @@ import {
   GAME_W,
   makeButton,
   emojiText,
-  readingText,
+  displayText,
   wiggle,
   popIn,
   confettiBurst,
@@ -41,7 +41,7 @@ export const runMemoryWord: RunRound = (scene, spec, ctx) => {
     const graphemes = word.graphemes;
     const hearts = new Set(word.heartIndexes ?? []);
 
-    const title = readingText(scene, GAME_W / 2, 130, 'Memory word!', 40, '#ffffffcc');
+    const title = displayText(scene, GAME_W / 2, 130, 'Memory word!', 36, '#ffffffcc');
     container.add(title);
 
     const bigHeart = emojiText(scene, GAME_W / 2, 225, '💜', 96);
@@ -232,7 +232,7 @@ export const runMemoryWord: RunRound = (scene, spec, ctx) => {
       }
       confettiBurst(scene, GAME_W / 2, slotY - 60, ctx.theme.accent);
       void speakUI('you-remembered-it', `You remembered it! ${word.text}!`);
-      const warm = readingText(scene, GAME_W / 2, 655, 'You remembered it! 💜', 34, '#ffe9a8');
+      const warm = displayText(scene, GAME_W / 2, 655, 'You remembered it! 💜', 32, '#ffe9a8');
       container.add(warm);
       popIn(scene, warm, 250);
       scene.time.delayedCall(1900, () => {

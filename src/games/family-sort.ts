@@ -11,6 +11,7 @@ import {
   GAME_W,
   makeButton,
   readingText,
+  displayText,
   wiggle,
   popIn,
   confettiBurst,
@@ -34,7 +35,7 @@ export const runFamilySort: RunRound = (scene, spec, ctx) => {
     const words = wordIds.map(getWord);
     const container = scene.add.container(0, 0);
 
-    const title = readingText(scene, GAME_W / 2, 84, 'Word families!', 44, '#ffffffcc');
+    const title = displayText(scene, GAME_W / 2, 84, 'Word families!', 40, '#ffffffcc');
     container.add(title);
     void speakUI('family-sort-intro', 'Sort the words into their families!');
 

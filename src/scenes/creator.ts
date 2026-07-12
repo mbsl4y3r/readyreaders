@@ -31,7 +31,6 @@ import { loadProgress, saveProgress } from '../services/progress';
 import { speakUI, chime, playMusic } from '../services/audio';
 import {
   GAME_W,
-  readingText,
   emojiText,
   makeButton,
   drawRealmBackground,
@@ -39,6 +38,8 @@ import {
   popIn,
   confettiBurst,
   type Button,
+  sceneTitle,
+  displayText,
 } from '../ui/kit';
 
 /**
@@ -155,7 +156,7 @@ export class CreatorScene extends Phaser.Scene {
     playMusic('wardrobe');
     ensureSparkTexture(this);
 
-    readingText(this, GAME_W / 2, 56, 'Make your reader! ✨', 40, '#ffe9a8');
+    sceneTitle(this, 'Make your reader!', '✨', 56);
     // welcome, then name the very first step so a pre-reader knows what to do
     // (later steps are voiced on the step change — see goToStep)
     void speakUI('creator-welcome', "Let's make your very own reader!").then(() => {
@@ -263,9 +264,9 @@ export class CreatorScene extends Phaser.Scene {
 
     // step indicator: "Step k of N" + a row of dots (current one gold)
     layer.add(
-      readingText(this, RACK_CX, 150, `Step ${this.stepIndex + 1} of ${STEPS.length}`, 18, '#ffffffaa'),
+      displayText(this, RACK_CX, 150, `Step ${this.stepIndex + 1} of ${STEPS.length}`, 18, '#ffffffaa', '500'),
     );
-    layer.add(readingText(this, RACK_CX, 188, step.prompt, 30, '#ffe9a8'));
+    layer.add(displayText(this, RACK_CX, 188, step.prompt, 28, '#ffe9a8'));
     this.buildDots(layer);
 
     if (step.kind === 'character') this.buildCharacterRow(layer);
@@ -305,7 +306,7 @@ export class CreatorScene extends Phaser.Scene {
       img.setScale(158 / img.height);
       card.add(img);
 
-      card.add(readingText(this, 0, CH / 2 - 22, ch.label, 24, selected ? '#ffe9a8' : '#ffffffcc'));
+      card.add(displayText(this, 0, CH / 2 - 22, ch.label, 22, selected ? '#ffe9a8' : '#ffffffcc'));
 
       // one clear "chosen" mark: a gold check badge, top-right
       if (selected) {
@@ -313,7 +314,7 @@ export class CreatorScene extends Phaser.Scene {
         badge.fillStyle(0xffe9a8, 1);
         badge.fillCircle(CW / 2 - 16, -CH / 2 + 16, 14);
         card.add(badge);
-        card.add(readingText(this, CW / 2 - 16, -CH / 2 + 16, '✓', 20, '#7a4a2a'));
+        card.add(displayText(this, CW / 2 - 16, -CH / 2 + 16, '✓', 20, '#7a4a2a'));
       }
 
       card.setSize(CW, CH);
@@ -416,7 +417,7 @@ export class CreatorScene extends Phaser.Scene {
       chip.label.setX(6);
       chip.add(emojiText(this, -76, 0, item?.emoji ?? '✖', 30));
       // gold tick marks the current pick without a price or clutter
-      if (selected) chip.add(readingText(this, 82, 0, '✓', 24, '#3c7a3c'));
+      if (selected) chip.add(displayText(this, 82, 0, '✓', 24, '#3c7a3c'));
       // squeeze long labels into the space between emoji and edge
       const maxLabel = 112;
       if (chip.label.width > maxLabel) chip.label.setScale(maxLabel / chip.label.width);

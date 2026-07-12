@@ -8,12 +8,15 @@ import { loadProgress, saveProgress } from '../services/progress';
 import { speakUI, chime } from '../services/audio';
 import {
   GAME_W,
-  readingText,
   emojiText,
   makeButton,
   drawRealmBackground,
   popIn,
   confettiBurst,
+  sceneTitle,
+  displayText,
+  HEX,
+  COL,
 } from '../ui/kit';
 
 export class AchievementsScene extends Phaser.Scene {
@@ -38,7 +41,7 @@ export class AchievementsScene extends Phaser.Scene {
     }
     const earned = new Set(progress.badges);
 
-    readingText(this, GAME_W / 2, 50, 'My Badges 🏅', 40, '#ffe9a8');
+    sceneTitle(this, 'My Badges', '🏅', 50);
     void speakUI('badges', 'Your badges! Look what you earned!');
 
     const home = makeButton(this, 62, 52, '🏠', () => this.scene.start('map'), {
@@ -46,9 +49,9 @@ export class AchievementsScene extends Phaser.Scene {
       fontSize: 30,
       width: 76,
       height: 64,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
-    home.setAlpha(0.85);
+    home.setAlpha(0.95);
 
     const cols = 5;
     const cellW = 184;
@@ -79,17 +82,17 @@ export class AchievementsScene extends Phaser.Scene {
             ease: 'Sine.easeInOut',
           }),
         );
-        readingText(this, cx, cy + 34, b.label, 19, '#ffffff');
+        displayText(this, cx, cy + 34, b.label, 18, '#ffffff', '500');
       } else {
         glyph.setAlpha(0.16);
-        readingText(this, cx, cy - 20, '?', 40, '#ffffff').setAlpha(0.6);
-        readingText(this, cx, cy + 34, b.hint, 15, '#ffffff88');
+        displayText(this, cx, cy - 20, '?', 40, '#ffffff').setAlpha(0.6);
+        displayText(this, cx, cy + 34, b.hint, 15, '#ffffff88', '500');
       }
       popIn(this, glyph, i * 45);
     });
 
     const total = BADGES.length;
-    readingText(this, GAME_W / 2, 668, `${earned.size} of ${total} earned!`, 30, '#ffe9a8');
+    displayText(this, GAME_W / 2, 668, `${earned.size} of ${total} earned!`, 30, '#ffe9a8');
     if (earned.size > 0) confettiBurst(this, GAME_W / 2, 120, 0xffe9a8);
 
     this.events.once('shutdown', () => this.bobs.forEach((t) => t.stop()));

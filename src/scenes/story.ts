@@ -35,6 +35,10 @@ import {
   confettiBurst,
   badgeToast,
   type Button,
+  sceneTitle,
+  displayText,
+  HEX,
+  COL,
 } from '../ui/kit';
 
 export class StoryScene extends Phaser.Scene {
@@ -82,9 +86,9 @@ export class StoryScene extends Phaser.Scene {
       fontSize: 30,
       width: 76,
       height: 64,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
-    home.setAlpha(0.85);
+    home.setAlpha(0.95);
 
     const story = this.storyId ? STORIES.find((s) => s.id === this.storyId) : undefined;
     if (story) this.buildReader(story);
@@ -94,12 +98,12 @@ export class StoryScene extends Phaser.Scene {
   /** The bookshelf: one cover per story; locked covers are invitations, not walls. */
   private buildShelf(): void {
     const progress = loadProgress();
-    readingText(this, GAME_W / 2, 56, 'Story Pages 📖', 40, '#ffe9a8');
+    sceneTitle(this, 'Story Pages', '📖', 56);
     void speakUI('story-shelf', 'Story pages! Pick a story to read!');
 
     if (STORIES.length === 0) {
       // content ships separately — an empty shelf still feels warm
-      const soon = readingText(this, GAME_W / 2, GAME_H / 2, 'Stories are coming soon! ✨', 40, '#ffe9a8');
+      const soon = displayText(this, GAME_W / 2, GAME_H / 2, 'Stories are coming soon! ✨', 40, '#ffe9a8');
       popIn(this, soon);
       return;
     }
@@ -133,7 +137,7 @@ export class StoryScene extends Phaser.Scene {
       card.add(bg);
 
       card.add(emojiText(this, 0, -cardH / 2 + 40, realmTheme.creature, 40));
-      const title = readingText(this, 0, 10, story.title, 24, '#ffffff');
+      const title = displayText(this, 0, 10, story.title, 24, '#ffffff');
       title.setWordWrapWidth(cardW - 28);
       title.setAlign('center');
       card.add(title);
@@ -142,7 +146,7 @@ export class StoryScene extends Phaser.Scene {
         // dimmed, never hidden — something to look forward to
         card.setAlpha(0.55);
         card.add(emojiText(this, -40, cardH / 2 - 26, '🔒', 22));
-        card.add(readingText(this, 20, cardH / 2 - 26, `Level ${story.unlockLevel}`, 20, '#ffffffaa'));
+        card.add(displayText(this, 20, cardH / 2 - 26, `Level ${story.unlockLevel}`, 20, '#ffffffaa'));
       } else if (readSet.has(story.id)) {
         card.add(emojiText(this, cardW / 2 - 26, -cardH / 2 + 26, '✨', 26));
       }
@@ -164,7 +168,7 @@ export class StoryScene extends Phaser.Scene {
 
   /** The reading flow: page by page, picture after the read. */
   private buildReader(story: Story): void {
-    readingText(this, GAME_W / 2, 56, story.title, 34, '#ffe9a8');
+    displayText(this, GAME_W / 2, 56, story.title, 32, HEX.gold);
     this.showPage(story);
   }
 
@@ -182,7 +186,7 @@ export class StoryScene extends Phaser.Scene {
     pebble.fillStyle(0xffffff, 0.12);
     pebble.fillRoundedRect(GAME_W / 2 - 110, 108, 220, 44, 22);
     view.add(pebble);
-    view.add(readingText(this, GAME_W / 2, 130, `Page ${n} of ${story.pages.length}`, 22, '#ffffffcc'));
+    view.add(displayText(this, GAME_W / 2, 130, `Page ${n} of ${story.pages.length}`, 22, '#ffffffcc'));
 
     // THE reading moment: big decodable text, and no picture yet
     const text = readingText(this, GAME_W / 2, 280, page.text, 46, '#ffffff');
@@ -197,7 +201,7 @@ export class StoryScene extends Phaser.Scene {
       fontSize: 32,
       width: 84,
       height: 76,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
     view.add(replay);
 
@@ -268,7 +272,7 @@ export class StoryScene extends Phaser.Scene {
       fontSize: 28,
       width: 88,
       height: 72,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
     view.add(mic);
   }
@@ -323,14 +327,14 @@ export class StoryScene extends Phaser.Scene {
 
     chime('fanfare');
     confettiBurst(this, GAME_W / 2, 320, THEMES.castle.accent);
-    const end = readingText(this, GAME_W / 2, 528, 'The end! ⭐', 44, '#ffe9a8');
+    const end = displayText(this, GAME_W / 2, 528, 'The end! ⭐', 44, '#ffe9a8');
     view.add(end);
     popIn(this, end);
     void speakUI('story-the-end', 'The end! You read the whole story!');
     if (firstRead) {
       const pearl = this.add.circle(GAME_W / 2 - 92, 566, 11, 0xffffff, 1).setStrokeStyle(2, 0xd8e6ee, 1);
       const shine = this.add.circle(GAME_W / 2 - 96, 562, 3, 0xffffff, 0.95);
-      const earned = readingText(this, GAME_W / 2 + 8, 566, `+${PEARLS_PER_STORY} pearls!`, 26, '#ffffff');
+      const earned = displayText(this, GAME_W / 2 + 8, 566, `+${PEARLS_PER_STORY} pearls!`, 26, '#ffffff');
       view.add(pearl);
       view.add(shine);
       view.add(earned);

@@ -15,6 +15,7 @@ import {
   makeButton,
   emojiText,
   readingText,
+  displayText,
   wiggle,
   popIn,
   confettiBurst,
@@ -35,7 +36,7 @@ export const runMagicPhrase: RunRound = (scene, spec, ctx) => {
     if (!phrase) throw new Error(`Unknown phrase ${spec.phraseId}`);
     const container = scene.add.container(0, 0);
 
-    const title = readingText(scene, GAME_W / 2, 120, 'Magic phrase! ✨', 40, '#ffffffcc');
+    const title = displayText(scene, GAME_W / 2, 120, 'Magic phrase! ✨', 36, '#ffffffcc');
     container.add(title);
 
     // The phrase, big and crisp — this is the thing she reads.
@@ -125,7 +126,7 @@ export const runMagicPhrase: RunRound = (scene, spec, ctx) => {
       const target = Phaser.Utils.Array.GetRandom(candidates);
       const sayTarget = () => void speakWord(phrase.wordIds[target]!, displayWords[target]!);
 
-      const prompt = readingText(scene, GAME_W / 2, 210, 'Tap the word you heard!', 34, '#ffffffcc');
+      const prompt = displayText(scene, GAME_W / 2, 210, 'Tap the word you heard!', 32, '#ffffffcc');
       container.add(prompt);
 
       const wordReplay = makeButton(scene, GAME_W / 2, 310, '🔊', sayTarget, {

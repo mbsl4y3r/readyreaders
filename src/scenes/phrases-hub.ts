@@ -17,10 +17,13 @@ import { runMagicPhrase } from '../games/magic-phrase';
 import {
   GAME_W,
   GAME_H,
-  readingText,
   makeButton,
   drawRealmBackground,
   popIn,
+  sceneTitle,
+  displayText,
+  COL,
+  HEX,
 } from '../ui/kit';
 
 export class PhrasesHubScene extends Phaser.Scene {
@@ -49,11 +52,11 @@ export class PhrasesHubScene extends Phaser.Scene {
       fontSize: 30,
       width: 76,
       height: 64,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
-    home.setAlpha(0.85);
+    home.setAlpha(0.95);
 
-    readingText(this, GAME_W / 2, 56, 'Magic Phrases ✨', 40, '#ffe9a8');
+    sceneTitle(this, 'Magic Phrases', '✨', 56);
     void speakUI('phrases-hub', 'Magic phrases! Pick one to read!');
 
     this.buildGallery();
@@ -71,7 +74,7 @@ export class PhrasesHubScene extends Phaser.Scene {
 
     const pool = phrasesForLevel(progress.currentLevel, progress.bookLesson);
     if (pool.length === 0) {
-      const empty = readingText(this, GAME_W / 2, GAME_H / 2, 'More magic phrases soon!', 40, '#ffe9a8');
+      const empty = displayText(this, GAME_W / 2, GAME_H / 2, 'More magic phrases soon!', 34, HEX.gold);
       gallery.add(empty);
       popIn(this, empty);
       return;
@@ -96,14 +99,15 @@ export class PhrasesHubScene extends Phaser.Scene {
         width: 460,
         height: 108,
         fontSize: 32,
+        reading: true,
       });
       // nudge the label up so the mastery pips fit along the bottom edge
       card.label.setY(-10);
       const mastery = progress.words[phraseStatKey(p.id)]?.mastery ?? 0;
       for (let d = 0; d < 3; d++) {
         const pip = this.add
-          .circle((d - 1) * 26, 36, 7, 0xffe9a8, d < mastery ? 1 : 0.15)
-          .setStrokeStyle(2, 0xffe9a8, 0.7);
+          .circle((d - 1) * 26, 36, 7, COL.gold, d < mastery ? 1 : 0.18)
+          .setStrokeStyle(2, COL.goldEdge, d < mastery ? 1 : 0.4);
         card.add(pip);
       }
       gallery.add(card);

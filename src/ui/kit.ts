@@ -67,6 +67,23 @@ export function displayText(
     .setOrigin(0.5);
 }
 
+/**
+ * Standard scene header in the display face: a centred gold title with an
+ * optional emoji sticker to its left. One call so every screen's header reads
+ * the same (replaces the old gold-Andika titles). Returns the title text.
+ */
+export function sceneTitle(
+  scene: Phaser.Scene,
+  text: string,
+  emoji?: string,
+  y = 52,
+  color: string = HEX.gold,
+): Phaser.GameObjects.Text {
+  const title = displayText(scene, GAME_W / 2, y, text, 38, color, '700');
+  if (emoji) emojiText(scene, GAME_W / 2 - title.width / 2 - 30, y, emoji, 34);
+  return title;
+}
+
 export function readingText(
   scene: Phaser.Scene,
   x: number,

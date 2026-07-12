@@ -5,7 +5,7 @@
 import Phaser from 'phaser';
 import { unlockAudio, speakUI, setMusicEnabled } from '../services/audio';
 import { loadProgress } from '../services/progress';
-import { GAME_W, GAME_H, readingText, emojiText, drawRealmBackground } from '../ui/kit';
+import { GAME_W, GAME_H, displayText, emojiText, drawRealmBackground, HEX } from '../ui/kit';
 import { THEMES } from '../content/themes';
 
 export class BootScene extends Phaser.Scene {
@@ -17,7 +17,7 @@ export class BootScene extends Phaser.Scene {
     drawRealmBackground(this, THEMES.cove.bgTop, THEMES.castle.bgBottom, ['✨', '🫧', '⭐']);
 
     emojiText(this, GAME_W / 2, 170, '🦸📖🧜‍♀️', 84);
-    readingText(this, GAME_W / 2, 300, 'Reading Realms', 60, '#ffe9a8');
+    displayText(this, GAME_W / 2, 300, 'Reading Realms', 62, HEX.gold, '700');
 
     const star = emojiText(this, GAME_W / 2, 470, '⭐', 130).setInteractive({ useHandCursor: true });
     this.tweens.add({
@@ -28,7 +28,7 @@ export class BootScene extends Phaser.Scene {
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
-    readingText(this, GAME_W / 2, 590, 'Tap the star to start!', 34, '#ffffffbb');
+    displayText(this, GAME_W / 2, 590, 'Tap the star to start!', 32, '#ffffffcc', '500');
 
     star.once('pointerdown', () => {
       unlockAudio();

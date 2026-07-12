@@ -17,11 +17,15 @@ import { chime, speakUI } from '../services/audio';
 import {
   GAME_W,
   GAME_H,
-  readingText,
   emojiText,
   makeButton,
   drawRealmBackground,
   popIn,
+  sceneTitle,
+  displayText,
+  coinChip,
+  HEX,
+  COL,
 } from '../ui/kit';
 
 // Card grid: four columns across, wrapping to a second row. Centres are spaced
@@ -54,7 +58,7 @@ export class TicketShopScene extends Phaser.Scene {
     this.cameras.main.fadeIn(300);
     void speakUI('ticket-shop', 'The ticket shop! Spend your game tickets on treasures!');
 
-    readingText(this, GAME_W / 2, 56, 'Ticket Shop 🎟️', 40, '#ffe9a8');
+    sceneTitle(this, 'Ticket Shop', '🎟️', 56);
 
     // home button — always a way back to the map
     const home = makeButton(this, 62, 52, '🏠', () => this.scene.start('map'), {
@@ -62,9 +66,9 @@ export class TicketShopScene extends Phaser.Scene {
       fontSize: 30,
       width: 76,
       height: 64,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
-    home.setAlpha(0.85);
+    home.setAlpha(0.95);
 
     this.buildBalance();
     this.buildCards();
@@ -75,7 +79,7 @@ export class TicketShopScene extends Phaser.Scene {
   private buildBalance(): void {
     const y = 132;
     emojiText(this, GAME_W / 2 - 40, y, '🎟️', 40);
-    this.balanceText = readingText(this, GAME_W / 2 + 4, y, `${this.progress.tickets}`, 40, '#ffffff');
+    this.balanceText = displayText(this, GAME_W / 2 + 4, y, `${this.progress.tickets}`, 40, '#ffffff');
     this.balanceText.setOrigin(0, 0.5);
   }
 
@@ -118,7 +122,7 @@ export class TicketShopScene extends Phaser.Scene {
 
     card.add(emojiText(this, 0, -66, emoji, 56));
 
-    const name = readingText(this, 0, -6, label, 20, '#3a2a4a');
+    const name = displayText(this, 0, -6, label, 20, '#3a2a4a', '500');
     // squeeze long labels so they never spill the card
     const maxLabel = CARD_W - 28;
     if (name.width > maxLabel) name.setScale(maxLabel / name.width);
@@ -126,10 +130,10 @@ export class TicketShopScene extends Phaser.Scene {
 
     // price row: 🎟️ N
     card.add(emojiText(this, -22, 34, '🎟️', 26));
-    card.add(readingText(this, 14, 34, `${price}`, 24, '#4a5568').setOrigin(0, 0.5));
+    card.add(displayText(this, 14, 34, `${price}`, 24, '#4a5568').setOrigin(0, 0.5));
 
     if (owned) {
-      card.add(readingText(this, 0, 82, 'Owned ✓', 24, '#3c7a3c'));
+      card.add(displayText(this, 0, 82, 'Owned ✓', 24, '#3c7a3c'));
     } else if (affordable) {
       const get = makeButton(this, 0, 84, 'Get!', () => this.buy(id, price), {
         width: 150,
@@ -139,7 +143,7 @@ export class TicketShopScene extends Phaser.Scene {
       });
       card.add(get);
     } else {
-      card.add(readingText(this, 0, 82, 'Need more 🎟️', 18, '#8a7a99'));
+      card.add(displayText(this, 0, 82, 'Need more 🎟️', 18, '#8a7a99', '500'));
       card.setAlpha(0.5);
     }
 

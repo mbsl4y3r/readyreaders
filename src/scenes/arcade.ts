@@ -34,6 +34,11 @@ import {
   drawRealmBackground,
   popIn,
   confettiBurst,
+  sceneTitle,
+  displayText,
+  coinChip,
+  COL,
+  HEX,
 } from '../ui/kit';
 import type { ArcadeGame, ArcadeCtx } from '../games/arcade/types';
 
@@ -122,7 +127,7 @@ export class ArcadeScene extends Phaser.Scene {
 
     const progress = loadProgress();
 
-    layer.add(readingText(this, GAME_W / 2, 46, 'Games Arcade 🕹️', 40, '#ffe9a8'));
+    layer.add(sceneTitle(this, 'Games Arcade', '🕹️', 46));
 
     // home
     const home = makeButton(this, 58, 46, '🏠', () => this.scene.start('map'), {
@@ -130,16 +135,14 @@ export class ArcadeScene extends Phaser.Scene {
       fontSize: 28,
       width: 72,
       height: 60,
-      fill: 0xffffff,
+      fill: COL.paper,
     });
-    home.setAlpha(0.9);
+    home.setAlpha(0.95);
     layer.add(home);
 
     // pearl purse + pass banner (top-right)
-    const pearl = this.add.circle(GAME_W - 250, 46, 11, 0xffffff, 1).setStrokeStyle(2, 0xd8e6ee, 1);
-    layer.add(pearl);
-    layer.add(readingText(this, GAME_W - 228, 46, `${progress.pearls}`, 26, '#ffffff').setOrigin(0, 0.5));
-    this.passText = readingText(this, GAME_W - 150, 46, '', 24, '#a7f3d0').setOrigin(0, 0.5);
+    layer.add(coinChip(this, GAME_W - 236, 46, '🦪', `${progress.pearls}`, 22));
+    this.passText = displayText(this, GAME_W - 150, 46, '', 22, HEX.teal, '700').setOrigin(0, 0.5);
     layer.add(this.passText);
     this.refreshPassText();
 
@@ -163,7 +166,9 @@ export class ArcadeScene extends Phaser.Scene {
     const until = loadProgress().arcadePassUntil;
     const now = Date.now();
     if (passActive(until, now)) {
-      const secs = Math.ceil((until - now) / 1000);
+      // clamp to the pass length so a corrupt/imported far-future value can
+      // never render a monster number
+      const secs = Math.min(Math.ceil((until - now) / 1000), Math.ceil(PASS_MS / 1000));
       const m = Math.floor(secs / 60);
       const s = secs % 60;
       this.passText.setText(`⏳ ${m}:${s.toString().padStart(2, '0')} — play away!`);

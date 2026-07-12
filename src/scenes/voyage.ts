@@ -15,12 +15,14 @@ import { chime, speakUI } from '../services/audio';
 import { loadProgress, saveProgress } from '../services/progress';
 import {
   GAME_W,
-  readingText,
   emojiText,
   makeButton,
   drawRealmBackground,
   confettiBurst,
   wiggle,
+  sceneTitle,
+  displayText,
+  HEX,
 } from '../ui/kit';
 import type { Button } from '../ui/kit';
 
@@ -93,13 +95,13 @@ export class VoyageScene extends Phaser.Scene {
 
     this.lesson = loadProgress().bookLesson;
 
-    readingText(this, GAME_W / 2, 64, 'The Placement Voyage ⛵', 40, '#ffe9a8');
-    readingText(this, GAME_W / 2, 116, "Sail to the lesson you're on in your book.", 26, '#ffffffcc');
+    sceneTitle(this, 'The Placement Voyage', '⛵', 64);
+    displayText(this, GAME_W / 2, 116, "Sail to the lesson you're on in your book.", 24, '#ffffffcc', '500');
 
     // big current-lesson readout: the number is the thing being chosen,
     // so it gets the largest type on the screen
-    this.numberText = readingText(this, GAME_W / 2, 212, `${this.lesson}`, 72, '#ffffff');
-    this.labelText = readingText(
+    this.numberText = displayText(this, GAME_W / 2, 212, `${this.lesson}`, 72, '#ffffff');
+    this.labelText = displayText(
       this,
       GAME_W / 2,
       278,
@@ -107,7 +109,7 @@ export class VoyageScene extends Phaser.Scene {
       28,
       '#ffffffcc',
     );
-    this.unlockLine = readingText(this, GAME_W / 2, 326, this.describeUnlocks(), 24, '#ffe9a8');
+    this.unlockLine = displayText(this, GAME_W / 2, 326, this.describeUnlocks(), 24, '#ffe9a8');
 
     // voyage track: realm zones sized by their share of the 120 lessons
     const track = this.add.graphics();
@@ -118,8 +120,8 @@ export class VoyageScene extends Phaser.Scene {
       track.fillRoundedRect(x + 2, TRACK_Y, w - 4, TRACK_H, 14);
       emojiText(this, x + w / 2, TRACK_Y + TRACK_H / 2, zone.emoji, 36).setAlpha(0.9);
     }
-    readingText(this, TRACK_X + 8, TRACK_Y + TRACK_H + 22, '1', 20, '#ffffff88');
-    readingText(this, TRACK_X + TRACK_W - 14, TRACK_Y + TRACK_H + 22, '120', 20, '#ffffff88');
+    displayText(this, TRACK_X + 8, TRACK_Y + TRACK_H + 22, '1', 20, '#ffffff88');
+    displayText(this, TRACK_X + TRACK_W - 14, TRACK_Y + TRACK_H + 22, '120', 20, '#ffffff88');
 
     this.boat = emojiText(this, this.boatX(this.lesson), TRACK_Y - 28, '⛵', 56);
     // idle bob keeps the sea alive even when nobody is pressing buttons
