@@ -13,7 +13,8 @@ export interface RealmTheme {
   creatureName: string;
   /** Pool of collectible emoji awarded at celebrations. */
   collectibles: string[];
-  collectionKey: 'treasures' | 'pets' | 'charms';
+  /** Album key in progress.collections ('treasures'/'pets'/'charms' or 'region-N'). */
+  collectionKey: string;
   /** Ambient decoration emoji sprinkled in the background. */
   ambient: string[];
 }

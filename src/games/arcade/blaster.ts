@@ -128,8 +128,8 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   };
 
   const onDown = (pointer: Phaser.Input.Pointer) => {
-    if (pointer.y < hudBottom) return; // ignore taps on the HUD strip
-    fire(pointer.x, pointer.y);
+    if (pointer.worldY < hudBottom) return; // ignore taps on the HUD strip
+    fire(pointer.worldX, pointer.worldY);
   };
   scene.input.on('pointerdown', onDown, this);
 

@@ -26,6 +26,10 @@ export interface Region {
   /** The region's friendly host creature (greets her, stars in feed rounds). */
   creature: string;
   creatureName: string;
+  /** The region's own 10-collectible album, awarded in order as lessons pass. */
+  collectibles: string[];
+  /** Save key for this region's album in progress.collections. */
+  collectionKey: string;
 }
 
 const R = (
@@ -38,6 +42,7 @@ const R = (
   ambient: string[],
   creature: string,
   creatureName: string,
+  collectibles: string[],
 ): Region => ({
   id,
   lessonRange: [(id - 1) * 10 + 1, id * 10],
@@ -49,22 +54,24 @@ const R = (
   ambient,
   creature,
   creatureName,
+  collectibles,
+  collectionKey: `region-${id}`,
 });
 
 export const REGIONS: Region[] = [
-  R(1, 'Coral Cove', '🌊', 0x0b3d64, 0x072a47, 0x4fc3f7, ['🐟', '🫧', '🪸', '🐠'], '🐙', 'Ollie the Octopus'),
-  R(2, 'Whisker Woods', '🌲', 0x1b4332, 0x081c15, 0x95d5b2, ['🌲', '🍄', '🌿', '🦋'], '🦦', 'Willa the Otter'),
-  R(3, 'Starlight Castle', '✨', 0x3c096c, 0x10002b, 0xe0aaff, ['✨', '🌙', '⭐', '🏰'], '🐲', 'Sparky the Dragon'),
+  R(1, 'Coral Cove', '🌊', 0x0b3d64, 0x072a47, 0x4fc3f7, ['🐟', '🫧', '🪸', '🐠'], '🐙', 'Ollie the Octopus', ['🐚', '🦪', '💎', '🫧', '🪸', '⭐', '🧜‍♀️', '🐬', '🐠', '🏺']),
+  R(2, 'Whisker Woods', '🌲', 0x1b4332, 0x081c15, 0x95d5b2, ['🌲', '🍄', '🌿', '🦋'], '🦦', 'Willa the Otter', ['🐰', '🐿️', '🦔', '🐢', '🐥', '🦊', '🐇', '🦉', '🐾', '🦌']),
+  R(3, 'Starlight Castle', '✨', 0x3c096c, 0x10002b, 0xe0aaff, ['✨', '🌙', '⭐', '🏰'], '🐲', 'Sparky the Dragon', ['🔮', '👑', '🪄', '💫', '🦄', '🧚', '✨', '🏰', '🗝️', '🌟']),
   // the banger — sugar rush right where long journeys usually sag
-  R(4, 'Candy Cliffs', '🍭', 0xb84a8c, 0x5e1f4a, 0xffb3dd, ['🍭', '🍬', '🧁', '🍩'], '🦄', 'Taffy the Unicorn'),
-  R(5, 'Rainbow Meadow', '🌈', 0x2f7d4f, 0x14402a, 0xffd166, ['🌈', '🌼', '🐞', '🦋'], '🐰', 'Poppy the Bunny'),
-  R(6, 'Star Sky', '🚀', 0x1a1f4d, 0x0a0c24, 0x8f9dff, ['🪐', '⭐', '☄️', '🌟'], '👽', 'Zizi the Stargazer'),
-  R(7, 'Snowy Summit', '❄️', 0x3f6ea8, 0x1a2c4a, 0xcfe8ff, ['❄️', '⛄', '🌨️', '🧊'], '🐧', 'Pip the Penguin'),
-  R(8, 'Fairy Garden', '🧚', 0x4a2a6e, 0x1e0f33, 0xd7b7ff, ['🧚', '🌷', '🍄', '✨'], '🦉', 'Luna the Owl'),
-  R(9, 'Dino Valley', '🦕', 0x5a6e2a, 0x263312, 0xc9e265, ['🦕', '🌴', '🥚', '🌋'], '🦖', 'Rocky the Rex'),
-  R(10, 'Pirate Bay', '🏴‍☠️', 0x2a5a6e, 0x102633, 0xffcf7d, ['⛵', '🗺️', '🦜', '💰'], '🦜', 'Coco the Parrot'),
-  R(11, 'Cloud Kingdom', '☁️', 0x7d9fd6, 0x3a4f7d, 0xfff3d6, ['☁️', '🎈', '🪁', '🕊️'], '🦢', 'Skye the Swan'),
-  R(12, 'Crystal Caves', '💎', 0x33245e, 0x120a2e, 0x9be8e0, ['💎', '🔮', '✨', '🪨'], '🐉', 'Gem the Cave Dragon'),
+  R(4, 'Candy Cliffs', '🍭', 0xb84a8c, 0x5e1f4a, 0xffb3dd, ['🍭', '🍬', '🧁', '🍩'], '🦄', 'Taffy the Unicorn', ['🍭', '🍬', '🧁', '🍩', '🍪', '🍦', '🎂', '🍫', '🍡', '🍰']),
+  R(5, 'Rainbow Meadow', '🌈', 0x2f7d4f, 0x14402a, 0xffd166, ['🌈', '🌼', '🐞', '🦋'], '🐰', 'Poppy the Bunny', ['🌈', '🌼', '🐞', '🦋', '🌷', '🍀', '🐝', '🌻', '🌺', '🐛']),
+  R(6, 'Star Sky', '🚀', 0x1a1f4d, 0x0a0c24, 0x8f9dff, ['🪐', '⭐', '☄️', '🌟'], '👽', 'Zizi the Stargazer', ['🚀', '🪐', '⭐', '☄️', '🌙', '👽', '🛸', '🌟', '🔭', '🌌']),
+  R(7, 'Snowy Summit', '❄️', 0x3f6ea8, 0x1a2c4a, 0xcfe8ff, ['❄️', '⛄', '🌨️', '🧊'], '🐧', 'Pip the Penguin', ['❄️', '⛄', '🧊', '🎿', '🛷', '🐧', '🧣', '🧤', '⛷️', '🏔️']),
+  R(8, 'Fairy Garden', '🧚', 0x4a2a6e, 0x1e0f33, 0xd7b7ff, ['🧚', '🌷', '🍄', '✨'], '🦉', 'Luna the Owl', ['🧚', '🍄', '🌸', '🍃', '🪷', '🌿', '🌜', '💐', '🦋', '✨']),
+  R(9, 'Dino Valley', '🦕', 0x5a6e2a, 0x263312, 0xc9e265, ['🦕', '🌴', '🥚', '🌋'], '🦖', 'Rocky the Rex', ['🦕', '🦖', '🥚', '🌋', '🌴', '🦴', '🐊', '🪨', '🍖', '🌵']),
+  R(10, 'Pirate Bay', '🏴‍☠️', 0x2a5a6e, 0x102633, 0xffcf7d, ['⛵', '🗺️', '🦜', '💰'], '🦜', 'Coco the Parrot', ['🏴‍☠️', '⚓', '🗺️', '💰', '🦜', '⛵', '🧭', '🪙', '🔱', '🏝️']),
+  R(11, 'Cloud Kingdom', '☁️', 0x7d9fd6, 0x3a4f7d, 0xfff3d6, ['☁️', '🎈', '🪁', '🕊️'], '🦢', 'Skye the Swan', ['☁️', '🎈', '🪁', '🕊️', '🦢', '🌤️', '⛅', '💨', '🎐', '🪂']),
+  R(12, 'Crystal Caves', '💎', 0x33245e, 0x120a2e, 0x9be8e0, ['💎', '🔮', '✨', '🪨'], '🐉', 'Gem the Cave Dragon', ['💎', '🔮', '🪨', '🦇', '🕯️', '⛏️', '🏮', '🪞', '💠', '🐉']),
 ];
 
 export const REGION_COUNT = REGIONS.length;
@@ -97,6 +104,9 @@ export function themeForRegion(region: Region): RealmTheme {
     creature: region.creature,
     creatureName: region.creatureName,
     ambient: region.ambient,
+    // lesson sessions award straight into the region's own album
+    collectibles: region.collectibles,
+    collectionKey: region.collectionKey,
   };
 }
 

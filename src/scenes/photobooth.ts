@@ -28,6 +28,7 @@ import {
   displayText,
   HEX,
   COL,
+  RENDER_SCALE,
 } from '../ui/kit';
 
 // ---- frame geometry (left-centre of the screen) -----------------------------
@@ -391,11 +392,12 @@ export class PhotoBoothScene extends Phaser.Scene {
   private snap(): void {
     if (!this.alive) return;
     chime('good');
+    // snapshotArea works in canvas pixels; world coords are RENDER_SCALE× smaller
     this.game.renderer.snapshotArea(
-      CAP_X,
-      CAP_Y,
-      CAP_W,
-      CAP_H,
+      CAP_X * RENDER_SCALE,
+      CAP_Y * RENDER_SCALE,
+      CAP_W * RENDER_SCALE,
+      CAP_H * RENDER_SCALE,
       (image: HTMLImageElement | Phaser.Display.Color) => {
         if (!this.alive) return;
         if (!(image instanceof HTMLImageElement)) return;

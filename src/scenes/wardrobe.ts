@@ -375,15 +375,16 @@ export class WardrobeScene extends Phaser.Scene {
     // drag anywhere on the rack to scroll; a real drag suppresses chip taps
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       this.scrollMoved = false;
-      if (p.x >= PANEL_X && p.x <= PANEL_X + PANEL_W && p.y >= PANEL_TOP && p.y <= PANEL_BOTTOM) {
+      // world coords — pointer.x/y are canvas-space, 2× world under RENDER_SCALE
+      if (p.worldX >= PANEL_X && p.worldX <= PANEL_X + PANEL_W && p.worldY >= PANEL_TOP && p.worldY <= PANEL_BOTTOM) {
         this.dragging = true;
-        this.dragStartY = p.y;
+        this.dragStartY = p.worldY;
         this.contentStartY = this.content?.y ?? PANEL_TOP;
       }
     });
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       if (!this.dragging || !p.isDown || !this.content) return;
-      const dy = p.y - this.dragStartY;
+      const dy = p.worldY - this.dragStartY;
       if (Math.abs(dy) > 12) this.scrollMoved = true;
       const maxScroll = Math.max(0, this.contentHeight - VIEW_H);
       this.content.y = Phaser.Math.Clamp(

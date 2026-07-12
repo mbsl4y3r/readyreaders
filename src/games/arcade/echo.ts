@@ -163,7 +163,7 @@ export const run: RunArcadeGame = (scene: Phaser.Scene, ctx: ArcadeCtx): ArcadeG
 
   function onPointerDown(pointer: Phaser.Input.Pointer): void {
     if (phase !== 'input') return;
-    const i = padAt(pointer.x, pointer.y);
+    const i = padAt(pointer.worldX, pointer.worldY);
     if (i < 0) return;
     pads[i]!.flash = FLASH_MS;
     if (i === sequence[inputIndex]) {

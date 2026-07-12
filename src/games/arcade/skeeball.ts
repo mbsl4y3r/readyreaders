@@ -121,10 +121,10 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
   const onDown = (p: Phaser.Input.Pointer) => {
     if (phase !== 'ready') return;
     phase = 'aim';
-    pointer.set(p.x, p.y);
+    pointer.set(p.worldX, p.worldY);
   };
   const onMove = (p: Phaser.Input.Pointer) => {
-    if (phase === 'aim') pointer.set(p.x, p.y);
+    if (phase === 'aim') pointer.set(p.worldX, p.worldY);
   };
   const onUp = () => {
     if (phase !== 'aim') return;

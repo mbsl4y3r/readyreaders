@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { freshProgress, loadProgress, exportCode, importCode } from '../src/services/progress';
+import { REGIONS } from '../src/content/regions';
 
 describe('progress export/import', () => {
   it('round-trips through the copy-paste code', () => {
@@ -16,7 +17,8 @@ describe('progress export/import', () => {
       lastSeen: 19900,
       mastery: 2,
     };
-    data.collections.treasures.push('🐚');
+    data.collections['treasures']!.push('🐚');
+    data.collections['region-1']!.push('🐚');
 
     const roundTripped = importCode(exportCode(data));
     expect(roundTripped).toEqual(data);
@@ -125,5 +127,63 @@ describe('character-creation flag + avatar migration', () => {
     expect(loaded.avatar.face).toBeNull();
     expect(loaded.avatar.glasses).toBeNull();
     expect(loaded.avatar.earrings).toBeNull();
+  });
+});
+
+describe('per-region collection albums', () => {
+  beforeEach(() => localStorage.clear());
+
+  /** A save from before region albums: only the three legacy pools exist. */
+  const legacyCollections = (treasures: number, pets: number, charms: number) => {
+    const data = freshProgress() as unknown as Record<string, unknown>;
+    data['collections'] = {
+      treasures: REGIONS[0]!.collectibles.slice(0, treasures),
+      pets: REGIONS[1]!.collectibles.slice(0, pets),
+      charms: REGIONS[2]!.collectibles.slice(0, charms),
+    };
+    return data;
+  };
+
+  it('fresh saves carry the three legacy pools plus all twelve region albums, empty', () => {
+    const c = freshProgress().collections;
+    for (const key of ['treasures', 'pets', 'charms']) expect(c[key]).toEqual([]);
+    for (const r of REGIONS) expect(c[r.collectionKey]).toEqual([]);
+    expect(Object.keys(c)).toHaveLength(15);
+  });
+
+  it('backfills missing region albums as empty on load', () => {
+    localStorage.setItem('readyreaders.v1', JSON.stringify(legacyCollections(0, 0, 0)));
+    const c = loadProgress().collections;
+    for (const r of REGIONS) expect(c[r.collectionKey]).toEqual([]);
+  });
+
+  it('migrates legacy finds into region albums sequentially, in region order', () => {
+    // 14 legacy collectibles → region 1 fills its first ten, region 2 gets four
+    localStorage.setItem('readyreaders.v1', JSON.stringify(legacyCollections(10, 4, 0)));
+    const c = loadProgress().collections;
+    expect(c['region-1']).toEqual(REGIONS[0]!.collectibles);
+    expect(c['region-2']).toEqual(REGIONS[1]!.collectibles.slice(0, 4));
+    for (const r of REGIONS.slice(2)) expect(c[r.collectionKey]).toEqual([]);
+    // legacy pools stay untouched — legacy level-mode sessions still use them
+    expect(c['treasures']).toEqual(REGIONS[0]!.collectibles);
+    expect(c['pets']).toEqual(REGIONS[1]!.collectibles.slice(0, 4));
+    expect(c['charms']).toEqual([]);
+  });
+
+  it('is one-time: a save with any region finds is left exactly as it was', () => {
+    const data = legacyCollections(10, 4, 0);
+    (data['collections'] as Record<string, string[]>)['region-5'] = ['🌈'];
+    localStorage.setItem('readyreaders.v1', JSON.stringify(data));
+    const c = loadProgress().collections;
+    expect(c['region-1']).toEqual([]);
+    expect(c['region-5']).toEqual(['🌈']);
+  });
+
+  it('importCode applies the same migration', () => {
+    const code = btoa(unescape(encodeURIComponent(JSON.stringify(legacyCollections(10, 4, 0)))));
+    const c = importCode(code)!.collections;
+    expect(c['region-1']).toEqual(REGIONS[0]!.collectibles);
+    expect(c['region-2']).toEqual(REGIONS[1]!.collectibles.slice(0, 4));
+    expect(c['treasures']).toHaveLength(10);
   });
 });

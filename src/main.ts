@@ -19,7 +19,7 @@ import { ArcadeScene } from './scenes/arcade';
 import { StickerBookScene } from './scenes/stickerbook';
 import { TicketShopScene } from './scenes/ticketshop';
 import { PhotoBoothScene } from './scenes/photobooth';
-import { GAME_W, GAME_H } from './ui/kit';
+import { GAME_W, GAME_H, RENDER_SCALE } from './ui/kit';
 
 function startGame(): Phaser.Game {
   return new Phaser.Game({
@@ -29,8 +29,24 @@ function startGame(): Phaser.Game {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: GAME_W,
-    height: GAME_H,
+    // internal canvas rasterizes at 2048×1440; scenes stay in 1024×720 world
+    // units via the per-scene camera zoom below
+    width: GAME_W * RENDER_SCALE,
+    height: GAME_H * RENDER_SCALE,
+  },
+  callbacks: {
+    postBoot: (game) => {
+      // Every scene lays out in 1024×720 world units; the camera zoom maps
+      // that onto the 2× canvas so all vector art rasterizes at retina
+      // density. Re-applied on every CREATE (scene.start/restart resets it).
+      for (const scene of game.scene.scenes) {
+        scene.events.on(Phaser.Scenes.Events.CREATE, () => {
+          const cam = scene.cameras.main;
+          cam.setZoom(RENDER_SCALE);
+          cam.centerOn(GAME_W / 2, GAME_H / 2);
+        });
+      }
+    },
   },
   scene: [
     BootScene,

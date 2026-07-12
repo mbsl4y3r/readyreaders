@@ -134,8 +134,8 @@ export const run: RunArcadeGame = (scene, ctx: ArcadeCtx) => {
     for (let i = bubbles.length - 1; i >= 0; i--) {
       const b = bubbles[i]!;
       if (!b.alive) continue;
-      const dx = pointer.x - b.container.x;
-      const dy = pointer.y - b.container.y;
+      const dx = pointer.worldX - b.container.x;
+      const dy = pointer.worldY - b.container.y;
       const hitR = b.r + 16; // forgiving pad; tap target well over 64px
       if (dx * dx + dy * dy <= hitR * hitR) {
         score += b.golden ? 5 : 1;

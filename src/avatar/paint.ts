@@ -265,7 +265,7 @@ export function drawReaderInto(ctx: Ctx, config: AvatarConfig): void {
 
   // 6. head + 7. face
   drawHead(ctx, skin);
-  drawFace(ctx, skin, hair, config.face);
+  drawFace(ctx, skin, hair, config.face, config.character === 'boy');
 
   // 8. front hair
   drawFrontHair(ctx, config.hairStyle, hair);
@@ -453,22 +453,25 @@ function drawBoyArms(
  * cape flowing behind — not a skirt around the legs.
  */
 function drawCape(ctx: Ctx, color: string): void {
+  // Stays INSIDE the leg silhouette's height: hem ends well above the shoes
+  // (feet reach ~y214) and the sides stay close to the torso, so it reads as
+  // a cape hanging behind the body — never a gown wrapped around the legs.
   ctx.beginPath();
-  ctx.moveTo(86, 122);
-  ctx.bezierCurveTo(70, 150, 62, 194, 74, 226); // left edge
-  ctx.quadraticCurveTo(86, 234, 94, 226); // narrower billowing hem
-  ctx.quadraticCurveTo(100, 234, 106, 226);
-  ctx.quadraticCurveTo(114, 234, 126, 226);
-  ctx.bezierCurveTo(138, 194, 130, 150, 114, 122); // right edge
+  ctx.moveTo(87, 122);
+  ctx.bezierCurveTo(76, 142, 71, 168, 77, 190); // left edge
+  ctx.quadraticCurveTo(84, 196, 90, 190); // billowing hem lobes
+  ctx.quadraticCurveTo(100, 197, 110, 190);
+  ctx.quadraticCurveTo(116, 196, 123, 190);
+  ctx.bezierCurveTo(129, 168, 124, 142, 113, 122); // right edge
   ctx.closePath();
-  fillGradientOutlined(ctx, [color, shade(color, 0.82)], 122, 230, 0.72, 1.8);
+  fillGradientOutlined(ctx, [color, shade(color, 0.82)], 122, 196, 0.72, 1.8);
   // a soft center fold
   ctx.strokeStyle = shade(color, 0.82);
   ctx.globalAlpha = 0.5;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(100, 130);
-  ctx.quadraticCurveTo(98, 180, 100, 226);
+  ctx.quadraticCurveTo(98, 160, 100, 190);
   ctx.stroke();
   ctx.globalAlpha = 1;
 }
@@ -790,22 +793,49 @@ function drawSportSuit(ctx: Ctx, colorway: string, skin: { base: string; shadow:
     ctx.textBaseline = 'middle';
     ctx.fillText('1', 100, 139);
   } else {
-    // a little dino silhouette
+    // a small toy-dino built from simple solids so the silhouette always
+    // reads: plump body + boxy head up-right + thick tail left + two legs
+    ctx.save();
+    ctx.translate(100, 139); // chest centre, clear of the collar
     ctx.fillStyle = look.trim;
+    // tail — a thick wedge sweeping left
     ctx.beginPath();
-    ctx.moveTo(92, 142);
-    ctx.quadraticCurveTo(92, 132, 100, 132);
-    ctx.quadraticCurveTo(104, 132, 105, 136);
-    ctx.lineTo(109, 135);
-    ctx.lineTo(106, 139);
-    ctx.quadraticCurveTo(108, 145, 104, 146);
-    ctx.lineTo(104, 143);
-    ctx.lineTo(100, 143);
-    ctx.lineTo(99, 146);
-    ctx.lineTo(96, 146);
-    ctx.lineTo(97, 142);
+    ctx.moveTo(-3, 2);
+    ctx.lineTo(-11.5, -1.5); // tip
+    ctx.lineTo(-3, -3.5);
     ctx.closePath();
     ctx.fill();
+    // legs — two sturdy stumps under the body
+    ctx.fillRect(-2.5, 2.5, 3, 5.5);
+    ctx.fillRect(2, 2.5, 3, 5.5);
+    // body — plump oval
+    ellipsePath(ctx, 0.5, -0.5, 6, 4.8, -0.15);
+    ctx.fill();
+    // head — rounded block up-right
+    ctx.beginPath();
+    ctx.moveTo(3.5, -5);
+    ctx.quadraticCurveTo(3.5, -9.5, 7, -9.5); // rounded back of skull
+    ctx.lineTo(10.5, -9.5);
+    ctx.quadraticCurveTo(11.5, -9.5, 11.5, -8.5);
+    ctx.lineTo(11.5, -5.8); // blunt snout
+    ctx.lineTo(6.5, -5.8);
+    ctx.lineTo(10.5, -3); // open-jaw notch → lower jaw
+    ctx.lineTo(8, -1.8);
+    ctx.quadraticCurveTo(4.5, -1.5, 3.5, -5); // chin back into the neck
+    ctx.closePath();
+    ctx.fill();
+    // tiny arm + eye punched in the jersey color
+    ctx.strokeStyle = look.jersey;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(2.5, -0.5);
+    ctx.lineTo(5, 0.8);
+    ctx.stroke();
+    ctx.fillStyle = look.jersey;
+    ctx.beginPath();
+    ctx.arc(6.8, -7.6, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 }
 
@@ -2177,12 +2207,13 @@ function drawFace(
   skin: { base: string; shadow: string },
   hair: { base: string; sheen: string },
   face: FaceId | null = null,
+  boy = false,
 ): void {
   if (face === 'blushhearts') {
     // Heart-shaped cheeks stand in for the usual round blush.
     for (const s of [-1, 1]) drawTinyHeart(ctx, 100 + s * 22, 96, 3.6, '#ff7fa8', 0.9);
-  } else {
-    // blush
+  } else if (!boy) {
+    // blush — girls only; the boy's cheeks stay plain
     ctx.save();
     ctx.globalAlpha = 0.5;
     ctx.fillStyle = '#ff8fa3';
@@ -2193,10 +2224,10 @@ function drawFace(
     ctx.restore();
   }
 
-  // eyes — big warm ovals with double highlights
+  // eyes — big warm ovals with double highlights (boys': a touch rounder)
   for (const s of [-1, 1]) {
     const ex = 100 + s * 14;
-    ellipsePath(ctx, ex, 83, 6.2, 8.6, 0);
+    ellipsePath(ctx, ex, 83, boy ? 6.6 : 6.2, boy ? 7.8 : 8.6, 0);
     ctx.fillStyle = EYE;
     ctx.fill();
     ctx.fillStyle = '#ffffff';
@@ -2209,27 +2240,34 @@ function drawFace(
     ctx.arc(ex + 2.2, 86.5, 1.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    // lashes at the outer corner
-    ctx.strokeStyle = EYE;
-    ctx.lineWidth = 1.4;
-    for (const [dy, len] of [
-      [-3, 3.4],
-      [0.5, 3.0],
-    ] as const) {
-      ctx.beginPath();
-      ctx.moveTo(ex + s * 5.6, 81 + dy);
-      ctx.quadraticCurveTo(ex + s * (5.6 + len * 0.7), 80 + dy - 1, ex + s * (5.6 + len), 79 + dy - 1.6);
-      ctx.stroke();
+    if (!boy) {
+      // lashes at the outer corner — the girl's look only
+      ctx.strokeStyle = EYE;
+      ctx.lineWidth = 1.4;
+      for (const [dy, len] of [
+        [-3, 3.4],
+        [0.5, 3.0],
+      ] as const) {
+        ctx.beginPath();
+        ctx.moveTo(ex + s * 5.6, 81 + dy);
+        ctx.quadraticCurveTo(ex + s * (5.6 + len * 0.7), 80 + dy - 1, ex + s * (5.6 + len), 79 + dy - 1.6);
+        ctx.stroke();
+      }
     }
   }
 
-  // brows — thin arches in the hair's shade
+  // brows — thin arches; the boy's sit straighter and a touch bolder
   ctx.strokeStyle = shade(hair.base, 0.92);
-  ctx.lineWidth = 2.2;
+  ctx.lineWidth = boy ? 2.7 : 2.2;
   for (const s of [-1, 1]) {
     ctx.beginPath();
-    ctx.moveTo(100 + s * 8, 68.5);
-    ctx.quadraticCurveTo(100 + s * 14, 65, 100 + s * 20, 68);
+    if (boy) {
+      ctx.moveTo(100 + s * 8, 68);
+      ctx.quadraticCurveTo(100 + s * 14, 66.2, 100 + s * 20, 67.6);
+    } else {
+      ctx.moveTo(100 + s * 8, 68.5);
+      ctx.quadraticCurveTo(100 + s * 14, 65, 100 + s * 20, 68);
+    }
     ctx.stroke();
   }
 
@@ -2305,16 +2343,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     fillOutlined(ctx, base, 0.8, 1.7);
   };
 
-  const sheenArc = (r = HEAD_R + 1, a0 = Math.PI * 1.18, a1 = Math.PI * 1.5): void => {
-    ctx.strokeStyle = sheen;
-    ctx.lineWidth = 3.4;
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    ctx.arc(HEAD_CX, HEAD_CY + 4, r - 7, a0, a1);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  };
-
   if (style === 'waves') {
     crownCap(100, 48);
     // side strands flowing in front of the shoulders
@@ -2329,7 +2357,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.closePath();
       fillOutlined(ctx, base, 0.8, 1.5);
     }
-    sheenArc();
   } else if (style === 'bob') {
     // full fringe with 3 shallow scallops
     ctx.beginPath();
@@ -2355,7 +2382,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.closePath();
       fillOutlined(ctx, base, 0.8, 1.5);
     }
-    sheenArc(HEAD_R + 3);
   } else if (style === 'pony') {
     // swept bangs — one big sweep from left temple to right brow
     ctx.beginPath();
@@ -2394,7 +2420,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     ctx.bezierCurveTo(154, 56, 156, 76, 152, 96);
     ctx.stroke();
     ctx.globalAlpha = 1;
-    sheenArc();
   } else if (style === 'bun') {
     // bun on top (behind the smooth cap edge)
     ctx.beginPath();
@@ -2425,7 +2450,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.quadraticCurveTo(100 + dx * 0.4, 44, 100 + dx * 0.15, 40);
       ctx.stroke();
     }
-    sheenArc();
   } else if (style === 'curls') {
     // Bouncy fringe of curl lobes across the forehead with a couple framing
     // the temples, plus a few spiral hints so the curls read as curls.
@@ -2455,7 +2479,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.arc(x, y, 4.6, Math.PI * 0.2, Math.PI * 1.8);
       ctx.stroke();
     }
-    sheenArc(HEAD_R + 2);
   } else if (style === 'pixie') {
     // Short crop: a side-swept fringe across the brow with a wispy tip and a
     // little sideburn flick; no length anywhere.
@@ -2485,7 +2508,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.closePath();
       fillOutlined(ctx, base, 0.8, 1.3);
     }
-    sheenArc();
   } else if (style === 'longstraight') {
     // Centre-part crown + two long sleek panels framing the face and falling
     // past the shoulders (the back curtain supplies the bulk of the length).
@@ -2508,7 +2530,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
-    sheenArc();
   } else if (style === 'spacebuns') {
     // Centre part + two round buns riding high on each side, each wrapped with
     // a band and finished with a short tail.
@@ -2543,7 +2564,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
-    sheenArc();
   } else if (style === 'sidebraid') {
     // Swept fringe + one thick plait draped over her left shoulder.
     ctx.beginPath();
@@ -2557,25 +2577,29 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     fillOutlined(ctx, base, 0.8, 1.7);
     // the plait itself hangs from BEHIND the head (drawn in the back pass),
     // so up front we draw only the swept fringe.
-    sheenArc();
   } else if (style === 'crop') {
-    // short neat cap with a soft side part
+    // classic short boy's cut: high hairline showing the whole forehead,
+    // short back-and-sides, a small forward flick at the front edge
     ctx.beginPath();
-    ctx.moveTo(58, 90);
-    ctx.bezierCurveTo(54, 54, 74, 33, 100, 33);
-    ctx.bezierCurveTo(126, 33, 146, 54, 142, 90);
-    ctx.bezierCurveTo(140, 74, 133, 64, 124, 60);
-    ctx.bezierCurveTo(108, 66, 84, 68, 68, 60); // fringe edge across the brow
-    ctx.bezierCurveTo(62, 66, 59, 76, 58, 90);
+    ctx.moveTo(60, 78);
+    ctx.bezierCurveTo(56, 48, 74, 31, 100, 31);
+    ctx.bezierCurveTo(126, 31, 144, 48, 140, 78);
+    ctx.bezierCurveTo(139, 64, 134, 55, 127, 51); // right temple
+    ctx.bezierCurveTo(118, 46, 108, 44, 100, 44); // hairline across the forehead
+    ctx.bezierCurveTo(92, 44, 83, 46, 77, 50);
+    ctx.lineTo(74, 56); // little front flick
+    ctx.bezierCurveTo(68, 60, 62, 68, 60, 78);
     ctx.closePath();
     fillOutlined(ctx, base, 0.8, 1.7);
-    ctx.strokeStyle = shade(base, 0.76);
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(84, 40);
-    ctx.quadraticCurveTo(96, 50, 112, 57);
-    ctx.stroke();
-    sheenArc();
+    // short sideburns in front of the ears
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(100 + s * 41, 62);
+      ctx.quadraticCurveTo(100 + s * 44, 70, 100 + s * 40, 77);
+      ctx.quadraticCurveTo(100 + s * 38, 70, 100 + s * 38, 63);
+      ctx.closePath();
+      fillOutlined(ctx, base, 0.8, 1.3);
+    }
   } else if (style === 'spiky') {
     // base cap + a zig-zag of spikes over the crown
     ctx.beginPath();
@@ -2600,7 +2624,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     ctx.bezierCurveTo(120, 55, 80, 55, 60, 62);
     ctx.closePath();
     fillOutlined(ctx, base, 0.78, 1.5);
-    sheenArc();
   } else if (style === 'buzz') {
     // very short — a thin close cap with a stubbly texture and low hairline
     ctx.beginPath();
@@ -2618,7 +2641,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.arc(x, y, 1, 0, Math.PI * 2);
       ctx.fill();
     }
-    sheenArc();
   } else if (style === 'curlytop') {
     // a cluster of short curl lobes on the crown (short sides)
     const lobes: ReadonlyArray<readonly [number, number, number]> = [
@@ -2640,14 +2662,32 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     }
     ctx.globalAlpha = 1;
   } else if (style === 'flow') {
-    // medium swept-back with side length past the ears
-    crownCap(100, 50);
+    // surfer sweep: hair combed straight BACK off a high open forehead,
+    // with a little side length past the ears — no fringe, no bonnet
     ctx.beginPath();
-    ctx.moveTo(70, 60);
-    ctx.bezierCurveTo(84, 44, 116, 44, 132, 58);
-    ctx.bezierCurveTo(124, 50, 100, 48, 84, 56);
+    ctx.moveTo(60, 80);
+    ctx.bezierCurveTo(55, 44, 76, 28, 100, 28);
+    ctx.bezierCurveTo(124, 28, 145, 44, 140, 80);
+    ctx.bezierCurveTo(138, 60, 132, 50, 124, 46); // right side down
+    ctx.bezierCurveTo(116, 42.5, 107, 41, 100, 41); // high hairline across
+    ctx.bezierCurveTo(90, 41, 78, 44, 71, 50);
+    ctx.bezierCurveTo(64, 56, 61, 68, 60, 80);
     ctx.closePath();
-    fillOutlined(ctx, base, 0.8, 1.4);
+    fillOutlined(ctx, base, 0.8, 1.7);
+    // swept-back comb strokes selling the direction
+    ctx.strokeStyle = shade(base, 0.8);
+    ctx.lineWidth = 1.5;
+    for (const [x0, y0, cx2, cy2, x1, y1] of [
+      [84, 42, 78, 36, 72, 33],
+      [100, 40, 98, 34, 95, 30],
+      [116, 42, 120, 36, 127, 34],
+    ] as const) {
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.quadraticCurveTo(cx2, cy2, x1, y1);
+      ctx.stroke();
+    }
+    // side length past the ears
     for (const s of [-1, 1]) {
       ctx.beginPath();
       ctx.moveTo(100 + s * 42, 64);
@@ -2656,7 +2696,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       ctx.closePath();
       fillOutlined(ctx, base, 0.8, 1.3);
     }
-    sheenArc();
   } else if (style === 'mohawk') {
     // shaved sides (a faint stubble arc) + a tall central spiked strip
     ctx.save();
@@ -2689,7 +2728,6 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     // braids: center part + bangs. The two plaits hang from behind the head
     // (back pass) so they stay anchored up top and never cover the face.
     crownCap(100, 46);
-    sheenArc();
   }
 }
 
@@ -3441,36 +3479,101 @@ export function drawRexInto(ctx: Ctx, config: AvatarConfig): void {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  // tail sweeping out behind to the right
+  // thick baby tail curling up behind to the right
   ctx.beginPath();
-  ctx.moveTo(98, 118);
-  ctx.quadraticCurveTo(140, 116, 151, 94);
-  ctx.quadraticCurveTo(151, 110, 138, 120);
-  ctx.quadraticCurveTo(120, 133, 100, 132);
+  ctx.moveTo(96, 122);
+  ctx.bezierCurveTo(126, 124, 144, 116, 148, 98); // top edge to the tip
+  ctx.quadraticCurveTo(150, 112, 140, 124); // rounded tip
+  ctx.bezierCurveTo(128, 138, 106, 142, 92, 138);
   ctx.closePath();
   fillOutlined(ctx, shade(pet.base, 0.92), 0.82, 1.4);
 
-  // two stubby feet with little claws
+  // stubby legs with round toes
   for (const s of [-1, 1]) {
-    ellipsePath(ctx, 80 + s * 20, 150, 15, 9, 0);
-    fillOutlined(ctx, pet.deep, 0.82, 1.4);
-    ctx.fillStyle = '#fff6e0';
+    ellipsePath(ctx, 80 + s * 17, 152, 13, 10, 0);
+    fillOutlined(ctx, pet.base, 0.82, 1.4);
+    ctx.fillStyle = lighten(pet.base, 0.5);
     for (const t of [-1, 0, 1]) {
       ctx.beginPath();
-      ctx.arc(80 + s * 20 + t * 5, 156, 1.6, 0, Math.PI * 2);
+      ctx.arc(80 + s * 17 + t * 5.5, 159, 2, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  // body — a rounded egg with a top-left light, just like Inky's dome
+  // small round tummy — the big head is the star, just like Inky
   ctx.beginPath();
-  ctx.moveTo(80, 30);
-  ctx.bezierCurveTo(44, 32, 30, 66, 34, 100);
-  ctx.bezierCurveTo(36, 130, 54, 150, 80, 150);
-  ctx.bezierCurveTo(106, 150, 124, 130, 126, 100);
-  ctx.bezierCurveTo(130, 66, 116, 32, 80, 30);
+  ellipsePath(ctx, 80, 126, 31, 28, 0);
+  const bg2 = ctx.createRadialGradient(66, 110, 6, 80, 126, 42);
+  bg2.addColorStop(0, lighten(pet.base, 0.18));
+  bg2.addColorStop(0.6, pet.base);
+  bg2.addColorStop(1, pet.deep);
+  ctx.fillStyle = bg2;
+  ctx.fill();
+  ctx.strokeStyle = shade(pet.deep, 0.85);
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  // lighter belly patch with faint tummy lines
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ellipsePath(ctx, 80, 132, 20, 19, 0);
+  ctx.fillStyle = belly;
+  ctx.fill();
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = shade(belly, 0.85);
+  ctx.lineWidth = 1.4;
+  for (const dy of [128, 136]) {
+    ctx.beginPath();
+    ctx.moveTo(68, dy);
+    ctx.quadraticCurveTo(80, dy + 3, 92, dy);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // proper little bent T-rex arms held up in front of the tummy: shoulder →
+  // elbow → hand as an outlined tube, finished with two tiny claws
+  for (const s of [-1, 1]) {
+    const arm = (w: number, c: string): void => {
+      ctx.strokeStyle = c;
+      ctx.lineWidth = w;
+      ctx.beginPath();
+      ctx.moveTo(80 + s * 25, 108);
+      ctx.quadraticCurveTo(80 + s * 31, 114, 80 + s * 29, 119); // upper arm → elbow
+      ctx.quadraticCurveTo(80 + s * 26, 124, 80 + s * 20, 125); // forearm → hand
+      ctx.stroke();
+    };
+    arm(9, shade(pet.deep, 0.85)); // outline pass
+    arm(6.2, pet.base); // fill pass
+    // two tiny claws pointing down-in from the hand
+    ctx.strokeStyle = shade(pet.deep, 0.85);
+    ctx.lineWidth = 1.8;
+    for (const [dx, dy] of [
+      [-1.5, 4],
+      [-4.5, 3],
+    ] as const) {
+      ctx.beginPath();
+      ctx.moveTo(80 + s * 20, 125);
+      ctx.lineTo(80 + s * (20 + dx), 125 + dy);
+      ctx.stroke();
+    }
+  }
+
+  // three soft rounded crest bumps peeking over the crown (drawn pre-head)
+  for (const [x, y, r] of [[58, 26, 8], [80, 18, 9.5], [102, 26, 8]] as const) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    fillOutlined(ctx, mix(pet.base, pet.deep, 0.5), 0.82, 1.3);
+  }
+
+  // BIG dome head — same pear proportions and lighting as Inky's
+  ctx.beginPath();
+  ctx.moveTo(80, 20);
+  ctx.bezierCurveTo(52, 20, 32, 44, 29, 74);
+  ctx.bezierCurveTo(26, 98, 44, 112, 80, 113);
+  ctx.bezierCurveTo(116, 112, 134, 98, 131, 74);
+  ctx.bezierCurveTo(128, 44, 108, 20, 80, 20);
   ctx.closePath();
-  const g = ctx.createRadialGradient(60, 60, 8, 80, 96, 92);
+  const g = ctx.createRadialGradient(60, 50, 8, 80, 72, 90);
   g.addColorStop(0, lighten(pet.base, 0.22));
   g.addColorStop(0.55, pet.base);
   g.addColorStop(1, pet.deep);
@@ -3480,88 +3583,58 @@ export function drawRexInto(ctx: Ctx, config: AvatarConfig): void {
   ctx.lineWidth = 1.8;
   ctx.stroke();
 
-  // lighter belly patch
-  ctx.save();
-  ctx.globalAlpha = 0.85;
-  ellipsePath(ctx, 80, 114, 26, 30, 0);
-  ctx.fillStyle = belly;
-  ctx.fill();
-  ctx.restore();
-
-  // tiny arms at the sides
+  // big sparkly eyes, low on the face like Inky's
   for (const s of [-1, 1]) {
+    const ex = 80 + s * 19;
     ctx.beginPath();
-    ctx.moveTo(80 + s * 30, 94);
-    ctx.quadraticCurveTo(80 + s * 41, 99, 80 + s * 37, 110);
-    ctx.quadraticCurveTo(80 + s * 30, 108, 80 + s * 27, 99);
-    ctx.closePath();
-    fillOutlined(ctx, pet.base, 0.82, 1.3);
-  }
-
-  // a little back-crest of three spikes on the crown
-  for (const [x, y, h] of [[64, 36, 9], [80, 30, 12], [96, 36, 9]] as const) {
-    ctx.beginPath();
-    ctx.moveTo(x - 6, y + 4);
-    ctx.lineTo(x, y - h);
-    ctx.lineTo(x + 6, y + 4);
-    ctx.closePath();
-    fillOutlined(ctx, pet.deep, 0.8, 1.2);
-  }
-
-  // eyes
-  for (const s of [-1, 1]) {
-    const ex = 80 + s * 17;
-    ctx.beginPath();
-    ctx.arc(ex, 72, 11, 0, Math.PI * 2);
+    ctx.arc(ex, 74, 11.5, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
     ctx.strokeStyle = shade(pet.deep, 0.9);
     ctx.lineWidth = 1.2;
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(ex + s * 1, 74, 5.2, 0, Math.PI * 2);
+    ctx.arc(ex + 1, 75.5, 5.4, 0, Math.PI * 2);
     ctx.fillStyle = '#352a2a';
     ctx.fill();
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(ex - 1, 71, 2, 0, Math.PI * 2);
+    ctx.arc(ex - 1, 73, 2.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(ex + 2.6, 77.5, 0.9, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // muzzle
-  ellipsePath(ctx, 80, 99, 24, 17, 0);
-  fillOutlined(ctx, lighten(pet.base, 0.14), 0.85, 1.4);
-  // nostrils
+  // little snout bump low on the dome: two nostril dots + a happy smile
   ctx.fillStyle = shade(pet.deep, 0.8);
   for (const s of [-1, 1]) {
     ctx.beginPath();
-    ctx.arc(80 + s * 7, 91, 1.6, 0, Math.PI * 2);
+    ctx.arc(80 + s * 5, 90, 1.5, 0, Math.PI * 2);
     ctx.fill();
   }
-  // wide grin
   ctx.strokeStyle = shade(pet.deep, 0.75);
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.2;
   ctx.beginPath();
-  ctx.moveTo(66, 101);
-  ctx.quadraticCurveTo(80, 113, 94, 101);
+  ctx.moveTo(68, 96);
+  ctx.quadraticCurveTo(80, 105, 92, 96);
   ctx.stroke();
-  // two friendly top teeth
+  // one tiny friendly tooth — says "T-rex" without any scary
   ctx.fillStyle = '#fffaf0';
-  for (const s of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(80 + s * 6, 102);
-    ctx.lineTo(80 + s * 10, 102);
-    ctx.lineTo(80 + s * 8, 107);
-    ctx.closePath();
-    ctx.fill();
-  }
-  // cheeks
+  ctx.beginPath();
+  ctx.moveTo(85, 100.5);
+  ctx.lineTo(90, 99);
+  ctx.lineTo(88.4, 104);
+  ctx.closePath();
+  ctx.fill();
+
+  // soft cheeks (Inky has them; so does his best friend)
   ctx.save();
-  ctx.globalAlpha = 0.5;
+  ctx.globalAlpha = 0.45;
   ctx.fillStyle = '#ff9db5';
   for (const s of [-1, 1]) {
     ctx.beginPath();
-    ctx.arc(80 + s * 28, 93, 5, 0, Math.PI * 2);
+    ctx.arc(80 + s * 31, 88, 5, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();

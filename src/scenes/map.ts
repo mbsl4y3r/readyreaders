@@ -9,7 +9,7 @@
  * the road and the Lesson button own the screen instead of ten edge icons.
  */
 import Phaser from 'phaser';
-import { regionForLesson, baseRealmFor, TOTAL_LESSONS } from '../content/regions';
+import { regionForLesson, baseRealmFor, REGIONS, TOTAL_LESSONS } from '../content/regions';
 import { canStartLessonToday, roadDone } from '../services/road';
 import { loadProgress } from '../services/progress';
 import { seasonFor, SEASON_THEMES } from '../services/juice';
@@ -65,7 +65,9 @@ export class MapScene extends Phaser.Scene {
 
     // ---- currency, top-left: pearls + a shell/collection tally as coin chips
     const c = progress.collections;
-    const total = c.treasures.length + c.pets.length + c.charms.length;
+    // per-region albums mirror the legacy pools after migration, so counting
+    // regions alone matches the Collection Book's "N of 120" exactly
+    const total = REGIONS.reduce((sum, r) => sum + (c[r.collectionKey]?.length ?? 0), 0);
     coinChip(this, 80, 44, '⚪', `${progress.pearls}`, 24);
     coinChip(this, 80, 92, '🐚', `${total}`, 22);
 

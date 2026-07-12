@@ -4,6 +4,7 @@
  * Export/import as a copy-paste code guards against iOS storage eviction.
  */
 import { defaultAvatar, starterCosmetics, START_PEARLS, type AvatarConfig } from '../avatar/catalog';
+import { REGIONS } from '../content/regions';
 
 export interface WordStat {
   exposures: number;
@@ -39,11 +40,12 @@ export interface ProgressData {
   /** True once the first-run character creator has made Evie her own. */
   created: boolean;
   words: Record<string, WordStat>;
-  collections: {
-    treasures: string[];
-    pets: string[];
-    charms: string[];
-  };
+  /**
+   * Collectible albums by key: the three legacy realm pools ('treasures',
+   * 'pets', 'charms' — still fed by legacy level-mode sessions) plus one
+   * 'region-1'…'region-12' album per Reading Road region.
+   */
+  collections: Record<string, string[]>;
   sessions: { date: string; rounds: number; minutes?: number }[];
   /** Best lightning-round total time, ms (0 = not yet played). */
   speedBest: number;
@@ -84,6 +86,39 @@ export interface ProgressData {
 
 const KEY = 'readyreaders.v1';
 
+const LEGACY_POOLS = ['treasures', 'pets', 'charms'] as const;
+
+function freshCollections(): Record<string, string[]> {
+  const collections: Record<string, string[]> = {};
+  for (const pool of LEGACY_POOLS) collections[pool] = [];
+  for (const region of REGIONS) collections[region.collectionKey] = [];
+  return collections;
+}
+
+/**
+ * Ensure every album key exists, then run the ONE-TIME region-album migration:
+ * a save from before per-region albums has finds only in the legacy pools, so
+ * mirror them into the region albums sequentially — region 1's list fills
+ * first (up to 10), then region 2's, and so on. That matches how they were
+ * actually earned: one collectible per passed lesson, in lesson order. The
+ * legacy pools are left untouched (legacy level-mode sessions still use them).
+ */
+function normalizeCollections(data: ProgressData): void {
+  data.collections ??= freshCollections();
+  for (const pool of LEGACY_POOLS) data.collections[pool] ??= [];
+  for (const region of REGIONS) data.collections[region.collectionKey] ??= [];
+
+  const regionFinds = REGIONS.some((r) => data.collections[r.collectionKey]!.length > 0);
+  let remaining = LEGACY_POOLS.reduce((sum, pool) => sum + data.collections[pool]!.length, 0);
+  if (regionFinds || remaining === 0) return;
+  for (const region of REGIONS) {
+    if (remaining <= 0) break;
+    const take = Math.min(10, remaining);
+    data.collections[region.collectionKey] = region.collectibles.slice(0, take);
+    remaining -= take;
+  }
+}
+
 export function freshProgress(): ProgressData {
   return {
     version: 1,
@@ -99,7 +134,7 @@ export function freshProgress(): ProgressData {
     placed: true,
     created: false,
     words: {},
-    collections: { treasures: [], pets: [], charms: [] },
+    collections: freshCollections(),
     sessions: [],
     speedBest: 0,
     storiesRead: [],
@@ -164,6 +199,7 @@ export function loadProgress(): ProgressData {
     data.avatar.earrings ??= null;
     data.settings.musicOn ??= true;
     data.settings.gameSpeed ??= 'normal';
+    normalizeCollections(data);
     return data;
   } catch {
     return freshProgress();
@@ -227,6 +263,7 @@ export function importCode(code: string): ProgressData | null {
     data.avatar.earrings ??= null;
     data.settings.musicOn ??= true;
     data.settings.gameSpeed ??= 'normal';
+    normalizeCollections(data);
     return data;
   } catch {
     return null;

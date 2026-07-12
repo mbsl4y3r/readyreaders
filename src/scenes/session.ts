@@ -250,7 +250,7 @@ export class SessionScene extends Phaser.Scene {
     const prize = winsPrize
       ? theme.collectibles.find((e) => !owned.has(e)) ?? theme.collectibles[0]!
       : '⭐';
-    if (winsPrize && !owned.has(prize)) progress.collections[theme.collectionKey].push(prize);
+    if (winsPrize && !owned.has(prize)) (progress.collections[theme.collectionKey] ??= []).push(prize);
 
     progress.sessions.push({
       date: new Date().toISOString().slice(0, 10),

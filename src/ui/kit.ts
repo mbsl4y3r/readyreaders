@@ -6,6 +6,12 @@ import Phaser from 'phaser';
 
 export const GAME_W = 1024;
 export const GAME_H = 720;
+/**
+ * Internal render scale: the canvas rasterizes at GAME_W*S × GAME_H*S
+ * (2048×1440) while every scene keeps laying out in 1024×720 world units via
+ * a camera zoom applied in main.ts. Crisp on retina iPads, cheap everywhere.
+ */
+export const RENDER_SCALE = 2;
 
 /** Font for text the child READS — early-reader letterforms (NEVER for chrome). */
 export const READING_FONT = 'Andika, "Comic Sans MS", sans-serif';
@@ -44,7 +50,9 @@ export const HEX = {
 export const REDUCED_MOTION =
   globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-const RES = Math.min(3, (globalThis.devicePixelRatio ?? 1) * 1.5);
+// Text rasterizes at 3× its font size: with the 2× camera zoom the on-screen
+// texel density stays ≥1 physical pixel per texture pixel — crisp everywhere.
+const RES = 3;
 
 /** Chrome text in the display face (titles, buttons, labels, scores). */
 export function displayText(
