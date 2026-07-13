@@ -120,9 +120,12 @@ export function emojiText(
   emoji: string,
   size = 64,
 ): Phaser.GameObjects.Text {
+  // Emoji cap at resolution 2: color-emoji fonts are BITMAP strikes (~128px)
+  // and some glyphs rasterize blank past them. 2× matches the camera zoom
+  // exactly (1 texture px : 1 physical px) — full sharpness, always renders.
   return scene.add
     .text(x, y, emoji, { fontFamily: EMOJI_FONT, fontSize: `${size}px` })
-    .setResolution(RES)
+    .setResolution(2)
     .setOrigin(0.5);
 }
 
