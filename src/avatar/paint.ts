@@ -253,6 +253,12 @@ export function drawReaderInto(ctx: Ctx, config: AvatarConfig): void {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
+  // The boy's figure ends at his shoes (~y214) while the girl's tail/gown
+  // reaches ~y260, so his art floats high in the shared 270-tall canvas.
+  // Shifting the whole figure down means every scene that stages the
+  // texture (wardrobe, creator, photo booth) grounds him automatically.
+  if (config.character === 'boy') ctx.translate(0, 46);
+
   // 1. back hair silhouette
   drawBackHair(ctx, config.hairStyle, hair);
 
@@ -849,6 +855,17 @@ function slipperFill(colorway: string): string {
 
 function drawBackHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen: string }): void {
   const base = hair.base;
+  if (style === 'crop' || style === 'spiky' || style === 'buzz' || style === 'flow' || style === 'curlytop') {
+    // Short-cut back rim: hair hugs the skull from ear to ear so the front
+    // cap always connects to the sideburns — without this the cut reads as a
+    // detached ring floating on the crown. (Mohawk skips it: shaved sides.)
+    ctx.strokeStyle = shade(base, 0.96);
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.arc(HEAD_CX, HEAD_CY, HEAD_R, Math.PI * 0.88, Math.PI * 2.12, false);
+    ctx.stroke();
+    return;
+  }
   if (style === 'waves') {
     // Long wavy mane flowing past the shoulders, S-curve outer edges.
     ctx.beginPath();
@@ -2578,25 +2595,28 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     // the plait itself hangs from BEHIND the head (drawn in the back pass),
     // so up front we draw only the swept fringe.
   } else if (style === 'crop') {
-    // classic short boy's cut: high hairline showing the whole forehead,
-    // short back-and-sides, a small forward flick at the front edge
+    // classic short boy's cut: an open forehead under a THICK cap whose side
+    // panels run all the way down to the ears, merging into the sideburns —
+    // one connected mass of hair, never a floating ring
     ctx.beginPath();
-    ctx.moveTo(60, 78);
-    ctx.bezierCurveTo(56, 48, 74, 31, 100, 31);
-    ctx.bezierCurveTo(126, 31, 144, 48, 140, 78);
-    ctx.bezierCurveTo(139, 64, 134, 55, 127, 51); // right temple
-    ctx.bezierCurveTo(118, 46, 108, 44, 100, 44); // hairline across the forehead
-    ctx.bezierCurveTo(92, 44, 83, 46, 77, 50);
-    ctx.lineTo(74, 56); // little front flick
-    ctx.bezierCurveTo(68, 60, 62, 68, 60, 78);
+    ctx.moveTo(57, 86);
+    ctx.bezierCurveTo(53, 46, 74, 29, 100, 29);
+    ctx.bezierCurveTo(126, 29, 147, 46, 143, 86); // outer edge down to ear level
+    ctx.bezierCurveTo(141, 84, 139, 82, 137, 80); // around the ear notch
+    ctx.bezierCurveTo(138, 68, 135, 57, 127, 52); // inner right temple
+    ctx.bezierCurveTo(119, 48, 109, 46, 100, 46); // hairline across the forehead
+    ctx.bezierCurveTo(91, 46, 82, 48, 76, 52);
+    ctx.lineTo(72, 58); // little front flick
+    ctx.bezierCurveTo(66, 62, 62, 70, 63, 80); // inner left, down to the ear
+    ctx.bezierCurveTo(61, 82, 59, 84, 57, 86);
     ctx.closePath();
     fillOutlined(ctx, base, 0.8, 1.7);
-    // short sideburns in front of the ears
+    // short sideburns in front of the ears, overlapping the cap's side panels
     for (const s of [-1, 1]) {
       ctx.beginPath();
-      ctx.moveTo(100 + s * 41, 62);
-      ctx.quadraticCurveTo(100 + s * 44, 70, 100 + s * 40, 77);
-      ctx.quadraticCurveTo(100 + s * 38, 70, 100 + s * 38, 63);
+      ctx.moveTo(100 + s * 42, 60);
+      ctx.quadraticCurveTo(100 + s * 45, 70, 100 + s * 40, 79);
+      ctx.quadraticCurveTo(100 + s * 37, 70, 100 + s * 37, 61);
       ctx.closePath();
       fillOutlined(ctx, base, 0.8, 1.3);
     }
