@@ -37,6 +37,7 @@ import {
   type Button,
   sceneTitle,
   displayText,
+  makePanel,
   HEX,
   COL,
 } from '../ui/kit';
@@ -128,25 +129,32 @@ export class StoryScene extends Phaser.Scene {
       const unlocked = story.unlockLevel <= progress.currentLevel;
       const realmTheme = THEMES[story.realm];
 
+      // a paper book cover: cut-paper sticker with a cloth "spine" band in the
+      // realm's accent — tappable things look like stickers
       const card = this.add.container(x, y);
       const bg = this.add.graphics();
-      bg.fillStyle(0xffffff, unlocked ? 0.16 : 0.07);
+      bg.fillStyle(0x000000, 0.16);
+      bg.fillRoundedRect(-cardW / 2, -cardH / 2 + 5, cardW, cardH, 22);
+      bg.fillStyle(COL.paper, 1);
       bg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 22);
-      bg.lineStyle(3, realmTheme.accent, unlocked ? 0.8 : 0.25);
+      bg.lineStyle(3, realmTheme.accent, unlocked ? 0.9 : 0.35);
       bg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 22);
+      // spine band down the left edge
+      bg.fillStyle(realmTheme.accent, unlocked ? 0.85 : 0.3);
+      bg.fillRoundedRect(-cardW / 2, -cardH / 2, 16, cardH, { tl: 22, tr: 0, bl: 22, br: 0 });
       card.add(bg);
 
-      card.add(emojiText(this, 0, -cardH / 2 + 40, realmTheme.creature, 40));
-      const title = displayText(this, 0, 10, story.title, 24, '#ffffff');
-      title.setWordWrapWidth(cardW - 28);
+      card.add(emojiText(this, 8, -cardH / 2 + 42, realmTheme.creature, 40));
+      const title = displayText(this, 8, 12, story.title, 22, HEX.ink);
+      title.setWordWrapWidth(cardW - 56);
       title.setAlign('center');
       card.add(title);
 
       if (!unlocked) {
         // dimmed, never hidden — something to look forward to
-        card.setAlpha(0.55);
-        card.add(emojiText(this, -40, cardH / 2 - 26, '🔒', 22));
-        card.add(displayText(this, 20, cardH / 2 - 26, `Level ${story.unlockLevel}`, 20, '#ffffffaa'));
+        card.setAlpha(0.6);
+        card.add(emojiText(this, -32, cardH / 2 - 26, '🔒', 22));
+        card.add(displayText(this, 26, cardH / 2 - 26, `Level ${story.unlockLevel}`, 18, HEX.inkSoft, '500'));
       } else if (readSet.has(story.id)) {
         card.add(emojiText(this, cardW / 2 - 26, -cardH / 2 + 26, '✨', 26));
       }
@@ -183,15 +191,22 @@ export class StoryScene extends Phaser.Scene {
 
     // page number pebble — where we are in the story, never a score
     const pebble = this.add.graphics();
-    pebble.fillStyle(0xffffff, 0.12);
+    pebble.fillStyle(COL.paper, 1);
     pebble.fillRoundedRect(GAME_W / 2 - 110, 108, 220, 44, 22);
+    pebble.lineStyle(2, COL.paperEdge, 1);
+    pebble.strokeRoundedRect(GAME_W / 2 - 110, 108, 220, 44, 22);
     view.add(pebble);
-    view.add(displayText(this, GAME_W / 2, 130, `Page ${n} of ${story.pages.length}`, 22, '#ffffffcc'));
+    view.add(displayText(this, GAME_W / 2, 130, `Page ${n} of ${story.pages.length}`, 20, HEX.ink, '500'));
 
-    // THE reading moment: big decodable text, and no picture yet
-    const text = readingText(this, GAME_W / 2, 280, page.text, 46, '#ffffff');
-    text.setWordWrapWidth(GAME_W - 140);
+    // THE reading moment: the decodable text sits on a clean paper page —
+    // things she reads get a calm, high-contrast surface (never a dark wash)
+    const text = readingText(this, GAME_W / 2, 300, page.text, 46, HEX.ink);
+    text.setWordWrapWidth(GAME_W - 240);
     text.setAlign('center');
+    const padY = 46;
+    const pageH = Math.max(220, text.height + padY * 2);
+    const paper = makePanel(this, 110, 300 - pageH / 2, GAME_W - 220, pageH, { radius: 26 });
+    view.add(paper);
     view.add(text);
     popIn(this, text);
 

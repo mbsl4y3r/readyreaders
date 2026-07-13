@@ -602,9 +602,13 @@ export class WardrobeScene extends Phaser.Scene {
       chip.setAlpha(affordable ? 0.9 : 0.45);
     }
 
-    // squeeze long labels into the space between emoji and price/check
+    // long labels step the font size down (stays legible) before any final
+    // squeeze — an xy scale alone shrinks the text into an unreadable pip
     const maxLabel = 118;
-    if (chip.label.width > maxLabel) chip.label.setScale(maxLabel / chip.label.width);
+    if (chip.label.width > maxLabel) {
+      chip.label.setFontSize(Math.max(14, Math.floor((18 * maxLabel) / chip.label.width)));
+      if (chip.label.width > maxLabel) chip.label.setScale(maxLabel / chip.label.width);
+    }
 
     popIn(this, chip, index * 40);
     return chip;

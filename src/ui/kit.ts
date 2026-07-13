@@ -263,7 +263,8 @@ export function coinChip(
 /** Gentle infinite vertical bob (e.g. the "you are here" marker). Honors reduced-motion. */
 export function bob(scene: Phaser.Scene, target: Phaser.GameObjects.Components.Transform, amp = 8, dur = 1400): void {
   if (REDUCED_MOTION) return;
-  scene.tweens.add({ targets: target, y: `-=${amp}`, duration: dur, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  // absolute target — a relative '-=' with repeat -1 can compound-drift
+  scene.tweens.add({ targets: target, y: target.y - amp, duration: dur, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 }
 
 /** Gentle infinite scale "breathe" (e.g. the primary button). Honors reduced-motion. */
