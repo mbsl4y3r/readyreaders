@@ -90,11 +90,15 @@ export class PhrasesHubScene extends Phaser.Scene {
     );
     const cards = pool.filter((p) => picked.has(p.id));
 
+    // centre the rows in the space below the title so a short list never
+    // leaves a lopsided empty band at the bottom of the screen
+    const rowCount = Math.ceil(cards.length / 2);
+    const y0 = Math.max(190, 190 + ((4 - rowCount) * 128) / 2);
     cards.forEach((p, i) => {
       const col = i % 2;
       const row = Math.floor(i / 2);
       const x = GAME_W / 2 + (col === 0 ? -1 : 1) * 245;
-      const y = 190 + row * 128;
+      const y = y0 + row * 128;
       const card = makeButton(this, x, y, p.text, () => this.playPhrase(p.id, level.realm, theme), {
         width: 460,
         height: 108,

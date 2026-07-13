@@ -39,13 +39,18 @@ function startGame(): Phaser.Game {
       // Every scene lays out in 1024×720 world units; the camera zoom maps
       // that onto the 2× canvas so all vector art rasterizes at retina
       // density. Re-applied on every CREATE (scene.start/restart resets it).
+      // The first scene's create can RACE postBoot, so any already-created
+      // scene is zoomed immediately as well — never rely on ordering here.
+      const apply = (scene: Phaser.Scene): void => {
+        const cam = scene.cameras?.main;
+        if (!cam) return;
+        cam.setZoom(RENDER_SCALE);
+        cam.centerOn(GAME_W / 2, GAME_H / 2);
+      };
       for (const scene of game.scene.scenes) {
-        scene.events.on(Phaser.Scenes.Events.CREATE, () => {
-          const cam = scene.cameras.main;
-          cam.setZoom(RENDER_SCALE);
-          cam.centerOn(GAME_W / 2, GAME_H / 2);
-        });
+        scene.events.on(Phaser.Scenes.Events.CREATE, () => apply(scene));
       }
+      game.scene.getScenes(true).forEach(apply);
     },
   },
   scene: [

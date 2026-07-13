@@ -589,7 +589,7 @@ export class WardrobeScene extends Phaser.Scene {
     chip.add(emojiText(this, -88, 0, item?.emoji ?? '✖', 30));
 
     if (equipped) {
-      chip.add(displayText(this, 88, 0, '✓', 26, '#3c7a3c'));
+      chip.add(displayText(this, 88, 0, '✓', 26, HEX.tealInk));
     } else if (item && !owned) {
       // price with a tiny pearl dot; not shown once it's hers
       const dot = this.add.graphics();

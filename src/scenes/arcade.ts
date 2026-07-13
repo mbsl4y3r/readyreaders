@@ -28,7 +28,6 @@ import { speakUI, chime, playMusic } from '../services/audio';
 import {
   GAME_W,
   GAME_H,
-  readingText,
   emojiText,
   makeButton,
   drawRealmBackground,
@@ -172,7 +171,7 @@ export class ArcadeScene extends Phaser.Scene {
       const m = Math.floor(secs / 60);
       const s = secs % 60;
       this.passText.setText(`⏳ ${m}:${s.toString().padStart(2, '0')} left`);
-      this.passText.setColor('#a7f3d0');
+      this.passText.setColor(HEX.teal);
     } else {
       this.passText.setText(`Pass: ${PASS_PEARLS} 🦪`);
       this.passText.setColor('#ffe9a8');
@@ -206,12 +205,12 @@ export class ArcadeScene extends Phaser.Scene {
     c.add(glyph);
 
     if (unlocked) {
-      c.add(readingText(this, 0, 20, def.title, 17, '#12202e'));
+      c.add(displayText(this, 0, 20, def.title, 16, '#12202e'));
       const bestLabel = best > 0 ? `Best: ${best}` : 'Tap to play!';
-      c.add(readingText(this, 0, 41, bestLabel, 13, '#12202e').setAlpha(0.85));
+      c.add(displayText(this, 0, 41, bestLabel, 12, '#12202e', '500').setAlpha(0.85));
     } else {
-      c.add(readingText(this, 0, 20, `Lesson ${def.unlockLesson}`, 16, '#c9d2de'));
-      c.add(readingText(this, 0, 41, 'to unlock', 13, '#9aa6b4'));
+      c.add(displayText(this, 0, 20, `Lesson ${def.unlockLesson}`, 15, '#c9d2de'));
+      c.add(displayText(this, 0, 41, 'to unlock', 12, '#9aa6b4', '500'));
     }
 
     c.setSize(w, h);
@@ -239,7 +238,7 @@ export class ArcadeScene extends Phaser.Scene {
   }
 
   private floatingNote(text: string): void {
-    const note = readingText(this, GAME_W / 2, GAME_H - 70, text, 26, '#ffe9a8');
+    const note = displayText(this, GAME_W / 2, GAME_H - 70, text, 24, HEX.gold);
     note.setDepth(50);
     this.tweens.add({
       targets: note,
@@ -267,15 +266,16 @@ export class ArcadeScene extends Phaser.Scene {
     m.add(panel);
 
     m.add(emojiText(this, 0, -104, '🎟️', 58));
-    m.add(readingText(this, 0, -34, 'Play Pass', 40, '#ffe9a8'));
+    m.add(displayText(this, 0, -34, 'Play Pass', 38, HEX.gold));
     m.add(
-      readingText(
+      displayText(
         this,
         0,
         16,
         canAfford ? `5 minutes of games for ${PASS_PEARLS} 🦪` : `You need ${PASS_PEARLS} 🦪 to play`,
-        26,
-        '#ffffff',
+        24,
+        HEX.white,
+        '500',
       ),
     );
 
@@ -293,7 +293,7 @@ export class ArcadeScene extends Phaser.Scene {
       });
       m.add(no);
     } else {
-      m.add(readingText(this, 0, 62, 'Read a lesson to earn pearls! 🦪', 24, '#a7f3d0'));
+      m.add(displayText(this, 0, 62, 'Read a lesson to earn pearls! 🦪', 22, HEX.teal, '500'));
       const ok = makeButton(this, 0, 118, 'Okay!', () => m.destroy(), {
         width: 220,
         height: 76,
@@ -343,8 +343,8 @@ export class ArcadeScene extends Phaser.Scene {
     });
     back.setAlpha(0.92);
     this.hudLayer.add(back);
-    this.hudLayer.add(readingText(this, GAME_W / 2, 40, def.title, 30, '#ffe9a8'));
-    this.scoreText = readingText(this, GAME_W - 34, 40, `0 ${def.scoreLabel}`, 26, '#ffffff').setOrigin(
+    this.hudLayer.add(displayText(this, GAME_W / 2, 40, def.title, 28, HEX.gold));
+    this.scoreText = displayText(this, GAME_W - 34, 40, `0 ${def.scoreLabel}`, 24, HEX.white).setOrigin(
       1,
       0.5,
     );
@@ -414,12 +414,12 @@ export class ArcadeScene extends Phaser.Scene {
     panel.strokeRoundedRect(-280, -180, 560, 360, 26);
     o.add(panel);
 
-    o.add(readingText(this, 0, -120, newBest ? 'New best! 🏆' : 'Great job! ⭐', 42, '#ffe9a8'));
-    o.add(readingText(this, 0, -52, `${finalScore} ${def.scoreLabel}`, 40, '#ffffff'));
+    o.add(displayText(this, 0, -120, newBest ? 'New best! 🏆' : 'Great job! ⭐', 40, HEX.gold));
+    o.add(displayText(this, 0, -52, `${finalScore} ${def.scoreLabel}`, 38, HEX.white));
     if (!newBest && prevBest > 0) {
-      o.add(readingText(this, 0, -4, `Best: ${prevBest} ${def.scoreLabel}`, 24, '#a7f3d0'));
+      o.add(displayText(this, 0, -4, `Best: ${prevBest} ${def.scoreLabel}`, 22, HEX.teal, '500'));
     }
-    o.add(readingText(this, 0, 42, `+${ticketsEarned} 🎟️`, 30, '#ffe9a8'));
+    o.add(displayText(this, 0, 42, `+${ticketsEarned} 🎟️`, 28, HEX.gold));
     if (newBest) confettiBurst(this, 0, -60, THEMES[def.realm].accent);
 
     const again = makeButton(this, -128, 108, '🔁 Play again', () => this.replay(), {

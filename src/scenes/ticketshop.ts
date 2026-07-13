@@ -133,7 +133,7 @@ export class TicketShopScene extends Phaser.Scene {
     card.add(displayText(this, 14, 34, `${price}`, 24, '#4a5568').setOrigin(0, 0.5));
 
     if (owned) {
-      card.add(displayText(this, 0, 82, 'Owned ✓', 24, '#3c7a3c'));
+      card.add(displayText(this, 0, 82, 'Owned ✓', 24, HEX.tealInk));
     } else if (affordable) {
       const get = makeButton(this, 0, 84, 'Get!', () => this.buy(id, price), {
         width: 150,

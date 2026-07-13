@@ -43,6 +43,8 @@ export const HEX = {
   gold: '#f5b841',
   goldEdge: '#c98a1e',
   teal: '#3fb8a6',
+  /** The success/equipped teal, darkened for WCAG contrast on paper fills. */
+  tealInk: '#1f7a6b',
   white: '#ffffff',
 } as const;
 

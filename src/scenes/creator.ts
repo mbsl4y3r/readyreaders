@@ -40,6 +40,7 @@ import {
   type Button,
   sceneTitle,
   displayText,
+  HEX,
 } from '../ui/kit';
 
 /**
@@ -417,7 +418,7 @@ export class CreatorScene extends Phaser.Scene {
       chip.label.setX(6);
       chip.add(emojiText(this, -76, 0, item?.emoji ?? '✖', 30));
       // gold tick marks the current pick without a price or clutter
-      if (selected) chip.add(displayText(this, 82, 0, '✓', 24, '#3c7a3c'));
+      if (selected) chip.add(displayText(this, 82, 0, '✓', 24, HEX.tealInk));
       // squeeze long labels into the space between emoji and edge
       const maxLabel = 112;
       if (chip.label.width > maxLabel) chip.label.setScale(maxLabel / chip.label.width);
