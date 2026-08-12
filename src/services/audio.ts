@@ -35,6 +35,19 @@ export function unlockAudio(): void {
   source.start(0);
 }
 
+/**
+ * Re-arm audio after iOS takes it away mid-session.
+ *
+ * Safari suspends the AudioContext when the app is backgrounded, a call or
+ * alarm interrupts, or the tab is hidden — and it does NOT come back on its
+ * own. Unlocking once at the splash is not enough: without this, coming back
+ * from a five-second interruption leaves the rest of the session silent.
+ * Cheap and idempotent, so it can be wired to every pointer event.
+ */
+export function resumeAudio(): void {
+  if (ctx && ctx.state === 'suspended') void ctx.resume();
+}
+
 async function loadClip(kind: ClipKind, id: string): Promise<AudioBuffer | null> {
   const key = `${kind}/${id}`;
   if (bufferCache.has(key)) return bufferCache.get(key)!;
@@ -99,6 +112,13 @@ function playBuffer(buffer: AudioBuffer, gain = 1): Promise<void> {
 // overlap: starting a new one stops whatever recording is still playing and
 // cancels any in-flight TTS. (Music and sfx are separate and may overlap.)
 let currentVoice: AudioBufferSourceNode | null = null;
+/**
+ * Resolver for the line currently playing. A voice line that is cut short —
+ * by the next line, or by iOS suspending the context — must still RESOLVE:
+ * gameplay is chained off these promises (`speakUI(...).then(showChoices)`),
+ * so a promise that never settles freezes the round with no way out.
+ */
+let currentVoiceEnd: (() => void) | null = null;
 
 function stopVoice(): void {
   if (currentVoice) {
@@ -110,23 +130,40 @@ function stopVoice(): void {
     }
     currentVoice = null;
   }
+  const end = currentVoiceEnd;
+  currentVoiceEnd = null;
   stopSpeaking(); // cancel any TTS utterance mid-sentence
+  end?.(); // release anyone waiting on the interrupted line
 }
+
+/** Grace over a clip's own length before the watchdog calls it finished. */
+const VOICE_WATCHDOG_SLACK_MS = 1500;
 
 function playVoiceBuffer(buffer: AudioBuffer): Promise<void> {
   return new Promise((resolve) => {
     if (!ctx) return resolve();
     const source = ctx.createBufferSource();
+    let settled = false;
+    let watchdog: ReturnType<typeof setTimeout> | undefined;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(watchdog);
+      if (currentVoice === source) currentVoice = null;
+      if (currentVoiceEnd === finish) currentVoiceEnd = null;
+      resolve();
+    };
     source.buffer = buffer;
     const g = ctx.createGain();
     g.gain.value = VOICE_GAIN;
     source.connect(g).connect(voiceComp ?? ctx.destination);
-    source.onended = () => {
-      if (currentVoice === source) currentVoice = null;
-      resolve();
-    };
+    source.onended = finish;
     currentVoice = source;
+    currentVoiceEnd = finish;
     source.start(0);
+    // A suspended AudioContext never fires `onended`. Without this the whole
+    // session hangs on the first interruption.
+    watchdog = setTimeout(finish, buffer.duration * 1000 + VOICE_WATCHDOG_SLACK_MS);
   });
 }
 
@@ -135,6 +172,7 @@ async function playClipOr(
   id: string,
   fallback: (() => Promise<void>) | null,
 ): Promise<void> {
+  resumeAudio(); // an interruption must not silence the rest of the session
   duckMusic(); // words come first — music dips under every voice line
   stopVoice(); // never talk over the previous line
   try {
@@ -168,6 +206,7 @@ export async function speakGrapheme(g: string): Promise<boolean> {
   const id = g.toLowerCase().replace(/[^a-z_']/g, '') || 'x';
   const buffer = await loadClip('graphemes', id);
   if (!buffer) return false;
+  resumeAudio();
   duckMusic();
   stopVoice(); // one voice at a time
   try {
@@ -187,6 +226,7 @@ export type ChimeKind = 'good' | 'gentle' | 'fanfare' | 'newbest' | 'sparkle';
 
 /** Chime kinds double as sfx file names: public/audio/sfx/<kind>.mp3. */
 export function chime(kind: ChimeKind): void {
+  resumeAudio();
   // a real sound file (e.g. from a Kenney pack) beats the oscillator —
   // but never block the game on the fetch; synth is the instant fallback
   void loadClip('sfx', kind).then((buffer) => {

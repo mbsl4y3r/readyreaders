@@ -20,6 +20,26 @@ import { StickerBookScene } from './scenes/stickerbook';
 import { TicketShopScene } from './scenes/ticketshop';
 import { PhotoBoothScene } from './scenes/photobooth';
 import { GAME_W, GAME_H, RENDER_SCALE } from './ui/kit';
+import { resumeAudio } from './services/audio';
+
+/**
+ * Keep audio alive for the whole session.
+ *
+ * On an iPad this game is a home-screen PWA, so it gets backgrounded, locked,
+ * and interrupted constantly — and every one of those suspends the
+ * AudioContext for good. These two listeners re-arm it the moment she comes
+ * back or touches the screen, which is the only cheap way to guarantee she is
+ * never left reading in silence. Capture phase and `passive` so they can never
+ * interfere with the game's own input handling.
+ */
+function keepAudioAlive(): void {
+  if (typeof window === 'undefined') return;
+  window.addEventListener('pointerdown', resumeAudio, { capture: true, passive: true });
+  window.addEventListener('touchstart', resumeAudio, { capture: true, passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) resumeAudio();
+  });
+}
 
 function startGame(): Phaser.Game {
   return new Phaser.Game({
@@ -77,6 +97,7 @@ function startGame(): Phaser.Game {
 // can never hang the game), then boot — so the very first frame uses the display
 // face, not a fallback.
 function boot(): void {
+  keepAudioAlive();
   const game = startGame();
   // introspection hook for automated tests
   (window as unknown as { __game: Phaser.Game }).__game = game;
