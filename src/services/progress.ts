@@ -67,7 +67,11 @@ export interface ProgressData {
   stickers: string[];
   /** Pet Inky's growth (xp from reading; level derived + persisted). */
   inky: { xp: number; level: number };
-  /** Saved Photo Mode snapshots as PNG data URLs (cap 6, newest last). */
+  /**
+   * Saved Photo Mode snapshots as PNG data URLs, newest last. Uncapped —
+   * nothing is ever deleted to make room. Persisted in their own record
+   * (see PHOTO_KEY), not inside the main save.
+   */
   photos: string[];
   /** Story page ids that have one of Evie's own recordings (audio blobs in IndexedDB). */
   recordings: string[];
@@ -85,6 +89,64 @@ export interface ProgressData {
 }
 
 const KEY = 'readyreaders.v1';
+/**
+ * Photos live in their OWN storage record.
+ *
+ * A snapshot is megabytes of base64 while the rest of a save is kilobytes, so
+ * keeping them in one record meant a single photo could push the whole thing
+ * past the quota and take a session's reading down with it — silently. Her
+ * reading progress must never be at the mercy of a keepsake.
+ */
+const PHOTO_KEY = 'readyreaders.photos.v1';
+
+/**
+ * Storage refused the last write. NEVER swallowed: the parent corner shows a
+ * warning with the export code, so a save that cannot happen is something a
+ * grown-up finds out about rather than something a child discovers by losing
+ * a week of reading.
+ */
+let saveBlocked = false;
+/** True when the album had to be released to keep her reading safe. */
+let photosEvicted = false;
+
+export function saveIsBlocked(): boolean {
+  return saveBlocked;
+}
+export function photosWereEvicted(): boolean {
+  return photosEvicted;
+}
+
+export interface SaveResult {
+  /** Her reading progress reached storage. */
+  ok: boolean;
+  /** The album reached storage. False means the caller must TELL her. */
+  photosOk: boolean;
+}
+
+export function loadPhotos(): string[] {
+  try {
+    const raw = localStorage.getItem(PHOTO_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw) as unknown;
+    return Array.isArray(list) ? (list as string[]).filter((p) => typeof p === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Write the album. Returns false when storage refused it — the caller must
+ * say so out loud. Dropping her oldest photo to make room is exactly the
+ * silent loss this game promises never to do.
+ */
+export function savePhotos(photos: string[]): boolean {
+  try {
+    localStorage.setItem(PHOTO_KEY, JSON.stringify(photos));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const LEGACY_POOLS = ['treasures', 'pets', 'charms'] as const;
 
@@ -188,7 +250,14 @@ export function loadProgress(): ProgressData {
     data.tickets ??= 0;
     data.stickers ??= [];
     data.inky ??= { xp: 0, level: 1 };
-    data.photos ??= [];
+    // Photos used to live inside this record. Move any we find into the album
+    // store — one-time, and it never discards: whichever side has them wins.
+    {
+      const embedded = Array.isArray(data.photos) ? data.photos : [];
+      const stored = loadPhotos();
+      data.photos = stored.length > 0 ? stored : embedded;
+      if (stored.length === 0 && embedded.length > 0) savePhotos(embedded);
+    }
     data.recordings ??= [];
     data.cosmetics ??= starterCosmetics();
     data.avatar ??= defaultAvatar();
@@ -206,12 +275,36 @@ export function loadProgress(): ProgressData {
   }
 }
 
-export function saveProgress(data: ProgressData): void {
+/**
+ * Persist. Reading progress goes in one small record, the album in another,
+ * so a full album can never block a lesson from being saved.
+ *
+ * When storage is so full that even the small record is refused, the album is
+ * released and the write retried: between a keepsake and a month of reading,
+ * the reading wins. That is a real loss, so it is flagged rather than hidden —
+ * `photosWereEvicted()` and `saveIsBlocked()` both surface in the parent
+ * corner. Nothing here ever fails quietly.
+ */
+export function saveProgress(data: ProgressData): SaveResult {
+  const { photos, ...core } = data;
+  const record = JSON.stringify({ ...core, photos: [] });
+  let ok = false;
   try {
-    localStorage.setItem(KEY, JSON.stringify(data));
+    localStorage.setItem(KEY, record);
+    ok = true;
   } catch {
-    // storage full/blocked — game keeps playing, progress just won't persist
+    try {
+      localStorage.removeItem(PHOTO_KEY);
+      localStorage.setItem(KEY, record);
+      ok = true;
+      photosEvicted = true;
+    } catch {
+      ok = false;
+    }
   }
+  saveBlocked = !ok;
+  const photosOk = photos.length === 0 ? true : savePhotos(photos);
+  return { ok, photosOk };
 }
 
 export function resetProgress(): ProgressData {

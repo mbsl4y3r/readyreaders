@@ -18,6 +18,8 @@ import {
   resetProgress,
   exportCode,
   importCode,
+  saveIsBlocked,
+  photosWereEvicted,
 } from '../services/progress';
 import { setMusicEnabled } from '../services/audio';
 import { allCosmeticIds, defaultAvatar, defaultBoyAvatar } from '../avatar/catalog';
@@ -173,6 +175,21 @@ export class ParentScene extends Phaser.Scene {
     // ---- account actions: small chips, clearly separated rows ----
     const W = 360;
     const H = 44;
+    // A save that could not be written is never left silent. It sits directly
+    // above Export, because copying the backup code IS the remedy.
+    if (saveIsBlocked() || photosWereEvicted()) {
+      readingText(
+        this,
+        cx,
+        462,
+        saveIsBlocked()
+          ? '\u26a0 This iPad refused to save \u2014 copy the backup code NOW, then free up space.'
+          : '\u26a0 Storage filled up, so the photo album was released to keep her reading safe.',
+        18,
+        '#ffb4a2',
+      );
+    }
+
     this.chip(LC, 486, W, H, 'Export progress', () => {
       const code = exportCode(loadProgress());
       void navigator.clipboard?.writeText(code).catch(() => {});

@@ -1,10 +1,11 @@
 /**
  * Photo Booth — pose the dressed-up Evie (and Inky) in a little photo frame,
  * pick a cheerful backdrop, dab on a few emoji stamps, then snap a keepsake
- * into a six-slot gallery.
+ * into the gallery.
  *
- * No fail states: every backdrop and stamp is free, snapping is always
- * available, and the gallery just keeps the six most-recent shots.
+ * No fail states: every backdrop and stamp is free, and snapping is always
+ * available. The album is uncapped and shows six at a time — a photo is only
+ * ever removed when she chooses to remove it.
  *
  * The avatars are live-painted from progress.avatar exactly as the wardrobe
  * does (paintEvie/paintInky → CanvasTexture → Image). A snap is captured with
@@ -67,6 +68,7 @@ const CHOOSER_STEP = 88;
 const GALLERY_Y = 686;
 const GALLERY_STEP = 76;
 const GALLERY_X0 = 322; // first of up to six thumbs, centred on 512
+const PER_PAGE = 6;
 const THUMB = 66;
 
 interface Backdrop {
@@ -123,6 +125,8 @@ export class PhotoBoothScene extends Phaser.Scene {
   /** Gallery thumbnails (+ their private texture keys) for teardown/rebuild. */
   private thumbs: { obj: Phaser.GameObjects.GameObject; key: string }[] = [];
   private thumbSeq = 0;
+  /** Which page of six the gallery is showing (the album is uncapped). */
+  private page = 0;
   private emptyHint: Phaser.GameObjects.Text | null = null;
 
   constructor() {
@@ -403,10 +407,18 @@ export class PhotoBoothScene extends Phaser.Scene {
         if (!(image instanceof HTMLImageElement)) return;
         const url = image.src;
         this.progress.photos.push(url);
-        while (this.progress.photos.length > 6) this.progress.photos.shift();
-        saveProgress(this.progress);
+        // The album used to drop her oldest photo the moment a seventh
+        // arrived — silently, with no way to get it back. Now the album is
+        // uncapped, and if storage genuinely refuses the new one she is told
+        // and picks what to make room for herself.
+        if (!saveProgress(this.progress).photosOk) {
+          this.progress.photos.pop();
+          this.albumFull();
+          return;
+        }
         chime('fanfare');
         confettiBurst(this, RX, 320, 0xffe9a8);
+        this.page = Math.floor((this.progress.photos.length - 1) / PER_PAGE);
         this.buildGallery();
       },
     );
@@ -437,12 +449,64 @@ export class PhotoBoothScene extends Phaser.Scene {
       return;
     }
 
-    // show up to the six most recent, oldest → newest, left → right
-    const start = Math.max(0, photos.length - 6);
-    for (let i = start; i < photos.length; i++) {
+    // A page of six, oldest → newest. Older photos are never thrown away, so
+    // once there are more than six the arrows page back through all of them.
+    const pages = Math.max(1, Math.ceil(photos.length / PER_PAGE));
+    this.page = Math.min(Math.max(0, this.page), pages - 1);
+    const start = this.page * PER_PAGE;
+    const end = Math.min(photos.length, start + PER_PAGE);
+    for (let i = start; i < end; i++) {
       const cx = GALLERY_X0 + (i - start) * GALLERY_STEP;
       this.loadThumb(photos[i]!, cx);
     }
+    if (pages > 1) this.buildPager(pages);
+  }
+
+  /** ‹ › arrows plus a page count, only when there is more than one page. */
+  private buildPager(pages: number): void {
+    const arrow = (x: number, label: string, delta: number): void => {
+      const t = displayText(this, x, GALLERY_Y, label, 40, '#ffe9a8').setDepth(26);
+      const enabled = delta < 0 ? this.page > 0 : this.page < pages - 1;
+      t.setAlpha(enabled ? 1 : 0.25);
+      if (enabled) {
+        t.setInteractive({ useHandCursor: true });
+        t.on('pointerup', () => {
+          this.page += delta;
+          this.buildGallery();
+        });
+      }
+      this.thumbs.push({ obj: t, key: '' });
+    };
+    arrow(GALLERY_X0 - GALLERY_STEP, '‹', -1);
+    arrow(GALLERY_X0 + PER_PAGE * GALLERY_STEP, '›', 1);
+    const count = displayText(
+      this,
+      512,
+      GALLERY_Y + 52,
+      `${this.progress.photos.length} photos`,
+      18,
+      '#c9b8e8',
+      '500',
+    ).setDepth(26);
+    this.thumbs.push({ obj: count, key: '' });
+  }
+
+  /**
+   * Storage would not take another photo. Say so plainly and point at the fix
+   * — the one thing we must never do here is quietly delete one of hers.
+   */
+  private albumFull(): void {
+    chime('gentle');
+    const msg = displayText(
+      this,
+      512,
+      GALLERY_Y - 92,
+      'Your album is full! Tap a photo to make room 💜',
+      24,
+      '#ffe9a8',
+    ).setDepth(40);
+    popIn(this, msg);
+    this.time.delayedCall(4200, () => msg.destroy());
   }
 
   /** Turn a data URL into a texture, then place a tappable thumbnail. */
@@ -489,6 +553,18 @@ export class PhotoBoothScene extends Phaser.Scene {
 
     overlay.add(displayText(this, GAME_W / 2, 60, 'Tap to close', 24, '#ffe9a8', '500'));
 
+    // Removing is hers to do, and it takes two deliberate taps — an accident
+    // must never cost her a photo.
+    const remove = makeButton(
+      this,
+      GAME_W - 150,
+      GAME_H - 80,
+      '🗑 Remove',
+      () => this.confirmRemove(url, overlay),
+      { fontSize: 24, width: 220, height: 66, fill: COL.paper },
+    );
+    overlay.add(remove);
+
     const key = `pb-big-${this.thumbSeq++}`;
     const img = new Image();
     img.onload = (): void => {
@@ -506,5 +582,43 @@ export class PhotoBoothScene extends Phaser.Scene {
       if (this.textures.exists(key)) this.textures.remove(key);
       overlay.destroy();
     });
+  }
+
+  /** Second tap of the two-step remove: "Remove this photo?" Keep / Remove. */
+  private confirmRemove(url: string, parent: Phaser.GameObjects.Container): void {
+    const ask = this.add.container(0, 0).setDepth(400);
+    const dim = this.add.graphics();
+    dim.fillStyle(0x000000, 0.72);
+    dim.fillRect(0, 0, GAME_W, GAME_H);
+    ask.add(dim);
+    ask.add(this.add.zone(0, 0, GAME_W, GAME_H).setOrigin(0).setInteractive());
+    ask.add(displayText(this, GAME_W / 2, GAME_H / 2 - 70, 'Remove this photo?', 40, '#ffe9a8'));
+    ask.add(
+      makeButton(this, GAME_W / 2 - 150, GAME_H / 2 + 40, '💜 Keep it', () => ask.destroy(), {
+        fontSize: 26,
+        width: 260,
+        height: 80,
+        fill: COL.paper,
+      }),
+    );
+    ask.add(
+      makeButton(
+        this,
+        GAME_W / 2 + 150,
+        GAME_H / 2 + 40,
+        '🗑 Remove',
+        () => {
+          const i = this.progress.photos.indexOf(url);
+          if (i >= 0) this.progress.photos.splice(i, 1);
+          saveProgress(this.progress);
+          chime('gentle');
+          ask.destroy();
+          parent.destroy();
+          this.buildGallery();
+        },
+        { fontSize: 26, width: 260, height: 80, fill: COL.paper },
+      ),
+    );
+    popIn(this, ask);
   }
 }
