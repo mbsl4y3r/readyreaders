@@ -859,10 +859,12 @@ function drawBackHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen:
     // Short-cut back rim: hair hugs the skull from ear to ear so the front
     // cap always connects to the sideburns — without this the cut reads as a
     // detached ring floating on the crown. (Mohawk skips it: shaved sides.)
+    // Sits a touch outside the front cap so it reads as hair BEHIND the head,
+    // never as a gap between the two layers.
     ctx.strokeStyle = shade(base, 0.96);
-    ctx.lineWidth = 9;
+    ctx.lineWidth = 10;
     ctx.beginPath();
-    ctx.arc(HEAD_CX, HEAD_CY, HEAD_R, Math.PI * 0.88, Math.PI * 2.12, false);
+    ctx.arc(HEAD_CX, HEAD_CY, HEAD_R + 2, Math.PI * 0.86, Math.PI * 2.14, false);
     ctx.stroke();
     return;
   }
@@ -2341,6 +2343,61 @@ function drawFace(
 
 // ---------------------------------------------------------------- hair (front)
 
+/**
+ * The solid mass every SHORT cut is built on.
+ *
+ * Hand-drawn caps kept landing a few pixels inside the skull, which left a
+ * ring of scalp showing between the hair and the head outline — a bald spot.
+ * This traces the actual head circle at a slightly LARGER radius, so the hair
+ * always overlaps the skull instead of sitting inside it; there is no way for
+ * skin to peek through above the hairline. Styles then add their character
+ * (spikes, stubble, curls, comb strokes) on top of this guaranteed base.
+ *
+ * `browY`  — where the hairline runs across the forehead.
+ * `sideY`  — how far the hair comes down at the temples (bigger = longer sides).
+ * `over`   — how far past the skull the hair sits, i.e. its thickness.
+ * `dip`    — how much lower the fringe hangs in the middle than at the temples.
+ *            Positive = a fringe over the brow; negative = swept back.
+ */
+function shortCap(
+  ctx: Ctx,
+  base: string,
+  browY: number,
+  sideY: number,
+  over = 3,
+  lineW = 1.7,
+  dip = 3,
+): void {
+  const R = HEAD_R + over;
+  const a = Math.asin(Math.max(-1, Math.min(1, (sideY - HEAD_CY) / R)));
+  const lx = HEAD_CX - R * Math.cos(a);
+  const rx = HEAD_CX + R * Math.cos(a);
+  const drop = (sideY - browY) * 0.45;
+  ctx.beginPath();
+  // over the skull: left temple → crown → right temple
+  ctx.arc(HEAD_CX, HEAD_CY, R, Math.PI - a, Math.PI * 2 + a, false);
+  // A real hairline is not a dome: it turns the corner at the temple and then
+  // runs roughly level across the brow. A dome peaking in the middle is what
+  // makes a cut read as receding.
+  ctx.bezierCurveTo(rx - 1, browY + drop, HEAD_CX + 33, browY + 5, HEAD_CX + 27, browY);
+  ctx.quadraticCurveTo(HEAD_CX, browY + dip, HEAD_CX - 27, browY);
+  ctx.bezierCurveTo(HEAD_CX - 33, browY + 5, lx + 1, browY + drop, lx, sideY);
+  ctx.closePath();
+  fillOutlined(ctx, base, 0.8, lineW);
+}
+
+/** Short sideburn flicks in front of the ears — they tie the cap to the face. */
+function sideburns(ctx: Ctx, base: string, topY: number, len: number): void {
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(HEAD_CX + s * 43, topY);
+    ctx.quadraticCurveTo(HEAD_CX + s * 46, topY + len * 0.55, HEAD_CX + s * 40, topY + len);
+    ctx.quadraticCurveTo(HEAD_CX + s * 37, topY + len * 0.5, HEAD_CX + s * 37, topY + 1);
+    ctx.closePath();
+    fillOutlined(ctx, base, 0.8, 1.3);
+  }
+}
+
 function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen: string }): void {
   const base = hair.base;
   const sheen = hair.sheen;
@@ -2469,7 +2526,10 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     }
   } else if (style === 'curls') {
     // Bouncy fringe of curl lobes across the forehead with a couple framing
-    // the temples, plus a few spiral hints so the curls read as curls.
+    // the temples, plus a few spiral hints so the curls read as curls. The
+    // lobes sit on a solid cap: circles alone leave scalp showing in the
+    // gaps between them.
+    shortCap(ctx, base, 62, 86, 4, 1.7, 4);
     const fringe: ReadonlyArray<readonly [number, number, number]> = [
       [78, 60, 11],
       [92, 56, 12],
@@ -2595,77 +2655,67 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     // the plait itself hangs from BEHIND the head (drawn in the back pass),
     // so up front we draw only the swept fringe.
   } else if (style === 'crop') {
-    // classic short boy's cut: an open forehead under a THICK cap whose side
-    // panels run all the way down to the ears, merging into the sideburns —
-    // one connected mass of hair, never a floating ring
+    // classic short boy's cut: a thick cap over an arched hairline, sides
+    // running down to the ears and merging into the sideburns
+    shortCap(ctx, base, 60, 80, 3.5, 1.7, 4);
+    sideburns(ctx, base, 66, 18);
+    // soft light along the crown so the mass isn't a flat colour block
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = sheen;
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(57, 86);
-    ctx.bezierCurveTo(53, 46, 74, 29, 100, 29);
-    ctx.bezierCurveTo(126, 29, 147, 46, 143, 86); // outer edge down to ear level
-    ctx.bezierCurveTo(141, 84, 139, 82, 137, 80); // around the ear notch
-    ctx.bezierCurveTo(138, 68, 135, 57, 127, 52); // inner right temple
-    ctx.bezierCurveTo(119, 48, 109, 46, 100, 46); // hairline across the forehead
-    ctx.bezierCurveTo(91, 46, 82, 48, 76, 52);
-    ctx.lineTo(72, 58); // little front flick
-    ctx.bezierCurveTo(66, 62, 62, 70, 63, 80); // inner left, down to the ear
-    ctx.bezierCurveTo(61, 82, 59, 84, 57, 86);
-    ctx.closePath();
-    fillOutlined(ctx, base, 0.8, 1.7);
-    // short sideburns in front of the ears, overlapping the cap's side panels
-    for (const s of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(100 + s * 42, 60);
-      ctx.quadraticCurveTo(100 + s * 45, 70, 100 + s * 40, 79);
-      ctx.quadraticCurveTo(100 + s * 37, 70, 100 + s * 37, 61);
-      ctx.closePath();
-      fillOutlined(ctx, base, 0.8, 1.3);
-    }
+    ctx.arc(HEAD_CX, HEAD_CY, HEAD_R - 4, Math.PI * 1.18, Math.PI * 1.52);
+    ctx.stroke();
+    ctx.restore();
   } else if (style === 'spiky') {
-    // base cap + a zig-zag of spikes over the crown
+    // spikes FIRST so they read as tufts standing off a solid head of hair,
+    // then the cap covers where they root — no gaps between the points
     ctx.beginPath();
-    ctx.moveTo(58, 88);
-    ctx.bezierCurveTo(54, 56, 74, 40, 100, 40);
-    ctx.bezierCurveTo(126, 40, 146, 56, 142, 88);
-    ctx.bezierCurveTo(140, 72, 133, 62, 124, 58);
-    ctx.bezierCurveTo(108, 64, 84, 66, 68, 58);
-    ctx.bezierCurveTo(62, 64, 59, 74, 58, 88);
-    ctx.closePath();
-    fillOutlined(ctx, base, 0.8, 1.6);
-    ctx.beginPath();
-    ctx.moveTo(60, 62);
-    ctx.lineTo(68, 38);
-    ctx.lineTo(79, 54);
-    ctx.lineTo(90, 32);
-    ctx.lineTo(100, 50);
-    ctx.lineTo(110, 32);
-    ctx.lineTo(121, 54);
-    ctx.lineTo(132, 38);
-    ctx.lineTo(140, 62);
-    ctx.bezierCurveTo(120, 55, 80, 55, 60, 62);
+    ctx.moveTo(62, 58);
+    ctx.lineTo(68, 30);
+    ctx.lineTo(80, 48);
+    ctx.lineTo(90, 24);
+    ctx.lineTo(100, 44);
+    ctx.lineTo(110, 24);
+    ctx.lineTo(120, 48);
+    ctx.lineTo(132, 30);
+    ctx.lineTo(138, 58);
+    ctx.bezierCurveTo(120, 74, 80, 74, 62, 58);
     ctx.closePath();
     fillOutlined(ctx, base, 0.78, 1.5);
-  } else if (style === 'buzz') {
-    // very short — a thin close cap with a stubbly texture and low hairline
+    shortCap(ctx, base, 60, 80, 3, 1.7, 3);
+    // light on the crown ties the tufts to the cap without drawing a seam
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = sheen;
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
-    ctx.moveTo(60, 84);
-    ctx.bezierCurveTo(57, 56, 75, 42, 100, 42);
-    ctx.bezierCurveTo(125, 42, 143, 56, 140, 84);
-    ctx.bezierCurveTo(138, 72, 132, 64, 124, 61);
-    ctx.bezierCurveTo(108, 66, 84, 67, 68, 61);
-    ctx.bezierCurveTo(60, 64, 57, 72, 60, 84);
-    ctx.closePath();
-    fillOutlined(ctx, base, 0.85, 1.4);
-    ctx.fillStyle = shade(base, 0.84);
-    for (const [x, y] of [[80, 52], [100, 48], [120, 52], [90, 60], [110, 60], [100, 56]] as const) {
+    ctx.arc(HEAD_CX, HEAD_CY, HEAD_R - 6, Math.PI * 1.2, Math.PI * 1.5);
+    ctx.stroke();
+    ctx.restore();
+  } else if (style === 'buzz') {
+    // very short — a close cap with a low hairline and a stubbly texture
+    shortCap(ctx, base, 61, 78, 2, 1.4, 1);
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = shade(base, 0.86);
+    for (const [x, y] of [
+      [80, 50], [100, 44], [120, 50], [90, 54], [110, 54], [100, 52],
+      [72, 58], [128, 58], [86, 42], [114, 42],
+    ] as const) {
       ctx.beginPath();
-      ctx.arc(x, y, 1, 0, Math.PI * 2);
+      ctx.arc(x, y, 0.8, 0, Math.PI * 2);
       ctx.fill();
     }
+    ctx.restore();
   } else if (style === 'curlytop') {
-    // a cluster of short curl lobes on the crown (short sides)
+    // a solid short cut whose whole edge is broken into curl lobes: the cap
+    // guarantees coverage, the lobes give it the bounce
+    shortCap(ctx, base, 60, 78, 2, 1.7, 2);
     const lobes: ReadonlyArray<readonly [number, number, number]> = [
-      [72, 52, 11], [88, 44, 12], [104, 44, 12], [120, 52, 11],
-      [80, 60, 10], [100, 56, 11], [120, 62, 10], [64, 62, 9], [136, 62, 9],
+      [66, 58, 11], [76, 42, 12], [90, 34, 12], [110, 34, 12],
+      [124, 42, 12], [134, 58, 11], [100, 44, 11], [83, 52, 10], [117, 52, 10],
     ];
     for (const [x, y, r] of lobes) {
       ctx.beginPath();
@@ -2675,7 +2725,7 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
     ctx.globalAlpha = 0.7;
     ctx.strokeStyle = sheen;
     ctx.lineWidth = 1.8;
-    for (const [x, y, r] of lobes.slice(0, 4)) {
+    for (const [x, y, r] of lobes.slice(0, 6)) {
       ctx.beginPath();
       ctx.arc(x - 2, y - 2, r * 0.5, Math.PI * 1.0, Math.PI * 1.8);
       ctx.stroke();
@@ -2684,29 +2734,23 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
   } else if (style === 'flow') {
     // surfer sweep: hair combed straight BACK off a high open forehead,
     // with a little side length past the ears — no fringe, no bonnet
-    ctx.beginPath();
-    ctx.moveTo(60, 80);
-    ctx.bezierCurveTo(55, 44, 76, 28, 100, 28);
-    ctx.bezierCurveTo(124, 28, 145, 44, 140, 80);
-    ctx.bezierCurveTo(138, 60, 132, 50, 124, 46); // right side down
-    ctx.bezierCurveTo(116, 42.5, 107, 41, 100, 41); // high hairline across
-    ctx.bezierCurveTo(90, 41, 78, 44, 71, 50);
-    ctx.bezierCurveTo(64, 56, 61, 68, 60, 80);
-    ctx.closePath();
-    fillOutlined(ctx, base, 0.8, 1.7);
+    shortCap(ctx, base, 56, 80, 4, 1.7, -5);
     // swept-back comb strokes selling the direction
-    ctx.strokeStyle = shade(base, 0.8);
-    ctx.lineWidth = 1.5;
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = shade(base, 0.84);
+    ctx.lineWidth = 2.2;
     for (const [x0, y0, cx2, cy2, x1, y1] of [
-      [84, 42, 78, 36, 72, 33],
-      [100, 40, 98, 34, 95, 30],
-      [116, 42, 120, 36, 127, 34],
+      [82, 52, 76, 44, 71, 40],
+      [100, 50, 97, 42, 94, 37],
+      [118, 52, 123, 44, 129, 40],
     ] as const) {
       ctx.beginPath();
       ctx.moveTo(x0, y0);
       ctx.quadraticCurveTo(cx2, cy2, x1, y1);
       ctx.stroke();
     }
+    ctx.restore();
     // side length past the ears
     for (const s of [-1, 1]) {
       ctx.beginPath();
@@ -2717,31 +2761,30 @@ function drawFrontHair(ctx: Ctx, style: HairStyleId, hair: { base: string; sheen
       fillOutlined(ctx, base, 0.8, 1.3);
     }
   } else if (style === 'mohawk') {
-    // shaved sides (a faint stubble arc) + a tall central spiked strip
-    ctx.save();
-    ctx.globalAlpha = 0.22;
-    ctx.strokeStyle = base;
-    ctx.lineWidth = 7;
+    // Shaved sides + a tall central spiked strip. "Shaved" still means HAIR:
+    // a real clipped cap in a lighter tint, so the head never reads as bald —
+    // the strip on top is what makes it a mohawk, not a bare scalp.
+    shortCap(ctx, mix(base, '#ffffff', 0.1), 61, 78, 1.5, 1.3, 1);
+    // a broad crest of joined spikes, not a thin fin
     ctx.beginPath();
-    ctx.arc(HEAD_CX, HEAD_CY - 2, HEAD_R - 1, Math.PI * 1.08, Math.PI * 1.92);
-    ctx.stroke();
-    ctx.restore();
-    ctx.beginPath();
-    ctx.moveTo(91, 66);
-    ctx.lineTo(89, 42);
-    ctx.lineTo(96, 50);
-    ctx.lineTo(98, 22);
-    ctx.lineTo(104, 50);
-    ctx.lineTo(111, 40);
-    ctx.lineTo(109, 66);
+    ctx.moveTo(84, 62);
+    ctx.lineTo(80, 34);
+    ctx.lineTo(90, 44);
+    ctx.lineTo(93, 18);
+    ctx.lineTo(100, 40);
+    ctx.lineTo(108, 18);
+    ctx.lineTo(111, 44);
+    ctx.lineTo(121, 34);
+    ctx.lineTo(116, 62);
+    ctx.quadraticCurveTo(100, 68, 84, 62);
     ctx.closePath();
     fillOutlined(ctx, base, 0.78, 1.6);
     ctx.strokeStyle = sheen;
-    ctx.globalAlpha = 0.7;
-    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 2.2;
     ctx.beginPath();
-    ctx.moveTo(99, 30);
-    ctx.lineTo(99, 62);
+    ctx.moveTo(94, 30);
+    ctx.lineTo(92, 58);
     ctx.stroke();
     ctx.globalAlpha = 1;
   } else {
