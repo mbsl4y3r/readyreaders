@@ -11,6 +11,7 @@
 import Phaser from 'phaser';
 import { regionForLesson, baseRealmFor, REGIONS, TOTAL_LESSONS } from '../content/regions';
 import { canStartLessonToday, roadDone } from '../services/road';
+import { giftForLesson } from '../services/tomorrow';
 import { loadProgress } from '../services/progress';
 import { seasonFor, SEASON_THEMES } from '../services/juice';
 import { speakUI, playMusic, chime } from '../services/audio';
@@ -212,6 +213,28 @@ export class MapScene extends Phaser.Scene {
       flag.add(displayText(this, 0, -2, "YOU'RE HERE", 13, HEX.ink, '700'));
       cont.add(flag);
       bob(this, cont, 6, 1400);
+
+      // The wrapped treasure waiting on this stop — the specific unopened
+      // thing she left behind yesterday, still sitting here today. Tapping it
+      // names the prize out loud (she cannot read the label).
+      const gift = giftForLesson(loadProgress(), lessonNum);
+      const wrap = this.add.container(r + 20, -r + 6);
+      const wg = this.add.graphics();
+      wg.fillStyle(0x000000, 0.16); wg.fillCircle(0, 3, 21);
+      wg.fillStyle(COL.paper, 1); wg.fillCircle(0, 0, 20);
+      wg.lineStyle(3, COL.gold, 1); wg.strokeCircle(0, 0, 20);
+      wrap.add(wg);
+      wrap.add(emojiText(this, 0, 0, '🎁', 24));
+      wrap.setSize(44, 44);
+      wrap.setInteractive(new Phaser.Geom.Circle(0, 0, 26), Phaser.Geom.Circle.Contains);
+      wrap.on('pointerup', () =>
+        void speakUI(
+          `gift-teaser-${gift.id}`,
+          `Read lesson ${lessonNum} to open ${gift.label}!`,
+        ),
+      );
+      cont.add(wrap);
+      bob(this, wrap, 4, 1100);
     } else if (passed) {
       cont.add(emojiText(this, 0, 0, '⭐', 24));
     }

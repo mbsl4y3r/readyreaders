@@ -11,6 +11,7 @@ import { THEMES } from '../src/content/themes';
 import { LEVELS } from '../src/content/levels';
 import { ARCADE_GAMES, ARCADE_ANNOUNCE } from '../src/content/arcade-games';
 import { REGIONS } from '../src/content/regions';
+import { COSMETICS } from '../src/avatar/catalog';
 
 export interface Clip {
   kind: 'graphemes' | 'ui' | 'words' | 'phrases' | 'sentences';
@@ -111,6 +112,14 @@ export function buildManifest(): Clip[] {
     ['checkout-keep-going', "Great practicing! We'll get those words next time!"],
     ['road-tomorrow', 'Great reading today! A brand new lesson opens tomorrow!'],
     ['road-done', 'You read the whole book! You are a REAL reader now!'],
+    // Tomorrow's Treasure — the wrapped gift waiting on her next stop. The
+    // prize name is dynamic (any of ~129 cosmetics), so these lines are TTS
+    // by design; one recorded line per cosmetic is not practical. This is UI
+    // narration, never a letter sound, so the recordings-only rule is intact.
+    ...COSMETICS.filter((c) => c.price > 0).map(
+      (c): [string, string] => [`gift-teaser-${c.id}`, `Read your lesson to open ${c.label}!`],
+    ),
+    ['gift-teaser-bonus-pearls', 'Read your lesson to open fifteen pearls!'],
     ...REGIONS.map(
       (r): [string, string] => [
         `region-${r.id}`,

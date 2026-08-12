@@ -14,7 +14,8 @@ import {
   planCheckoutRetry,
   phraseStatKey,
 } from '../engine/session-planner';
-import { evaluateCheckout, passLesson, FREE_PASS_THROUGH } from '../services/road';
+import { evaluateCheckout, passLesson, roadDone, FREE_PASS_THROUGH } from '../services/road';
+import { claimGift, giftForLesson, type Gift } from '../services/tomorrow';
 import type { RoundSpec, RoundResult } from '../engine/rounds';
 import { updateStat } from '../engine/adaptive';
 import { newlyEarned } from '../engine/achievements';
@@ -49,6 +50,7 @@ import {
   confettiBurst,
   popIn,
   badgeToast,
+  bob,
   COL,
   HEX,
 } from '../ui/kit';
@@ -262,8 +264,13 @@ export class SessionScene extends Phaser.Scene {
     // ---- the Reading Road: a passed check-out moves the marker; a miss
     // stores the words to re-drill so next session starts with them
     let pass: ReturnType<typeof passLesson> | null = null;
+    /** The treasure that was wrapped on this stop and is opening right now. */
+    let openedGift: Gift | null = null;
     if (this.lesson && checkout) {
       if (passed && this.lesson === progress.lesson) {
+        // Claim BEFORE passLesson advances the marker: the gift belongs to the
+        // lesson she just read, and claiming first keeps the derivation stable.
+        openedGift = claimGift(progress, this.lesson);
         pass = passLesson(progress);
       } else if (!passed) {
         progress.checkoutMisses = checkout.missedIds;
@@ -340,6 +347,14 @@ export class SessionScene extends Phaser.Scene {
       popIn(this, sub, 320);
     }
 
+    // ---- the treasure she just opened, then the one waiting for tomorrow.
+    // A named, pictured, WRAPPED object beats a sentence promising one: it is
+    // the specific unopened thing she leaves the session looking at.
+    if (openedGift) this.showOpenedGift(openedGift);
+    if (this.lesson && !roadDone(progress)) {
+      this.showTomorrowGift(giftForLesson(progress, progress.lesson), progress.lesson);
+    }
+
     // pearls earned by this reading — the wardrobe currency
     const pearl = this.add.circle(GAME_W / 2 - 52, GAME_H / 2 + 128, 13, 0xffffff, 1);
     pearl.setStrokeStyle(2, 0xd8e6ee, 1);
@@ -368,6 +383,61 @@ export class SessionScene extends Phaser.Scene {
   }
 
   /** Earn + celebrate freshly-unlocked badges, streak milestones, Inky level-ups, and stickers. */
+  /** The gift wrapped on the stop she just passed, bursting open. */
+  private showOpenedGift(gift: Gift): void {
+    const y = GAME_H / 2 + 196;
+    const box = this.add.container(GAME_W / 2, y).setDepth(20);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.14);
+    bg.fillRoundedRect(-186, -34, 372, 76, 22);
+    bg.fillStyle(COL.paper, 1);
+    bg.fillRoundedRect(-186, -38, 372, 76, 22);
+    bg.lineStyle(3, COL.gold, 1);
+    bg.strokeRoundedRect(-186, -38, 372, 76, 22);
+    box.add(bg);
+    box.add(emojiText(this, -142, 0, gift.emoji, 44));
+    box.add(displayText(this, 22, -12, 'You opened', 17, HEX.inkSoft, '500'));
+    const name = displayText(this, 22, 12, gift.label, 24, HEX.ink, '700');
+    if (name.width > 260) name.setFontSize(19);
+    box.add(name);
+    popIn(this, box, 620);
+    this.time.delayedCall(620, () => {
+      if (!this.alive) return;
+      chime('good');
+      confettiBurst(this, GAME_W / 2, y, COL.gold);
+    });
+  }
+
+  /**
+   * Tomorrow's still-wrapped treasure. Named and pictured, so the last thing
+   * she sees is a specific thing she has not opened yet — and the same one
+   * will be sitting on the map when she comes back.
+   */
+  private showTomorrowGift(gift: Gift, lesson: number): void {
+    const c = this.add.container(GAME_W - 150, 96).setDepth(20);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.16);
+    bg.fillRoundedRect(-116, -60, 232, 132, 22);
+    bg.fillStyle(COL.paper, 1);
+    bg.fillRoundedRect(-116, -64, 232, 132, 22);
+    bg.lineStyle(3, COL.goldEdge, 1);
+    bg.strokeRoundedRect(-116, -64, 232, 132, 22);
+    c.add(bg);
+    c.add(displayText(this, 0, -42, 'TOMORROW', 14, HEX.inkSoft, '700'));
+    // wrapped: the present, not the prize — the silhouette stays a surprise
+    c.add(emojiText(this, 0, 2, '🎁', 52));
+    const name = displayText(this, 0, 46, gift.label, 18, HEX.ink, '700');
+    if (name.width > 208) name.setFontSize(14);
+    c.add(name);
+    c.setSize(232, 132);
+    c.setInteractive({ useHandCursor: true });
+    c.on('pointerup', () =>
+      void speakUI(`gift-teaser-${gift.id}`, `Tomorrow you can open ${gift.label}! Read lesson ${lesson}.`),
+    );
+    popIn(this, c, 900);
+    bob(this, c, 6, 1600);
+  }
+
   private awardRewards(
     progress: ReturnType<typeof loadProgress>,
     streak: ReturnType<typeof recordReadingDay> | null,
