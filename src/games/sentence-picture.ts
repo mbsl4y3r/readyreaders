@@ -83,9 +83,11 @@ export const runSentencePicture: RunRound = (scene, spec, ctx) => {
               cardButtons.forEach((b) => b !== card && b.setAlpha(0.25));
               scene.tweens.add({ targets: card, scale: 1.15, y: 460, duration: 300, ease: 'Back.easeOut' });
               confettiBurst(scene, x, 420, ctx.theme.accent);
-              // Beat 3: hear it read fluently…
-              void speakUI('listen', 'Yes! Listen:')
-                .then(() => speakSentence(sentence.id, sentence.text))
+              // Beat 3: hear it read fluently. A twinkle marks "yes!" so the
+              // only VOICE she hears here is the fluent sentence she is meant
+              // to imitate — never a stock praise line on repeat.
+              chime('sparkle');
+              void speakSentence(sentence.id, sentence.text)
                 .then(() => {
                   if (aborted) return;
                   // Beat 4: …then read it again, with expression.

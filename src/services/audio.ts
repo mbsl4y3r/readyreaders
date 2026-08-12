@@ -183,7 +183,7 @@ export function speakUI(id: string, text: string): Promise<void> {
   return playClipOr('ui', id, () => speak(text));
 }
 
-export type ChimeKind = 'good' | 'gentle' | 'fanfare' | 'newbest';
+export type ChimeKind = 'good' | 'gentle' | 'fanfare' | 'newbest' | 'sparkle';
 
 /** Chime kinds double as sfx file names: public/audio/sfx/<kind>.mp3. */
 export function chime(kind: ChimeKind): void {
@@ -204,19 +204,26 @@ function synthChime(kind: ChimeKind): void {
         ? [392]
         : kind === 'newbest'
           ? [659.25, 783.99, 1046.5, 1318.51] // bright rising "new high score!" sting
-          : [523.25, 659.25, 783.99, 1046.5];
+          : kind === 'sparkle'
+            ? [1046.5, 1396.91, 1760] // twinkle on the picture reveal — the "yay" without words
+            : [523.25, 659.25, 783.99, 1046.5];
+  // The sparkle is a garnish, not an announcement: quicker and quieter than
+  // the others so it can fire every round without ever nagging.
+  const step = kind === 'sparkle' ? 0.055 : 0.09;
+  const peak = kind === 'sparkle' ? 0.12 : 0.18;
+  const tail = kind === 'sparkle' ? 0.26 : 0.35;
   const now = ctx.currentTime;
   notes.forEach((freq, i) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
     osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.0001, now + i * 0.09);
-    gain.gain.exponentialRampToValueAtTime(0.18, now + i * 0.09 + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.09 + 0.35);
+    gain.gain.setValueAtTime(0.0001, now + i * step);
+    gain.gain.exponentialRampToValueAtTime(peak, now + i * step + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + i * step + tail);
     osc.connect(gain).connect(ctx.destination);
-    osc.start(now + i * 0.09);
-    osc.stop(now + i * 0.09 + 0.4);
+    osc.start(now + i * step);
+    osc.stop(now + i * step + tail + 0.05);
   });
 }
 

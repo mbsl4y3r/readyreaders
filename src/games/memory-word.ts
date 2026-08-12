@@ -231,7 +231,9 @@ export const runMemoryWord: RunRound = (scene, spec, ctx) => {
         popIn(scene, pic);
       }
       confettiBurst(scene, GAME_W / 2, slotY - 60, ctx.theme.accent);
-      void speakUI('you-remembered-it', `You remembered it! ${word.text}!`);
+      // Praise stays on the screen where she can glance at it; the audio slot
+      // belongs to the word itself (modelled above) plus a twinkle.
+      chime('sparkle');
       const warm = displayText(scene, GAME_W / 2, 655, 'You remembered it! 💜', 32, '#ffe9a8');
       container.add(warm);
       popIn(scene, warm, 250);

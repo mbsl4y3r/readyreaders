@@ -78,7 +78,10 @@ export const runFeedCreature: RunRound = (scene, spec, ctx) => {
             container.add(pic);
             popIn(scene, pic);
           }
-          void speakUI('yum', 'Yum! Thank you!');
+          // A jingle, not a sentence. Spoken praise after EVERY word turns into
+          // nagging by the tenth round; the twinkle lands the same "yes!" in a
+          // third of a second and never gets old.
+          chime('sparkle');
           scene.time.delayedCall(1300, () => {
             if (aborted) return;
             container.destroy();

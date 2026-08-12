@@ -150,7 +150,9 @@ export const runBuildWord: RunRound = (scene, spec, ctx) => {
         popIn(scene, pic);
       }
       confettiBurst(scene, GAME_W / 2, slotY - 60, ctx.theme.accent);
-      void speakUI('you-read-it', `You built it! ${word.text}!`);
+      // The word itself was just modelled above — spoken praise on top of it
+      // is one line too many, every single round. Twinkle instead.
+      chime('sparkle');
       scene.time.delayedCall(1700, () => {
         if (aborted) return;
         container.destroy();

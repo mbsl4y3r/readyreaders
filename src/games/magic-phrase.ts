@@ -100,9 +100,10 @@ export const runMagicPhrase: RunRound = (scene, spec, ctx) => {
         container.add(pic);
         popIn(scene, pic, 200 + i * 140);
       });
-      // hear it read fluently, then move on
-      void speakUI('listen', 'Yes! Listen:')
-        .then(() => speakPhrase(phrase.id, phrase.text))
+      // hear it read fluently, then move on — twinkle for "yes!", voice for
+      // the phrase only, so the praise line never repeats round after round
+      chime('sparkle');
+      void speakPhrase(phrase.id, phrase.text)
         .then(() => {
           if (aborted) return;
           scene.time.delayedCall(900, () => {
