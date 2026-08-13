@@ -6,12 +6,13 @@ export type MechanicId =
   | 'sentence-picture'
   | 'magic-phrase'
   | 'memory-word'
+  | 'say-it'
   | 'speed-round'
   | 'family-sort';
 
 export interface RoundSpec {
   mechanic: MechanicId;
-  /** Word rounds (build-word, feed-creature, memory-word). */
+  /** Word rounds (build-word, feed-creature, memory-word, say-it). */
   wordId?: string;
   /** Written-choice distractor word ids (feed-the-creature). */
   distractorIds?: string[];

@@ -53,6 +53,9 @@ export function buildManifest(): Clip[] {
     ['this-one', 'This word says… tap it!'],
     ['build-the-word', 'Build the word:'],
     ['next-sound', 'Find the next sound — this one!'],
+    // Say-It: spoken ONCE per session, before the word appears, so that
+    // listening can never be mistaken for reading.
+    ['say-it-prompt', 'Read this word out loud. Then tap, I said it!'],
     ['read-sentence', 'Read the sentence. Then tap "I read it!"'],
     ['pick-picture', 'Which picture matches? You pick!'],
     ['listen-match', 'Listen, then tap the match:'],

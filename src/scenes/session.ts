@@ -36,6 +36,7 @@ import { runBuildWord } from '../games/build-word';
 import { runSentencePicture } from '../games/sentence-picture';
 import { runMagicPhrase } from '../games/magic-phrase';
 import { runMemoryWord } from '../games/memory-word';
+import { runSayIt } from '../games/say-it';
 import { runSpeedRound } from '../games/speed-round';
 import { runFamilySort } from '../games/family-sort';
 import type { RunRound } from '../games/types';
@@ -61,6 +62,7 @@ const RUNNERS: Record<RoundSpec['mechanic'], RunRound> = {
   'sentence-picture': runSentencePicture,
   'magic-phrase': runMagicPhrase,
   'memory-word': runMemoryWord,
+  'say-it': runSayIt,
   'speed-round': runSpeedRound,
   'family-sort': runFamilySort,
 };
@@ -75,6 +77,8 @@ export class SessionScene extends Phaser.Scene {
   private alive = true;
   /** Wall-clock start of this chunk — celebrate() logs real minutes played. */
   private startedAt = 0;
+  /** Words that reached AUTOMATIC this session — tallied at the celebration. */
+  private starWords: string[] = [];
 
   constructor() {
     super('session');
@@ -90,6 +94,7 @@ export class SessionScene extends Phaser.Scene {
   create(): void {
     this.alive = true;
     this.startedAt = Date.now();
+    this.starWords = [];
     this.events.once('shutdown', () => (this.alive = false));
     const theme = this.lesson
       ? themeForRegion(regionForLesson(this.lesson))
@@ -210,6 +215,39 @@ export class SessionScene extends Phaser.Scene {
     note.destroy();
   }
 
+  /**
+   * A word just climbed a rung. Show it as a thing that HAPPENED TO THE WORD —
+   * the word itself flying up with a badge — rather than a score going up.
+   * Silent apart from a twinkle: this fires often, and a spoken line every
+   * time is what makes a game unbearable in a shared room.
+   */
+  private wordGraduated(wordId: string, mastery: number): void {
+    const RUNGS: Record<number, { label: string; color: string; emoji: string }> = {
+      1: { label: 'you know it!', color: '#bfe9ff', emoji: '✨' },
+      2: { label: 'quick!', color: '#9ce8c9', emoji: '⚡' },
+      3: { label: 'AUTOMATIC!', color: '#ffe9a8', emoji: '⭐' },
+    };
+    const rung = RUNGS[mastery];
+    if (!rung) return;
+    const text = WORDS_BY_ID.get(wordId)?.text;
+    if (!text) return;
+
+    const badge = this.add.container(GAME_W / 2, GAME_H - 150).setDepth(200);
+    badge.add(readingText(this, 0, -14, text, 40, rung.color));
+    badge.add(displayText(this, 0, 24, `${rung.emoji} ${rung.label}`, 24, rung.color));
+    popIn(this, badge);
+    chime('sparkle');
+    this.tweens.add({
+      targets: badge,
+      y: badge.y - 90,
+      alpha: 0,
+      delay: 900,
+      duration: 700,
+      ease: 'Cubic.easeIn',
+      onComplete: () => badge.destroy(),
+    });
+  }
+
   private recordResult(spec: RoundSpec, result: RoundResult): void {
     const progress = loadProgress();
     if (spec.mechanic === 'speed-round') {
@@ -234,7 +272,17 @@ export class SessionScene extends Phaser.Scene {
           ? phraseStatKey(result.itemId)
           : result.itemId;
     const stat = statFor(progress, key);
+    const before = stat.mastery;
     progress.words[key] = updateStat(stat, result);
+    // The engine has always tiered words by how FAST she reads them, but the
+    // only place it showed was the parent screen. Speed is the whole point for
+    // a reader who decodes accurately and slowly, so when a word climbs a rung
+    // she is the one who gets told.
+    const after = progress.words[key]!.mastery;
+    if (after > before && spec.wordId && key === result.itemId) {
+      this.wordGraduated(spec.wordId, after);
+      if (after === 3) this.starWords.push(spec.wordId);
+    }
     saveProgress(progress);
   }
 
@@ -350,6 +398,29 @@ export class SessionScene extends Phaser.Scene {
     // ---- the treasure she just opened, then the one waiting for tomorrow.
     // A named, pictured, WRAPPED object beats a sentence promising one: it is
     // the specific unopened thing she leaves the session looking at.
+    // Words that went AUTOMATIC today, named. This is the achievement that
+    // matters for a reader who is accurate but slow, so it gets said out loud
+    // in writing rather than buried in a parent report she never sees.
+    if (this.starWords.length > 0) {
+      const names = this.starWords
+        .map((id) => WORDS_BY_ID.get(id)?.text)
+        .filter(Boolean)
+        .join('  ');
+      const star = this.add.container(GAME_W / 2, GAME_H / 2 + 112).setDepth(60);
+      star.add(
+        displayText(
+          this,
+          0,
+          -22,
+          this.starWords.length === 1 ? '⭐ This word is automatic now!' : '⭐ These words are automatic now!',
+          26,
+          '#ffe9a8',
+        ),
+      );
+      star.add(readingText(this, 0, 20, names, 34, '#ffffff'));
+      popIn(this, star, 420);
+    }
+
     if (openedGift) this.showOpenedGift(openedGift);
     if (this.lesson && !roadDone(progress)) {
       this.showTomorrowGift(giftForLesson(progress, progress.lesson), progress.lesson);

@@ -190,12 +190,21 @@ export function planSession(
     const word = wordById.get(wordId);
     if (!word) return;
     if (i % 2 === 0) {
-      rounds.push({
-        mechanic: 'feed-creature',
-        wordId,
-        distractorIds: pickDistractors(word, levelWords.length >= 3 ? levelWords : WORDS, random),
-        realm: level.realm,
-      });
+      // A word she has already met gets read, not matched. Feed-the-creature
+      // is a listen-and-match round — solvable without reading — so once a
+      // word is known, swap in the say-it round that actually times her
+      // recognition. Brand-new words keep the supported mechanics.
+      const known = (progress.words[wordId]?.mastery ?? 0) >= 1;
+      if (known) {
+        rounds.push({ mechanic: 'say-it', wordId, realm: level.realm });
+      } else {
+        rounds.push({
+          mechanic: 'feed-creature',
+          wordId,
+          distractorIds: pickDistractors(word, levelWords.length >= 3 ? levelWords : WORDS, random),
+          realm: level.realm,
+        });
+      }
     } else {
       rounds.push({ mechanic: 'build-word', wordId, realm: level.realm });
     }
