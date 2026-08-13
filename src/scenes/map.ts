@@ -10,9 +10,11 @@
  */
 import Phaser from 'phaser';
 import { regionForLesson, baseRealmFor, REGIONS, TOTAL_LESSONS } from '../content/regions';
+
 import { canStartLessonToday, roadDone } from '../services/road';
 import { giftForLesson } from '../services/tomorrow';
 import { loadProgress } from '../services/progress';
+import { paintReader, paintPet } from '../avatar/paint';
 import { seasonFor, SEASON_THEMES } from '../services/juice';
 import { speakUI, playMusic, chime } from '../services/audio';
 import {
@@ -32,6 +34,11 @@ import {
   HEX,
 } from '../ui/kit';
 
+/** Her reader + pet, painted once per visit and stood on the current stop. */
+const READER_KEY = 'map-reader';
+const PET_KEY = 'map-pet';
+const READER_H = 72;
+
 /** The ten lesson stops of the current region, winding across the middle. */
 const STOP_POS: [number, number][] = [
   [210, 560], [320, 505], [435, 545], [545, 495], [650, 535],
@@ -48,6 +55,9 @@ export class MapScene extends Phaser.Scene {
     const lesson = Math.min(progress.lesson, TOTAL_LESSONS);
     const region = regionForLesson(lesson);
     const boy = progress.avatar.character === 'boy';
+    // repainted every visit, so a change of outfit shows up on the road at once
+    paintReader(this, progress.avatar, READER_KEY, 2);
+    paintPet(this, progress.avatar, PET_KEY, 2);
 
     const season = seasonFor();
     const st = SEASON_THEMES[season];
@@ -202,10 +212,24 @@ export class MapScene extends Phaser.Scene {
     cont.add(g);
 
     if (isCurrent) {
-      // the child's pet marks "you are here", under a little flag
-      const region = regionForLesson(lessonNum);
-      cont.add(emojiText(this, 0, 2, region.creature, 34));
-      const flag = this.add.container(0, -r - 20);
+      // SHE marks "you are here" — the reader she dressed herself, standing on
+      // the stop she reached. She spends pearls in the wardrobe on someone who
+      // never appeared in the world she is travelling; this is where the
+      // dressing-up pays off, on the screen she opens the game to.
+      // Stood a little to the LEFT of centre: the trail doubles back, so a
+      // figure standing dead-centre on this stop puts her head through the
+      // number label of the stop above it.
+      const reader = this.add.image(-40, -r - 4, READER_KEY);
+      reader.setScale(READER_H / reader.height);
+      reader.setOrigin(0.5, 1); // feet on the medallion
+      cont.add(reader);
+      // her pet keeps her company, tucked at her feet
+      const pet = this.add.image(-4, -r + 6, PET_KEY);
+      pet.setScale(38 / pet.height);
+      pet.setOrigin(0.5, 1);
+      cont.add(pet);
+
+      const flag = this.add.container(0, -r - 20 - READER_H);
       const fg = this.add.graphics();
       fg.fillStyle(COL.gold, 1); fg.fillRoundedRect(-52, -15, 104, 26, 8);
       fg.lineStyle(2, COL.goldEdge, 1); fg.strokeRoundedRect(-52, -15, 104, 26, 8);
