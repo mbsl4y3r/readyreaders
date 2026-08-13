@@ -327,8 +327,10 @@ export class WardrobeScene extends Phaser.Scene {
     tab.bg.fillStyle(0xffffff, 1);
     tab.bg.fillRoundedRect(-w / 2, -h / 2, w, h, 20);
     tab.setSize(w, h);
-    tab.setInteractive(new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h), Phaser.Geom.Rectangle.Contains);
-    if (tab.input) tab.input.cursor = 'pointer';
+    // Bare setInteractive(), matching makeButton. An explicit centred rect
+    // measures wrong under the 2x camera zoom: the declared offsets land
+    // doubled, leaving only the tab's top-left quadrant tappable.
+    tab.setInteractive({ useHandCursor: true });
   }
 
   private switchTab(tab: TabId): void {

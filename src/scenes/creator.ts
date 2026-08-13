@@ -319,12 +319,13 @@ export class CreatorScene extends Phaser.Scene {
       }
 
       card.setSize(CW, CH);
-      // explicit CENTERED hit area — a bare container hit area anchors top-left,
-      // which would drop taps just left/above the card's middle.
-      card.setInteractive(
-        new Phaser.Geom.Rectangle(-CW / 2, -CH / 2, CW, CH),
-        Phaser.Geom.Rectangle.Contains,
-      );
+      // setSize + a BARE setInteractive() is the pattern every working button
+      // in the game uses (see makeButton). Passing an explicit centred rect
+      // here looked more correct but measured wrong: under the 2× camera zoom
+      // the declared offsets land doubled, so the live hit box sat with its
+      // bottom-right corner on the card's centre and only the top-left
+      // quadrant of the card responded. scripts/hit-area-check.mjs measures it.
+      card.setInteractive({ useHandCursor: true });
       card.on('pointerover', () => !selected && card.setScale(1.03));
       card.on('pointerout', () => card.setScale(1));
       card.on('pointerup', () => this.chooseCharacter(ch.id));
