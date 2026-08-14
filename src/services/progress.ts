@@ -59,6 +59,14 @@ export interface ProgressData {
   arcadeBest: Record<string, number>;
   /** Epoch ms until which the Games Arcade play pass is active (0 = none). */
   arcadePassUntil: number;
+  /**
+   * Play Passes earned by READING — one per lesson passed. The arcade used to
+   * be a toll booth: every visit cost pearls, the same currency the wardrobe
+   * runs on, so playing a game meant not buying an outfit and a child with no
+   * pearls could not play at all. Reading is now the way in; pearls remain a
+   * second door for a grown-up who wants to open it.
+   */
+  arcadeTokens: number;
   /** Reading-day streak — the 🔥. lastDate is an ISO yyyy-mm-dd. */
   streak: { lastDate: string; days: number; best: number };
   /** Arcade currency — earned by playing games, spent in the ticket shop. */
@@ -204,6 +212,7 @@ export function freshProgress(): ProgressData {
     badges: [],
     arcadeBest: {},
     arcadePassUntil: 0,
+    arcadeTokens: 0,
     streak: { lastDate: '', days: 0, best: 0 },
     tickets: 0,
     stickers: [],
@@ -246,6 +255,7 @@ export function loadProgress(): ProgressData {
     data.badges ??= [];
     data.arcadeBest ??= {};
     data.arcadePassUntil ??= 0;
+    data.arcadeTokens ??= 0;
     data.streak ??= { lastDate: '', days: 0, best: 0 };
     data.tickets ??= 0;
     data.stickers ??= [];
@@ -341,6 +351,7 @@ export function importCode(code: string): ProgressData | null {
     data.badges ??= [];
     data.arcadeBest ??= {};
     data.arcadePassUntil ??= 0;
+    data.arcadeTokens ??= 0;
     data.streak ??= { lastDate: '', days: 0, best: 0 };
     data.tickets ??= 0;
     data.stickers ??= [];

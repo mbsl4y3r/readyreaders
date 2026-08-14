@@ -173,8 +173,14 @@ export class ArcadeScene extends Phaser.Scene {
       this.passText.setText(`⏳ ${m}:${s.toString().padStart(2, '0')} left`);
       this.passText.setColor(HEX.teal);
     } else {
-      this.passText.setText(`Pass: ${PASS_PEARLS} 🦪`);
-      this.passText.setColor('#ffe9a8');
+      const tokens = loadProgress().arcadeTokens;
+      if (tokens > 0) {
+        this.passText.setText(`🎟️ ${tokens} Play ${tokens === 1 ? 'Pass' : 'Passes'}`);
+        this.passText.setColor(HEX.teal);
+      } else {
+        this.passText.setText(`Read a lesson to play · or ${PASS_PEARLS} 🦪`);
+        this.passText.setColor('#ffe9a8');
+      }
     }
   }
 
@@ -232,9 +238,22 @@ export class ArcadeScene extends Phaser.Scene {
     const progress = loadProgress();
     if (passActive(progress.arcadePassUntil, Date.now())) {
       this.startGame(def);
-    } else {
-      this.passModal(def);
+      return;
     }
+    // A pass she EARNED by reading opens the door with no till and no choice
+    // between playing and dressing up. Only when she has none does the pearl
+    // offer appear, and that is a grown-up's door, not a wall in front of her.
+    if (progress.arcadeTokens > 0) {
+      progress.arcadeTokens -= 1;
+      progress.arcadePassUntil = Date.now() + PASS_MS;
+      saveProgress(progress);
+      chime('fanfare');
+      this.floatingNote('Your reading opened the arcade! 🎟️');
+      this.refreshPassText();
+      this.startGame(def);
+      return;
+    }
+    this.passModal(def);
   }
 
   private floatingNote(text: string): void {

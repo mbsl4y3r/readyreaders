@@ -319,6 +319,10 @@ export class SessionScene extends Phaser.Scene {
         // Claim BEFORE passLesson advances the marker: the gift belongs to the
         // lesson she just read, and claiming first keeps the derivation stable.
         openedGift = claimGift(progress, this.lesson);
+        // Reading is what buys play. One Play Pass per lesson passed, so the
+        // arcade is something she earns at the desk rather than a till she
+        // has to pay at with the pearls she was saving for an outfit.
+        progress.arcadeTokens += 1;
         pass = passLesson(progress);
       } else if (!passed) {
         progress.checkoutMisses = checkout.missedIds;
