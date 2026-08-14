@@ -164,13 +164,21 @@ export class ParentScene extends Phaser.Scene {
     this.panel(RX, 264, COL_W, 182);
     this.eyebrow(RX + 22, 290, 'LEVEL MASTERY  (quick or faster)');
     const shownLevels = Math.min(progress.currentLevel, 9);
+    // Two columns. Nine rows at a 14.5px pitch put 16px text through the line
+    // below it — every row overlapped the next and the whole panel was a smear.
+    const ROW_H = 24;
+    const PER_COL = 5;
+    const half = COL_W / 2;
     for (let n = 1; n <= shownLevels; n++) {
       const pool = wordsForLevel(n, progress.bookLesson);
       const quick = pool.filter((w) => (progress.words[w.id]?.mastery ?? 0) >= 2).length;
       const pct = pool.length ? Math.round((quick / pool.length) * 100) : 0;
-      const y = 320 + (n - 1) * 14.5;
-      readingText(this, RX + 22, y, `Level ${n}`, 16, '#ffffff').setOrigin(0, 0.5);
-      readingText(this, RX + COL_W - 22, y, `${quick}/${pool.length}  ·  ${pct}%`, 16, MUTED).setOrigin(1, 0.5);
+      const col = Math.floor((n - 1) / PER_COL);
+      const y = 322 + ((n - 1) % PER_COL) * ROW_H;
+      const left = RX + 22 + col * half;
+      const right = RX + (col === 0 ? half - 12 : COL_W - 22);
+      readingText(this, left, y, `Level ${n}`, 15, '#ffffff').setOrigin(0, 0.5);
+      readingText(this, right, y, `${quick}/${pool.length} · ${pct}%`, 15, MUTED).setOrigin(1, 0.5);
     }
 
     // ---- account actions: small chips, clearly separated rows ----

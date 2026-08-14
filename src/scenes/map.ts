@@ -249,7 +249,9 @@ export class MapScene extends Phaser.Scene {
       wg.lineStyle(3, COL.gold, 1); wg.strokeCircle(0, 0, 20);
       wrap.add(wg);
       wrap.add(emojiText(this, 0, 0, '🎁', 24));
-      wrap.setSize(44, 44);
+      // 64px minimum: a 44px target is a coin-sized thing for a child who
+      // aims with a whole hand, and this one is a reward she wants to reach.
+      wrap.setSize(64, 64);
       wrap.setInteractive(new Phaser.Geom.Circle(0, 0, 26), Phaser.Geom.Circle.Contains);
       wrap.on('pointerup', () =>
         void speakUI(
