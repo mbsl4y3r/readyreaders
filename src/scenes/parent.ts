@@ -22,6 +22,7 @@ import {
   photosWereEvicted,
 } from '../services/progress';
 import { setMusicEnabled } from '../services/audio';
+import { dayCardText } from '../services/daycard';
 import { allCosmeticIds, defaultAvatar, defaultBoyAvatar } from '../avatar/catalog';
 import { GAME_W, GAME_H, readingText, emojiText, sceneTitle } from '../ui/kit';
 
@@ -206,6 +207,14 @@ export class ParentScene extends Phaser.Scene {
         window.alert("That code didn't work — check it and try again.");
       }
     }, { fill: SLATE, textColor: SLATE_TXT, fontSize: 20 });
+    // Share today — the one thing here that PUSHES. Everything else in this
+    // corner waits to be found; this puts a sentence in the other parent's
+    // hand naming the words she can now read without stopping.
+    this.chip(LC, 610, W, H, 'Share today 📤', () => this.shareDay(), {
+      fill: SLATE,
+      textColor: SLATE_TXT,
+      fontSize: 20,
+    });
     this.chip(LC, 548, W, H, 'Placement voyage ⛵', () => this.scene.start('voyage', { fromParent: true }), {
       fill: SLATE,
       textColor: SLATE_TXT,
@@ -241,6 +250,35 @@ export class ParentScene extends Phaser.Scene {
    * A compact rounded button for the adult screen (no 72px floor). Returns
    * the container; its children are [bg, label].
    */
+  /**
+   * Hand the day's reading to a grown-up. navigator.share opens the iOS sheet
+   * (Messages, Mail, anything); without it we fall back to the clipboard, and
+   * without that we simply show the card so it can be read aloud or screenshot.
+   * Nothing is uploaded anywhere — this is text, built on the device.
+   */
+  private shareDay(): void {
+    const progress = loadProgress();
+    const now = new Date();
+    const key = now.toISOString().slice(0, 10);
+    const label = now.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    const text = dayCardText(progress, key, label);
+    if (!text) {
+      window.alert('No reading logged today yet — come back after a lesson!');
+      return;
+    }
+    const nav = navigator as Navigator & { share?: (d: { title: string; text: string }) => Promise<void> };
+    if (typeof nav.share === 'function') {
+      void nav.share({ title: 'Reading Realms', text }).catch(() => {
+        /* the sheet was dismissed — nothing to report */
+      });
+      return;
+    }
+    void navigator.clipboard
+      ?.writeText(text)
+      .then(() => window.alert(`Copied — paste it to anyone:\n\n${text}`))
+      .catch(() => window.alert(text));
+  }
+
   private chip(
     cx: number,
     y: number,

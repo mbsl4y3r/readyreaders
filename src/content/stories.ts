@@ -208,4 +208,90 @@ export const STORIES: Story[] = [
       },
     ],
   },
+  // ---- THE SERIAL ------------------------------------------------------
+  // Every story above is a closed arc: she finishes it and there is nothing
+  // left to wonder about. This one stops on a question and the answer sits
+  // on the shelf, locked, two levels ahead — the only thing in the game that
+  // makes her want to come back to find out what happened.
+  {
+    id: 'st07',
+    title: 'The Box on the Hill',
+    realm: 'woods',
+    unlockLevel: 4,
+    lesson: 41,
+    serial: { key: 'box', part: 1, of: 2 },
+    cliffhanger: true,
+    pages: [
+      {
+        text: 'Jack and Jill ran up the hill.',
+        wordIds: ['jack', 'and', 'jill', 'ran', 'up', 'the', 'hill'],
+        emojiScene: '\u{1F466}\u{1F467}\u26F0\uFE0F',
+      },
+      {
+        text: 'A big black box sat in the grass.',
+        wordIds: ['a', 'big', 'black', 'box', 'sat', 'in', 'the', 'grass'],
+        emojiScene: '\u{1F4E6}\u{1F33F}',
+      },
+      {
+        text: 'The box had a lock on it.',
+        wordIds: ['the', 'box', 'had', 'a', 'lock', 'on', 'it'],
+        emojiScene: '\u{1F4E6}\u{1F512}',
+      },
+      {
+        text: 'Jack got a rock. The lock fell off.',
+        wordIds: ['jack', 'got', 'a', 'rock', 'the', 'lock', 'fell', 'off'],
+        emojiScene: '\u{1FAA8}\u{1F513}',
+      },
+      {
+        text: 'Then the box went bang!',
+        wordIds: ['then', 'the', 'box', 'went', 'bang'],
+        emojiScene: '\u{1F4E6}\u{1F4A5}',
+      },
+      {
+        text: 'What is in the box?',
+        wordIds: ['what', 'is', 'in', 'the', 'box'],
+        emojiScene: '\u{1F4E6}\u2753',
+      },
+    ],
+  },
+  {
+    id: 'st08',
+    title: 'The Box on the Hill, Part 2',
+    realm: 'woods',
+    unlockLevel: 6,
+    lesson: 64,
+    serial: { key: 'box', part: 2, of: 2 },
+    pages: [
+      {
+        text: 'Jack and Jill held the box.',
+        wordIds: ['jack', 'and', 'jill', 'held', 'the', 'box'],
+        emojiScene: '\u{1F466}\u{1F467}\u{1F4E6}',
+      },
+      {
+        text: 'Crack! The lid split.',
+        wordIds: ['crack', 'the', 'lid', 'split'],
+        emojiScene: '\u{1F4E6}\u2728',
+      },
+      {
+        text: 'It was not a rock. It was a chick!',
+        wordIds: ['it', 'was', 'not', 'a', 'rock', 'it', 'was', 'a', 'chick'],
+        emojiScene: '\u{1F425}',
+      },
+      {
+        text: 'The chick was wet and glum.',
+        wordIds: ['the', 'chick', 'was', 'wet', 'and', 'glum'],
+        emojiScene: '\u{1F425}\u{1F4A7}',
+      },
+      {
+        text: 'Jill held the chick. It felt snug.',
+        wordIds: ['jill', 'held', 'the', 'chick', 'it', 'felt', 'snug'],
+        emojiScene: '\u{1F467}\u{1F425}\u{1F49B}',
+      },
+      {
+        text: 'Then the chick sang. What a gift!',
+        wordIds: ['then', 'the', 'chick', 'sang', 'what', 'a', 'gift'],
+        emojiScene: '\u{1F425}\u{1F3B5}\u{1F381}',
+      },
+    ],
+  },
 ];

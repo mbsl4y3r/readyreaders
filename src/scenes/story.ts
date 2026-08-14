@@ -342,10 +342,26 @@ export class StoryScene extends Phaser.Scene {
 
     chime('fanfare');
     confettiBurst(this, GAME_W / 2, 320, THEMES.castle.accent);
-    const end = displayText(this, GAME_W / 2, 528, 'The end! ⭐', 44, '#ffe9a8');
+    // A serial part does not get "The end" — the whole point is that she goes
+    // to bed not knowing, and the next part is sitting on the shelf.
+    const end = displayText(
+      this,
+      GAME_W / 2,
+      528,
+      story.cliffhanger ? 'To be continued… 📖' : 'The end! ⭐',
+      44,
+      '#ffe9a8',
+    );
     view.add(end);
     popIn(this, end);
-    void speakUI('story-the-end', 'The end! You read the whole story!');
+    if (story.cliffhanger) {
+      void speakUI(
+        'story-continued',
+        'To be continued! Keep reading and you will find out what happens next!',
+      );
+    } else {
+      void speakUI('story-the-end', 'The end! You read the whole story!');
+    }
     if (firstRead) {
       const pearl = this.add.circle(GAME_W / 2 - 92, 566, 11, 0xffffff, 1).setStrokeStyle(2, 0xd8e6ee, 1);
       const shine = this.add.circle(GAME_W / 2 - 96, 562, 3, 0xffffff, 0.95);

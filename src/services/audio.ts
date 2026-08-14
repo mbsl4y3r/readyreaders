@@ -222,11 +222,14 @@ export function speakUI(id: string, text: string): Promise<void> {
   return playClipOr('ui', id, () => speak(text));
 }
 
-export type ChimeKind = 'good' | 'gentle' | 'fanfare' | 'newbest' | 'sparkle';
+export type ChimeKind = 'good' | 'gentle' | 'fanfare' | 'newbest' | 'sparkle' | 'tap';
 
 /** Chime kinds double as sfx file names: public/audio/sfx/<kind>.mp3. */
 export function chime(kind: ChimeKind): void {
   resumeAudio();
+  // The tap tick is synth-only: it fires constantly, and a fetch per press
+  // would hammer the network on a first run before anything is cached.
+  if (kind === 'tap') return synthChime('tap');
   // a real sound file (e.g. from a Kenney pack) beats the oscillator —
   // but never block the game on the fetch; synth is the instant fallback
   void loadClip('sfx', kind).then((buffer) => {
@@ -246,12 +249,18 @@ function synthChime(kind: ChimeKind): void {
           ? [659.25, 783.99, 1046.5, 1318.51] // bright rising "new high score!" sting
           : kind === 'sparkle'
             ? [1046.5, 1396.91, 1760] // twinkle on the picture reveal — the "yay" without words
-            : [523.25, 659.25, 783.99, 1046.5];
+            : kind === 'tap'
+              ? [880] // one short, soft tick — acknowledgement, not an event
+              : [523.25, 659.25, 783.99, 1046.5];
   // The sparkle is a garnish, not an announcement: quicker and quieter than
   // the others so it can fire every round without ever nagging.
+  //
+  // The tap is quieter still — a soft wooden tick, barely there. It fires on
+  // EVERY button in the game, so a grown-up in the same room hears it dozens
+  // of times an hour: it has to confirm the touch and then get out of the way.
   const step = kind === 'sparkle' ? 0.055 : 0.09;
-  const peak = kind === 'sparkle' ? 0.12 : 0.18;
-  const tail = kind === 'sparkle' ? 0.26 : 0.35;
+  const peak = kind === 'tap' ? 0.028 : kind === 'sparkle' ? 0.12 : 0.18;
+  const tail = kind === 'tap' ? 0.05 : kind === 'sparkle' ? 0.26 : 0.35;
   const now = ctx.currentTime;
   notes.forEach((freq, i) => {
     const osc = ctx.createOscillator();

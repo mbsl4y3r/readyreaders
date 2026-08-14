@@ -73,6 +73,16 @@ export interface Story {
   pages: { text: string; wordIds: string[]; emojiScene: string }[];
   /** Decodability lesson for the whole story (≥ the max any page needs). */
   lesson: number;
+  /**
+   * Part of a serial. Every other story here is a closed arc, so nothing ever
+   * pulls her back to find out what happened — this is the open loop.
+   */
+  serial?: { key: string; part: number; of: number };
+  /**
+   * This part stops before the ending: the shelf shows "To be continued" and
+   * the next part sits there, locked, as the thing she is reading toward.
+   */
+  cliffhanger?: boolean;
 }
 
 export interface Sentence {

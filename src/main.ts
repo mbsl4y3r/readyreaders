@@ -20,7 +20,7 @@ import { StickerBookScene } from './scenes/stickerbook';
 import { TicketShopScene } from './scenes/ticketshop';
 import { PhotoBoothScene } from './scenes/photobooth';
 import { GAME_W, GAME_H, RENDER_SCALE } from './ui/kit';
-import { resumeAudio } from './services/audio';
+import { resumeAudio, chime } from './services/audio';
 
 /**
  * Keep audio alive for the whole session.
@@ -66,6 +66,12 @@ function startGame(): Phaser.Game {
         if (!cam) return;
         cam.setZoom(RENDER_SCALE);
         cam.centerOn(GAME_W / 2, GAME_H / 2);
+        // A touch that makes no sound reads as a touch that did not work. Wired
+        // at the INPUT PLUGIN rather than in the button helper, because plenty
+        // of controls (character cards, swatches, gallery thumbs) hand-roll
+        // their own handlers and would otherwise stay silent. Scene input
+        // listeners are cleared on shutdown, so re-arming on CREATE is right.
+        scene.input?.on('gameobjectdown', () => chime('tap'));
       };
       for (const scene of game.scene.scenes) {
         scene.events.on(Phaser.Scenes.Events.CREATE, () => apply(scene));

@@ -85,6 +85,8 @@ export function buildManifest(): Clip[] {
     ['story-shelf', 'Story pages! Pick a story to read!'],
     ['story-locked', 'Keep adventuring — this story unlocks soon!'],
     ['story-the-end', 'The end! You read the whole story!'],
+    // a serial part stops on a question instead of an ending
+    ['story-continued', 'To be continued! Keep reading and you will find out what happens next!'],
     // wardrobe
     ['wardrobe-welcome', "Your wardrobe! Let's play dress-up!"],
     ['new-outfit', 'Ooh! You look wonderful!'],
