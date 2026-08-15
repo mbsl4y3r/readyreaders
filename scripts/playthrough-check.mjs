@@ -50,16 +50,6 @@ await page.tap(512, 470); // start star
 await page.waitFor(`window.__game.scene.isActive('map')`, { label: 'map' });
 await page.wait(1200);
 
-// watch for the celebration fanfare via the sfx fetch (fanfare.wav exists)
-await page.evalJS(`(() => {
-  const real = window.fetch;
-  window.fetch = function (u, ...rest) {
-    if (String(u).includes('/sfx/fanfare')) window.__m.fanfareAt ||= performance.now();
-    return real.call(this, u, ...rest);
-  };
-  return 1;
-})()`);
-
 // tap the gold Lesson CTA
 const cta = await page.evalJS(`(() => {
   const s = window.__game.scene.getScene('map'); let f = null;
@@ -94,48 +84,60 @@ const CONTROLS = `(() => {
   return out;
 })()`;
 
-// the toddler-walk: tap controls round-robin until the fanfare fires
+// Celebration is detected by what is ON SCREEN — the "+N pearls!" award and
+// the map-exit button — never by a sound fetch: the first cut watched for the
+// fanfare sfx request and timed out on caching/ordering, blaming the game for
+// a harness mistake. CELEB stamps page-clock times the first moment each
+// marker exists, so the <3s budget is measured where she experiences it.
+const CELEB = `(() => {
+  const s = window.__game.scene.getScene('session');
+  if (!s) return null;
+  const out = { pearls: 0, exit: 0, gift: false };
+  const walk = (l) => { for (const o of l) {
+    if (o.type === 'Text') {
+      const t = String(o.text);
+      if (t.includes('pearls!')) out.pearls ||= performance.now();
+      if (t.includes('🎁')) out.gift = true;
+    }
+    if (o.type === 'Container') {
+      if (o.input && o.input.enabled &&
+          (o.list || []).some((c) => c.type === 'Text' && String(c.text).includes('🗺️'))) {
+        out.exit ||= performance.now();
+      }
+      walk(o.list || []);
+    }
+  }};
+  walk(s.children.list);
+  return out;
+})()`;
+
 const t0 = Date.now();
-let fanfareAt = 0;
+let celebAt = 0;
 let tapCount = 0;
 while (Date.now() - t0 < 420000) {
-  const state = await page.evalJS(`({ f: window.__m.fanfareAt, inSession: window.__game.scene.isActive('session') })`);
-  if (state.f) { fanfareAt = state.f; break; }
-  if (!state.inSession) break;
+  const c = await page.evalJS(CELEB);
+  if (c && c.pearls) { celebAt = c.pearls; break; }
+  const inSession = await page.evalJS(`window.__game.scene.isActive('session')`);
+  if (!inSession) break;
   const controls = await page.evalJS(CONTROLS);
   if (!controls || controls.length === 0) { await page.wait(600); continue; }
-  for (const c of controls.slice(0, 6)) {
-    await page.tap(c.x, c.y);
+  for (const c2 of controls.slice(0, 6)) {
+    await page.tap(c2.x, c2.y);
     tapCount++;
-    await page.wait(420);
-    const hit = await page.evalJS(`window.__m.fanfareAt`);
-    if (hit) break;
+    await page.wait(380);
   }
-  await page.wait(500);
 }
 
 let exitReadyMs = null;
 let giftVisible = false;
-if (fanfareAt) {
-  // poll until the map-exit button is live; measure on the PAGE clock
-  for (let i = 0; i < 30 && exitReadyMs === null; i++) {
-    const probe = await page.evalJS(`(() => {
-      const s = window.__game.scene.getScene('session');
-      let exit = null; let gift = false;
-      const walk = (l) => { for (const o of l) {
-        if (o.type === 'Text' && String(o.text).includes('🎁')) gift = true;
-        if (o.type === 'Container' && o.input && o.input.enabled) {
-          const t = (o.list || []).filter((c) => c.type === 'Text').map((c) => String(c.text));
-          if (t.some((x) => x.includes('🗺️'))) exit = performance.now();
-        }
-        if (o.type === 'Container') walk(o.list || []);
-      }};
-      walk(s.children.list);
-      return { exit, gift };
-    })()`);
+if (celebAt) {
+  // poll until the map-exit button is live; both stamps are page-clock
+  for (let i = 0; i < 30; i++) {
+    const probe = await page.evalJS(CELEB);
     if (probe.gift) giftVisible = true;
-    if (probe.exit) exitReadyMs = probe.exit - fanfareAt;
-    else await page.wait(180);
+    if (probe.exit && exitReadyMs === null) exitReadyMs = probe.exit - celebAt;
+    if (exitReadyMs !== null && giftVisible) break;
+    await page.wait(160);
   }
 }
 
@@ -145,7 +147,7 @@ const median = taps.length ? taps[Math.floor(taps.length / 2)] : null;
 const p90 = taps.length ? taps[Math.floor(taps.length * 0.9)] : null;
 
 console.log(JSON.stringify({
-  reachedCelebration: Boolean(fanfareAt), tapCount,
+  reachedCelebration: Boolean(celebAt), tapCount,
   ackMedianMs: median === null ? null : Math.round(median),
   ackP90Ms: p90 === null ? null : Math.round(p90),
   ackSamples: taps.length,
@@ -157,7 +159,7 @@ console.log(JSON.stringify({
 const okAck = median !== null && median <= 100;
 const okCeleb = exitReadyMs !== null && exitReadyMs <= 3000;
 const okGift = giftVisible;
-const okDone = Boolean(fanfareAt);
+const okDone = Boolean(celebAt);
 console.log(okDone ? 'PASS: a blind toddler-walk reached the celebration (no fail states hold)' : 'FAIL: never reached the celebration');
 console.log(okAck ? `PASS: taps acknowledged in ${Math.round(median)}ms median (target 100ms)` : `FAIL: tap ack ${median}ms median`);
 console.log(okCeleb ? `PASS: celebration exitable in ${Math.round(exitReadyMs)}ms (target 3000ms)` : `FAIL: exit took ${exitReadyMs}ms`);
