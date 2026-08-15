@@ -22,6 +22,7 @@ import {
 } from '../content/arcade-games';
 import { ARCADE_RUNNERS } from '../games/arcade';
 import { THEMES } from '../content/themes';
+import { regionForLesson, baseRealmFor, TOTAL_LESSONS } from '../content/regions';
 import { loadProgress, saveProgress } from '../services/progress';
 import { speedFactor, TICKETS_PER_PLAY, TICKETS_NEW_BEST } from '../services/juice';
 import { speakUI, chime, playMusic } from '../services/audio';
@@ -38,12 +39,16 @@ import {
   coinChip,
   COL,
   HEX,
+  bob,
 } from '../ui/kit';
 import type { ArcadeGame, ArcadeCtx } from '../games/arcade/types';
 
 const HUD_BOTTOM = 92;
 
 export class ArcadeScene extends Phaser.Scene {
+  /** Cabinet order for this visit, home realm first — read by the live check. */
+  private homeFirstIds: string[] = [];
+
   private alive = true;
   private playing = false;
 
@@ -145,18 +150,33 @@ export class ArcadeScene extends Phaser.Scene {
     layer.add(this.passText);
     this.refreshPassText();
 
+    // The arcade belongs to the WORLD she is travelling, not a mall off to the
+    // side: games from her current realm come first, wear its host creature,
+    // and the shelf is labelled with the realm's name — so "the otter's games"
+    // grow as she reads her way into new lands.
+    const homeRealm = baseRealmFor(regionForLesson(Math.min(progress.lesson, TOTAL_LESSONS)));
+    const region = regionForLesson(Math.min(progress.lesson, TOTAL_LESSONS));
+    this.homeFirstIds = [...ARCADE_GAMES]
+      .sort((a, b) => Number(b.realm === homeRealm) - Number(a.realm === homeRealm))
+      .map((g) => g.id);
+    const ordered = this.homeFirstIds.map((id) => ARCADE_GAMES.find((g) => g.id === id)!);
+
+    layer.add(
+      displayText(this, GAME_W / 2, 136, `${region.creature} ${region.name} games first!`, 18, '#ffffffcc', '500'),
+    );
+
     // cabinet grid: 5 cols (compact) so the growing library fits without scroll
     const cols = 5;
     const cellW = 196;
     const cellH = 128;
     const x0 = GAME_W / 2 - ((cols - 1) / 2) * cellW;
     const y0 = 196;
-    ARCADE_GAMES.forEach((def, i) => {
+    ordered.forEach((def, i) => {
       const cx = x0 + (i % cols) * cellW;
       const cy = y0 + Math.floor(i / cols) * cellH;
       const unlocked = progress.lesson >= def.unlockLesson;
       const best = progress.arcadeBest[def.id] ?? 0;
-      layer.add(this.cabinet(def, cx, cy, unlocked, best, i));
+      layer.add(this.cabinet(def, cx, cy, unlocked, best, i, def.realm === homeRealm ? region.creature : null));
     });
   }
 
@@ -178,7 +198,7 @@ export class ArcadeScene extends Phaser.Scene {
         this.passText.setText(`🎟️ ${tokens} Play ${tokens === 1 ? 'Pass' : 'Passes'}`);
         this.passText.setColor(HEX.teal);
       } else {
-        this.passText.setText(`Read a lesson to play · or ${PASS_PEARLS} 🦪`);
+        this.passText.setText('Read to play!');
         this.passText.setColor('#ffe9a8');
       }
     }
@@ -191,6 +211,7 @@ export class ArcadeScene extends Phaser.Scene {
     unlocked: boolean,
     best: number,
     i: number,
+    hostBadge: string | null = null,
   ): Phaser.GameObjects.Container {
     const theme = THEMES[def.realm];
     const w = 182;
@@ -224,6 +245,14 @@ export class ArcadeScene extends Phaser.Scene {
     c.on('pointerdown', () => {
       this.tweens.add({ targets: c, scale: 0.94, duration: 70, yoyo: true });
     });
+    // the current region's host perches on its own realm's cabinets — the
+    // same creature she just met on the map, so the arcade is HER land's fair
+    if (hostBadge && unlocked) {
+      const perch = emojiText(this, 66, -28, hostBadge, 24);
+      c.add(perch);
+      bob(this, perch, 3, 1500 + (i % 4) * 180);
+    }
+
     c.on('pointerup', () => this.onCabinet(def, unlocked));
     popIn(this, c, 60 + i * 35);
     return c;

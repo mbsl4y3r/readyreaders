@@ -67,6 +67,12 @@ export interface ProgressData {
    * second door for a grown-up who wants to open it.
    */
   arcadeTokens: number;
+  /**
+   * The last region whose host creature has welcomed her (0 = none yet).
+   * The greeting plays ONCE per region — a host who repeats itself on every
+   * visit is exactly the nagging this game's audio rules exist to prevent.
+   */
+  greetedRegion: number;
   /** Reading-day streak — the 🔥. lastDate is an ISO yyyy-mm-dd. */
   streak: { lastDate: string; days: number; best: number };
   /** Arcade currency — earned by playing games, spent in the ticket shop. */
@@ -213,6 +219,7 @@ export function freshProgress(): ProgressData {
     arcadeBest: {},
     arcadePassUntil: 0,
     arcadeTokens: 0,
+    greetedRegion: 0,
     streak: { lastDate: '', days: 0, best: 0 },
     tickets: 0,
     stickers: [],
@@ -256,6 +263,7 @@ export function loadProgress(): ProgressData {
     data.arcadeBest ??= {};
     data.arcadePassUntil ??= 0;
     data.arcadeTokens ??= 0;
+    data.greetedRegion ??= 0;
     data.streak ??= { lastDate: '', days: 0, best: 0 };
     data.tickets ??= 0;
     data.stickers ??= [];
@@ -352,6 +360,7 @@ export function importCode(code: string): ProgressData | null {
     data.arcadeBest ??= {};
     data.arcadePassUntil ??= 0;
     data.arcadeTokens ??= 0;
+    data.greetedRegion ??= 0;
     data.streak ??= { lastDate: '', days: 0, best: 0 };
     data.tickets ??= 0;
     data.stickers ??= [];

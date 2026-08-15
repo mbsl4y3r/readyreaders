@@ -13,7 +13,7 @@ import { regionForLesson, baseRealmFor, REGIONS, TOTAL_LESSONS } from '../conten
 
 import { canStartLessonToday, roadDone } from '../services/road';
 import { giftForLesson } from '../services/tomorrow';
-import { loadProgress } from '../services/progress';
+import { loadProgress, saveProgress } from '../services/progress';
 import { paintReader, paintPet } from '../avatar/paint';
 import { seasonFor, SEASON_THEMES } from '../services/juice';
 import { speakUI, playMusic, chime } from '../services/audio';
@@ -46,6 +46,11 @@ const STOP_POS: [number, number][] = [
 ];
 
 export class MapScene extends Phaser.Scene {
+  /** The one gold action — the pet leads her here when tapped. */
+  private cta: Phaser.GameObjects.Container | null = null;
+  /** Trail segments already walked (gold) — exposed for the live world check. */
+  private walkedSegments = 0;
+
   constructor() {
     super('map');
   }
@@ -112,7 +117,12 @@ export class MapScene extends Phaser.Scene {
     navBtn(GAME_W - 66, 574, '🧰', 'More', () => this.openMore(goTo));
 
     // ---- the road: a dotted trail of sticker medallions ----
-    this.drawTrail(region);
+    // the stitches BEHIND her turn gold — the world keeps a visible record of
+    // how far she has walked it, not just which coins flipped
+    this.walkedSegments = roadDone(progress)
+      ? STOP_POS.length - 1
+      : Math.max(0, Math.min(STOP_POS.length - 1, lesson - region.lessonRange[0]));
+    this.drawTrail(region, this.walkedSegments);
 
     const done = roadDone(progress);
     const canStart = canStartLessonToday(progress);
@@ -162,7 +172,10 @@ export class MapScene extends Phaser.Scene {
       if (canStart) startLesson(lesson);
       else startReview();
     }, { fontSize: 32, width: 340, height: 88, fill: COL.gold, textColor: HEX.ink });
+    this.cta = cta;
     if (canStart && !done) breathe(this, cta, 1.03, 1300);
+
+    this.addHost(region, progress.greetedRegion);
 
     // parent gear — quiet, bottom-left, out of the way of play
     makeButton(this, 58, GAME_H - 46, '⚙️', () => this.scene.start('parent'), {
@@ -170,8 +183,54 @@ export class MapScene extends Phaser.Scene {
     }).setAlpha(0.85);
   }
 
+  /**
+   * The region's host creature, out in the world where she can meet it.
+   *
+   * Every region has always HAD a named host — it just never appeared on the
+   * map, so the world read as a trail of coins with nobody home. The host now
+   * stands by the road, welcomes her BY THE REGION'S OWN VOICE LINE exactly
+   * once per region (a host who repeats itself every visit is nagging), and
+   * afterwards simply lives there: tap it and it hops with a soft twinkle.
+   */
+  private addHost(
+    region: { id: number; name: string; creature: string; creatureName: string },
+    greetedRegion: number,
+  ): void {
+    const host = this.add.container(150, 470);
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.2);
+    shadow.fillEllipse(0, 30, 64, 14);
+    host.add(shadow);
+    host.add(emojiText(this, 0, 0, region.creature, 52));
+    host.setSize(72, 84);
+    host.setInteractive({ useHandCursor: true });
+    host.setDepth(4);
+    bob(this, host, 5, 1600);
+
+    const hop = (): void => {
+      chime('sparkle');
+      this.tweens.add({ targets: host, y: host.y - 26, duration: 170, yoyo: true, ease: 'Quad.easeOut' });
+      this.tweens.add({ targets: host, angle: { from: -5, to: 5 }, duration: 90, yoyo: true, repeat: 2, onComplete: () => host.setAngle(0) });
+    };
+    host.on('pointerup', hop);
+
+    // first time she reaches this region: the host welcomes her, once
+    if (greetedRegion !== region.id) {
+      const progress = loadProgress();
+      progress.greetedRegion = region.id;
+      saveProgress(progress);
+      this.time.delayedCall(700, () => {
+        hop();
+        void speakUI(
+          `region-hello-${region.id}`,
+          `Welcome to ${region.name}! I'm ${region.creatureName}! Let's read together!`,
+        );
+      });
+    }
+  }
+
   /** A dotted stitched trail connecting the ten stops. */
-  private drawTrail(region: { accent: number }): void {
+  private drawTrail(region: { accent: number }, walked = 0): void {
     const g = this.add.graphics();
     for (let i = 0; i < STOP_POS.length - 1; i++) {
       const [x1, y1] = STOP_POS[i]!;
@@ -182,8 +241,13 @@ export class MapScene extends Phaser.Scene {
         const t = d / dots;
         const x = x1 + (x2 - x1) * t;
         const y = y1 + (y2 - y1) * t;
-        g.fillStyle(0xffffff, 0.5);
-        g.fillCircle(x, y, 4);
+        if (i < walked) {
+          g.fillStyle(COL.gold, 0.95);
+          g.fillCircle(x, y, 5);
+        } else {
+          g.fillStyle(0xffffff, 0.5);
+          g.fillCircle(x, y, 4);
+        }
       }
     }
   }
@@ -223,11 +287,37 @@ export class MapScene extends Phaser.Scene {
       reader.setScale(READER_H / reader.height);
       reader.setOrigin(0.5, 1); // feet on the medallion
       cont.add(reader);
-      // her pet keeps her company, tucked at her feet
-      const pet = this.add.image(-4, -r + 6, PET_KEY);
+      // Her pet keeps her company — and it GUIDES. Tap it and it bounds
+      // toward the gold Lesson button while the button swells: the pet is the
+      // one who knows what comes next, not another sticker. Sparkle only, no
+      // voice — this can happen twenty times a day.
+      const petWrap = this.add.container(-4, -r + 6);
+      const pet = this.add.image(0, 0, PET_KEY);
       pet.setScale(38 / pet.height);
       pet.setOrigin(0.5, 1);
-      cont.add(pet);
+      petWrap.add(pet);
+      petWrap.setSize(64, 64);
+      petWrap.setInteractive({ useHandCursor: true });
+      petWrap.on('pointerup', () => {
+        chime('sparkle');
+        const target = this.cta;
+        if (!target) return;
+        // bound a third of the way toward the button and back home
+        const wx = x + petWrap.x;
+        const wy = y + petWrap.y;
+        const dx = (target.x - wx) / 3;
+        const dy = (target.y - wy) / 3;
+        this.tweens.chain({
+          targets: petWrap,
+          tweens: [
+            { x: petWrap.x + dx * 0.5, y: petWrap.y + dy * 0.5 - 34, duration: 190, ease: 'Quad.easeOut' },
+            { x: petWrap.x + dx, y: petWrap.y + dy, duration: 190, ease: 'Quad.easeIn' },
+            { x: petWrap.x, y: petWrap.y, duration: 340, delay: 240, ease: 'Sine.easeInOut' },
+          ],
+        });
+        this.tweens.add({ targets: target, scale: 1.12, duration: 220, yoyo: true, repeat: 1 });
+      });
+      cont.add(petWrap);
 
       const flag = this.add.container(0, -r - 20 - READER_H);
       const fg = this.add.graphics();

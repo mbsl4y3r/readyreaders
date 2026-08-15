@@ -127,6 +127,13 @@ export function buildManifest(): Clip[] {
         `You finished the whole region! Welcome to ${r.name}!`,
       ],
     ),
+    // the host creature's one-time welcome when she first reaches its region
+    ...REGIONS.map(
+      (r): [string, string] => [
+        `region-hello-${r.id}`,
+        `Welcome to ${r.name}! I'm ${r.creatureName}! Let's read together!`,
+      ],
+    ),
     // reward hubs (sticker book, photo booth, ticket shop)
     ['sticker-book', 'Your sticker book! Look at all your shiny stickers!'],
     ['photo-booth', "Photo booth! Let's take a picture of you!"],
